@@ -1,0 +1,6 @@
+{
+  "version": "1.0.0",
+  "build": 1,
+  "apkUrl": "https://raw.githubusercontent.com/<用户名>/<仓库名>/main/pixel_planner.apk",
+  "release_notes": "首次发布：通知栏行程常驻、AI语音添加日程、入职调研引导、锁屏行程显示"
+}

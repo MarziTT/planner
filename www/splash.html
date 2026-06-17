@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pixel Planner</title>
+<style>
+:root {
+  --accent: #3b82f6;
+  --text-secondary: #94a3b8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.splash-gif {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  object-fit: cover;
+  box-shadow: 0 4px 24px rgba(59,130,246,0.15);
+}
+.splash-quote {
+  font-size: 15px;
+  font-weight: 600;
+  color: #475569;
+  max-width: 280px;
+  line-height: 1.6;
+  text-align: center;
+  margin-top: 20px;
+  min-height: 48px;
+}
+.splash-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 1px;
+  margin-top: 24px;
+}
+.splash-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.splash-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.splash-loader-bar-bg {
+  width: 140px;
+  height: 3px;
+  background: #e2e8f0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.splash-loader-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s linear;
+}
+.splash-loader-text {
+  font-size: 11px;
+  color: #94a3b8;
+  letter-spacing: 1px;
+}
+
+/* Fade transition */
+.fade-out {
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+</style>
+</head>
+<body>
+<img class="splash-gif" id="splashGif" src="" alt="" />
+<div class="splash-quote" id="splashQuote"></div>
+<div class="splash-title">Pixel Planner</div>
+<div class="splash-subtitle">你的像素日历助手</div>
+<div class="splash-loader">
+  <div class="splash-loader-bar-bg">
+    <div class="splash-loader-bar" id="splashLoaderBar"></div>
+  </div>
+  <span class="splash-loader-text">LOADING</span>
+</div>
+
+<script>
+(function initSplash() {
+  var SPLASH_QUOTES = [
+    "自律给我自由",
+    "今天的汗水是明天的勋章",
+    "每一步都算数",
+    "要么不做，要么做到最好",
+    "坚持比天赋更重要",
+    "你的时间花在哪，成就就在哪",
+    "千里之行，始于足下",
+    "没有白走的路",
+    "把每一天都过成想要的样子",
+    "行动是焦虑的解药",
+    "成长就是不断突破舒适区",
+    "做时间的朋友",
+    "不积跬步无以至千里",
+    "今天比昨天进步一点点",
+    "专注当下，未来自来",
+    "最难的永远是第一步",
+    "不是看到希望才坚持，而是坚持才看到希望",
+    "你有多自律，就有多自由",
+    "生活不会辜负认真的人",
+    "每天都是新起点",
+    "星光不问赶路人，时光不负有心人",
+    "所有的坚持，终将美好",
+    "努力到无能为力，拼搏到感动自己",
+    "今天的努力，是明天的底气",
+    "不逼自己一把，永远不知道自己有多优秀",
+    "成功不是偶然，而是每天的坚持",
+    "与其羡慕别人，不如自己努力",
+    "每一个不曾起舞的日子，都是对生命的辜负",
+    "路虽远，行则将至；事虽难，做则必成",
+    "你现在的努力，是为了以后有更多选择的权利"
+  ];
+
+  var SPLASH_GIFS = [
+    "gifs/惩戒秩序.gif",
+    "gifs/冲击.gif",
+    "gifs/分身.gif",
+    "gifs/变换.gif",
+    "gifs/器械.gif",
+    "gifs/奇异.gif",
+    "gifs/恢复.gif",
+    "gifs/护盾.gif",
+    "gifs/等离子.gif",
+    "gifs/重力.gif",
+    "gifs/雨天.gif",
+    "gifs/飞行.gif",
+    "gifs/1号.gif",
+    "gifs/2号.gif",
+    "gifs/3号.gif",
+    "gifs/10号.gif",
+    "gifs/15.gif",
+    "gifs/20.gif",
+    "gifs/25.gif",
+    "gifs/30.gif"
+  ];
+
+  var gifEl = document.getElementById('splashGif');
+  var quoteEl = document.getElementById('splashQuote');
+  var barEl = document.getElementById('splashLoaderBar');
+
+  var qIdx = Math.floor(Math.random() * SPLASH_QUOTES.length);
+  quoteEl.textContent = '「' + SPLASH_QUOTES[qIdx] + '」';
+
+  var gIdx = Math.floor(Math.random() * SPLASH_GIFS.length);
+  gifEl.src = SPLASH_GIFS[gIdx];
+
+  var hasData = false;
+  try {
+    var raw = localStorage.getItem('pixel_planner_events');
+    hasData = raw && JSON.parse(raw) && Object.keys(JSON.parse(raw)).length > 0;
+  } catch(e) {}
+  var duration = hasData ? 1000 : 3000;
+
+  var startTime = Date.now();
+  function animateBar() {
+    var elapsed = Date.now() - startTime;
+    var pct = Math.min(100, (elapsed / duration) * 100);
+    barEl.style.width = pct + '%';
+    if (pct < 100) requestAnimationFrame(animateBar);
+  }
+  requestAnimationFrame(animateBar);
+
+  setTimeout(function() {
+    document.body.classList.add('fade-out');
+    setTimeout(function() {
+      sessionStorage.setItem('pixel_splash_done', '1');
+      window.location.replace('pixel_calendar.html');
+    }, 600);
+  }, duration);
+})();
+</script>
+</body>
+</html>

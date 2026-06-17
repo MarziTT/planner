@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <style>
+      .bg { fill: #16213e; }
+      .border { fill: #0f3460; }
+      .accent { fill: #e94560; }
+      .light { fill: #16c79a; }
+      .text { fill: #eaeaea; }
+      .grid-line { fill: #1a2a4e; }
+      .highlight { fill: #f5c518; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect class="bg" x="0" y="0" width="512" height="512" rx="16"/>
+
+  <!-- Outer pixel border -->
+  <rect class="border" x="8" y="8" width="496" height="496" rx="8" fill="none" stroke="#0f3460" stroke-width="8"/>
+
+  <!-- Calendar body -->
+  <rect class="accent" x="56" y="80" width="400" height="56" rx="0"/>
+
+  <!-- White dots (rings) in header -->
+  <rect class="text" x="80" y="100" width="12" height="12"/>
+  <rect class="text" x="100" y="100" width="12" height="12"/>
+
+  <!-- Month/year text placeholder -->
+  <rect class="text" x="124" y="98" width="80" height="16" rx="0"/>
+  <rect class="text" x="340" y="100" width="12" height="12"/>
+  <rect class="text" x="360" y="100" width="12" height="12"/>
+
+  <!-- Calendar grid background -->
+  <rect class="border" x="56" y="136" width="400" height="320" rx="0"/>
+
+  <!-- Grid lines - vertical (7 cols, so 8 lines) -->
+  <rect class="grid-line" x="112" y="136" width="4" height="320"/>
+  <rect class="grid-line" x="168" y="136" width="4" height="320"/>
+  <rect class="grid-line" x="224" y="136" width="4" height="320"/>
+  <rect class="grid-line" x="280" y="136" width="4" height="320"/>
+  <rect class="grid-line" x="336" y="136" width="4" height="320"/>
+  <rect class="grid-line" x="392" y="136" width="4" height="320"/>
+
+  <!-- Grid lines - horizontal (5 rows) -->
+  <rect class="grid-line" x="56" y="200" width="400" height="4"/>
+  <rect class="grid-line" x="56" y="264" width="400" height="4"/>
+  <rect class="grid-line" x="56" y="328" width="400" height="4"/>
+  <rect class="grid-line" x="56" y="392" width="400" height="4"/>
+
+  <!-- Day labels (S M T W T F S) - tiny dots -->
+  <rect class="light" x="72" y="148" width="8" height="8"/>
+  <rect class="light" x="128" y="148" width="8" height="8"/>
+  <rect class="light" x="184" y="148" width="8" height="8"/>
+  <rect class="light" x="240" y="148" width="8" height="8"/>
+  <rect class="light" x="296" y="148" width="8" height="8"/>
+  <rect class="light" x="352" y="148" width="8" height="8"/>
+  <rect class="highlight" x="408" y="148" width="8" height="8"/>
+
+  <!-- Date numbers as pixel blocks - row 1 -->
+  <rect class="text" x="72" y="170" width="12" height="16"/>
+  <rect class="text" x="128" y="170" width="12" height="16"/>
+  <rect class="text" x="184" y="170" width="12" height="16"/>
+  <rect class="text" x="240" y="170" width="12" height="16"/>
+  <rect class="text" x="296" y="170" width="12" height="16"/>
+  <rect class="text" x="352" y="170" width="12" height="16"/>
+  <rect class="text" x="408" y="170" width="12" height="16"/>
+
+  <!-- Date numbers - row 2 -->
+  <rect class="text" x="72" y="212" width="12" height="16"/>
+  <rect class="text" x="128" y="212" width="12" height="16"/>
+  <rect class="text" x="184" y="212" width="12" height="16"/>
+
+  <!-- Highlighted date (today) with red background -->
+  <rect class="accent" x="228" y="204" width="36" height="36"/>
+  <rect class="text" x="238" y="214" width="16" height="16"/>
+
+  <rect class="text" x="296" y="212" width="12" height="16"/>
+  <rect class="text" x="352" y="212" width="12" height="16"/>
+  <rect class="highlight" x="408" y="212" width="12" height="16"/>
+
+  <!-- Date numbers - row 3 -->
+  <rect class="text" x="72" y="276" width="12" height="16"/>
+  <rect class="text" x="128" y="276" width="12" height="16"/>
+  <rect class="text" x="184" y="276" width="12" height="16"/>
+  <rect class="text" x="240" y="276" width="12" height="16"/>
+  <rect class="text" x="296" y="276" width="12" height="16"/>
+  <rect class="text" x="352" y="276" width="12" height="16"/>
+  <rect class="text" x="408" y="276" width="12" height="16"/>
+
+  <!-- Date numbers - row 4 -->
+  <rect class="text" x="72" y="340" width="12" height="16"/>
+  <rect class="text" x="128" y="340" width="12" height="16"/>
+  <rect class="text" x="184" y="340" width="12" height="16"/>
+  <rect class="text" x="240" y="340" width="12" height="16"/>
+  <rect class="text" x="296" y="340" width="12" height="16"/>
+  <rect class="text" x="352" y="340" width="12" height="16"/>
+  <rect class="text" x="408" y="340" width="12" height="16"/>
+
+  <!-- Date numbers - row 5 (last row partially filled) -->
+  <rect class="text" x="72" y="404" width="12" height="16"/>
+  <rect class="text" x="128" y="404" width="12" height="16"/>
+  <rect class="text" x="184" y="404" width="12" height="16"/>
+  <rect class="text" x="240" y="404" width="12" height="16"/>
+  <rect class="text" x="296" y="404" width="12" height="16"/>
+  <rect class="text" x="352" y="404" width="12" height="16"/>
+  <rect class="bg" x="400" y="404" width="24" height="24"/>
+
+  <!-- Event dots on some dates -->
+  <rect class="light" x="76" y="190" width="8" height="8"/>
+  <rect class="light" x="244" y="256" width="8" height="8"/>
+  <rect class="highlight" x="356" y="190" width="8" height="8"/>
+  <rect class="light" x="300" y="320" width="8" height="8"/>
+  <rect class="highlight" x="188" y="384" width="8" height="8"/>
+</svg>
