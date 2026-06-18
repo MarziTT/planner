@@ -1,6 +1,0 @@
-{
-  "version": "1.0.1",
-  "build": 2,
-  "apkUrl": "https://raw.githubusercontent.com/MarziTT/planner/main/pixel_planner.apk",
-  "release_notes": "v1.0.1：硬编码远程更新URL，移除设置入口，打开即用"
-}

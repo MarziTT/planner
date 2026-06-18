@@ -732,7 +732,6 @@ body { font-family: var(--ff); }
     <button class="set-btn" onclick="doExport()">&#x1F4E4; 导出数据</button>
     <button class="set-btn" onclick="document.getElementById('impF').click()">&#x1F4E5; 导入数据</button>
     <input type="file" id="impF" accept=".json" style="display:none" onchange="doImport(event)">
-    <button class="set-btn" onclick="doChkUpdate()">&#x1F504; 检查更新</button>
     <button class="set-btn dng" onclick="doClearAll()">&#x1F5D1; 清除所有数据</button>
   </div>
 </div>
@@ -2728,179 +2727,6 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ==================== Service Worker 注册 ====================
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
-    navigator.serviceWorker.register('sw.js', { scope: '/' }).then(function(reg) {
-      console.log('SW registered: ', reg.scope);
-
-      // 监听 SW 更新
-      reg.addEventListener('updatefound', function() {
-        var newWorker = reg.installing;
-        if (!newWorker) return;
-        newWorker.addEventListener('statechange', function() {
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // 新 SW 已就绪，等待用户激活
-            showSWUpdatePrompt();
-          }
-        });
-      });
-    }).catch(function(err) {
-      console.warn('SW registration failed: ', err);
-    });
-
-    // 监听 controller 变更（skipWaiting 后触发）
-    var refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function() {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
-  });
-}
-
-// ==================== 通知系统 ====================
-var notificationGranted = false;
-var notificationDenied = false;
-var notifiedToday = {};       // 去重集合: { 'HH:MM_content': true }
-var lastCheckDate = '';       // 用于跨天重置
-
-// 请求通知权限（延迟2秒 + 用户首次交互都触发，但只请求一次）
-var permRequested = false;
-function requestNotificationPermission() {
-  if (!('Notification' in window)) return;
-  if (permRequested) return;
-  if (Notification.permission === 'granted') {
-    notificationGranted = true;
-    notificationDenied = false;
-    updatePermHint();
-    return;
-  }
-  if (Notification.permission === 'denied') {
-    notificationDenied = true;
-    updatePermHint();
-    return;
-  }
-  // default 状态
-  permRequested = true;
-  Notification.requestPermission().then(function(perm) {
-    if (perm === 'granted') {
-      notificationGranted = true;
-      notificationDenied = false;
-    } else if (perm === 'denied') {
-      notificationDenied = true;
-    }
-    updatePermHint();
-  });
-}
-
-// 更新权限提示条显示
-function updatePermHint() {
-  var hint = document.getElementById('notifyPermHint');
-  if (notificationDenied) {
-    hint.classList.add('visible');
-  } else {
-    hint.classList.remove('visible');
-  }
-}
-
-// 发送浏览器通知
-function sendNotification(title, body) {
-  if (!notificationGranted) return;
-  try {
-    new Notification(title, {
-      body: body,
-      icon: 'icon.svg',
-      tag: 'pixel-planner',
-      requireInteraction: false
-    });
-  } catch(e) {
-    // 静默处理
-  }
-}
-
-// 跨天重置
-function resetDailyNotifyState() {
-  var dk = dateKey(new Date());
-  if (lastCheckDate !== dk) {
-    lastCheckDate = dk;
-    notifiedToday = {};
-    morningRemindedToday = false;
-  }
-}
-
-// 每分钟检查行程提醒
-function checkEventReminders() {
-  resetDailyNotifyState();
-  if (!notificationGranted) return;
-
-  var now = new Date();
-  var currentHour = now.getHours();
-  var currentMinute = now.getMinutes();
-  var todayEvts = events[todayKey] || [];
-
-  for (var i = 0; i < todayEvts.length; i++) {
-    var e = todayEvts[i];
-    var t = e.time;
-    // 跳过无具体时间的项目（如健身模板的 '—'）
-    if (!t || t === '—' || t === '--:--') continue;
-
-    var parts = t.split(':');
-    if (parts.length !== 2) continue;
-    var eventHour = parseInt(parts[0], 10);
-    var eventMinute = parseInt(parts[1], 10);
-    if (isNaN(eventHour) || isNaN(eventMinute)) continue;
-
-    // 匹配当前分钟
-    if (eventHour === currentHour && eventMinute === currentMinute) {
-      var dedupKey = t + '_' + e.content;
-      if (notifiedToday[dedupKey]) continue;
-      notifiedToday[dedupKey] = true;
-
-      var title = '⏰ 行程提醒 - Pixel Planner';
-      body = t + ' - ' + e.content;
-      sendNotification(title, body);
-    }
-  }
-
-
-}
-
-// 初始化通知：初始检查权限状态
-function initNotifications() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') {
-    notificationGranted = true;
-    permRequested = true;
-  } else if (Notification.permission === 'denied') {
-    notificationDenied = true;
-  }
-  updatePermHint();
-
-  // 延迟2秒后请求（如果还是 default 状态）
-  setTimeout(function() {
-    if (Notification.permission === 'default' && !permRequested) {
-      requestNotificationPermission();
-    }
-  }, 2000);
-
-  // 用户首次交互后请求
-  var interacted = false;
-  function onInteract() {
-    if (interacted) return;
-    interacted = true;
-    if (Notification.permission === 'default' && !permRequested) {
-      requestNotificationPermission();
-    }
-  }
-  document.addEventListener('click', onInteract, { once: true });
-  document.addEventListener('keydown', onInteract, { once: true });
-  document.addEventListener('touchstart', onInteract, { once: true });
-}
-
-// 启动定时检查（每60秒）
-// 初始化和定时检查已由 initApp() 统一管理
-
 
 // ==================== 暗色模式 ====================
 var THEME_MODE_KEY = 'pixel_theme_mode';
@@ -2957,115 +2783,6 @@ function toggleThemeMode() {
     }
   });
 })();
-
-
-
-// ==================== 热更新模块 ====================
-var UPDATE_URL = 'https://raw.githubusercontent.com/MarziTT/planner/main/version.json';
-
-function getLocalVersion() {
-  return { version: '1.0.0', build: 1 };
-}
-// ==================== 更新机制 ====================
-function showUpdateDialog(remote) {
-  // 移除旧弹窗（如果有）
-  var old = document.getElementById('updateDialogOverlay');
-  if (old) old.remove();
-
-  var notes = remote.release_notes || '';
-  var notesHtml = notes ? '<div style="font-size:12px;color:#6b7280;margin:12px 0;text-align:left;line-height:1.6;white-space:pre-wrap;">' + notes.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : '';
-
-  var overlay = document.createElement('div');
-  overlay.id = 'updateDialogOverlay';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:center;z-index:250;animation:fadeIn 0.2s ease;';
-
-  var card = document.createElement('div');
-  card.style.cssText = 'background:#fff;border-radius:20px;padding:28px 24px 20px;width:340px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);animation:modalIn 0.3s ease forwards;text-align:center;font-family:var(--font-stack);';
-
-  card.innerHTML =
-    '<div style="font-size:18px;font-weight:800;color:#1f2937;margin-bottom:8px;">发现新版本 v' + remote.version + '</div>' +
-    notesHtml +
-    '<div style="display:flex;gap:10px;margin-top:16px;">' +
-      '<button id="updateDeferBtn" style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fff;color:#6b7280;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font-stack);">先等等</button>' +
-      '<button id="updateGoBtn" style="flex:1;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font-stack);box-shadow:0 4px 16px rgba(59,130,246,0.35);">更新</button>' +
-    '</div>';
-
-  overlay.appendChild(card);
-  document.body.appendChild(overlay);
-
-  document.getElementById('updateGoBtn').onclick = function() {
-    overlay.remove();
-    doUpdate(UPDATE_URL);
-  };
-  document.getElementById('updateDeferBtn').onclick = function() {
-    overlay.remove();
-    localStorage.setItem('pixel_update_deferred', new Date().toISOString());
-  };
-  // 点击遮罩关闭 = 先等等
-  overlay.onclick = function(e) {
-    if (e.target === overlay) {
-      overlay.remove();
-      localStorage.setItem('pixel_update_deferred', new Date().toISOString());
-    }
-  };
-}
-
-function checkUpdate(manual) {
-  fetch(UPDATE_URL + '?t=' + Date.now())
-    .then(function(res) {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then(function(remote) {
-      var local = getLocalVersion();
-      if (remote.build > local.build) {
-        showUpdateDialog(remote);
-      } else if (manual) {
-        alert('已是最新版本 v' + local.version);
-      }
-    })
-    .catch(function(err) {
-      if (manual) alert('检查更新失败: ' + err.message);
-    });
-}
-
-// 执行更新
-function doUpdate(remoteUrl) {
-  var baseUrl = remoteUrl.replace(/\/version\.json$/, '');
-  var htmlUrl = baseUrl + '/pixel_calendar.html';
-
-  fetch(htmlUrl + '?t=' + Date.now())
-    .then(function(res) {
-      if (!res.ok) throw new Error('下载失败 HTTP ' + res.status);
-      return res.text();
-    })
-    .then(function(html) {
-      document.open();
-      document.write(html);
-      document.close();
-    })
-    .catch(function(err) {
-      alert('更新失败: ' + err.message + '\n请检查网络连接或更新URL配置');
-    });
-}
-
-// 页面加载后自动检查更新（3天延迟策略）
-(function initAutoCheck() {
-  var deferred = localStorage.getItem('pixel_update_deferred');
-  if (deferred) {
-    var deferredTime = new Date(deferred).getTime();
-    var now = Date.now();
-    var threeDays = 3 * 24 * 60 * 60 * 1000;
-    if (now - deferredTime < threeDays) {
-      // 不到3天，跳过检查
-      return;
-    }
-    // 超过3天，清除标记继续检查
-    localStorage.removeItem('pixel_update_deferred');
-  }
-  setTimeout(function() { checkUpdate(false); }, 3000);
-})();
-
 // ==================== 数据导出/导入 ====================
 var LAST_EXPORT_KEY = 'last_export_date';
 
@@ -4280,10 +3997,6 @@ function initApp() {
   updateBackupDot();
   fetchWeather();
   initCarousel();
-  initNotifications();
-  resetDailyNotifyState();
-  setInterval(checkEventReminders, 60000);
-  setTimeout(checkEventReminders, 1000);
   updateLiveClock();
   setInterval(updateLiveClock, 1000);
 }
@@ -5831,12 +5544,6 @@ function doImport(ev) {
   };
   r.readAsText(f);
   ev.target.value = '';
-}
-function doChkUpdate() {
-  // Use original showUpdateDialog if available
-  if (typeof showUpdateDialog === 'function') { showUpdateDialog(); }
-  else { alert('更新检查: 当前版本 v3.0'); }
-  closeSettings();
 }
 function doClearAll() {
   if (confirm('此操作不可撤销！确认清除所有数据？')) {
