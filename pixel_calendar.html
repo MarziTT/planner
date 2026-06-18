@@ -434,11 +434,7 @@ body {
 
 /* Theme Switcher */
 
-.update-bar { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; font-size: 11px; color: var(--text-secondary); cursor: default; min-height: 20px; transition: color 0.2s; font-weight: 500; }
-.update-bar.has-update { color: var(--accent); cursor: pointer; }
-.update-bar.has-update:hover { color: var(--text-primary); }
-.update-bar.checking { color: var(--gold); animation: blink-text 1s infinite; }
-@keyframes blink-text { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
 
 .today-btn { display: block; width: 100%; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-primary); background: var(--bg-container); color: var(--accent); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; margin-top: 12px; transition: all 0.15s ease; font-family: var(--font-stack); }
 .today-btn:hover { background: var(--today-bg); border-color: var(--accent); }
@@ -535,7 +531,7 @@ body {
 .day-timeline .event-item::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--tag-bar-color, transparent); }
 
 /* Voice mic button */
-.mic-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border-primary); background: var(--bg-cell); color: var(--text-secondary); font-size: 16px; cursor: pointer; transition: all 0.2s; font-family: var(--font-stack); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mic-btn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid var(--border-primary); background: var(--bg-cell); color: var(--text-secondary); font-size: 16px; cursor: pointer; transition: all 0.2s; font-family: var(--font-stack); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin: 8px auto 0; }
 .mic-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--today-bg); }
 .mic-btn.recording { background: var(--accent); color: #fff; border-color: var(--accent); animation: pulse-mic 1.2s infinite; }
 .mic-btn.disabled { opacity: 0.4; cursor: not-allowed; color: var(--text-secondary); border-color: var(--border-primary); }
@@ -543,7 +539,7 @@ body {
 @keyframes pulse-mic { 0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); } 50% { box-shadow: 0 0 0 12px rgba(59,130,246,0); } }
 
 /* Voice wave */
-.voice-wave-container { display: none; justify-content: center; align-items: flex-end; gap: 3px; height: 32px; margin-bottom: 10px; }
+.voice-wave-container { display: none; justify-content: center; align-items: flex-end; gap: 3px; height: 32px; margin: 14px 0 10px; }
 .voice-wave-container.active { display: flex; }
 .voice-wave-bar { width: 4px; border-radius: 2px; background: var(--accent); animation: waveJump 0.4s ease infinite alternate; }
 .voice-wave-bar:nth-child(1) { height: 10px; animation-delay: 0s; }
@@ -711,26 +707,7 @@ body {
 .modal-title { display: none; }
 .modal-close { display: none; }
 
-.settings-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 200; }
-.settings-overlay.open { display: flex; animation: fadeIn 0.2s ease; }
-.settings-panel { background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 24px; width: 360px; max-width: 90vw; }
-.settings-panel h3 { font-size: 16px; font-weight: 700; margin-bottom: 0; color: var(--text-primary); }
-.settings-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.settings-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f3f4f6; color: #6b7280; font-size: 18px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; font-family: var(--font-stack); padding: 0; min-width: 44px; min-height: 44px; margin: -6px -6px -6px 0; }
-.settings-close:hover { background: #d1d5db; color: #1f2937; }
-@media (hover: none) { .settings-close { background: #e5e7eb; } }
-.settings-row { margin-bottom: 12px; }
-.settings-row label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500; }
-.settings-row input { width: 100%; padding: 8px 12px; border: 1px solid var(--border-primary); border-radius: var(--radius-sm); font-size: 13px; outline: none; font-family: var(--font-stack); }
-.settings-row input:focus { border-color: var(--accent); }
-.settings-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
-.settings-actions { display: flex; gap: 8px; }
-.settings-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border-primary); font-size: 13px; font-weight: 600; cursor: pointer; background: #fff; color: var(--text-primary); transition: all 0.15s; font-family: var(--font-stack); }
-.settings-btn:hover { background: var(--bg-cell-hover); }
-.settings-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-.settings-btn.primary:hover { background: var(--accent-dark); }
-.settings-gear { position: fixed; bottom: 24px; right: 24px; width: 42px; height: 42px; border-radius: 50%; background: #fff; box-shadow: var(--shadow-md); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; font-size: 20px; color: var(--text-secondary); transition: all 0.2s; }
-.settings-gear:hover { transform: rotate(90deg); color: var(--accent); }
+
 
 .corner-carousel { position: fixed; bottom: 80px; right: 30px; z-index: 0; width: 24px; height: 24px; pointer-events: none; border-radius: 6px; overflow: hidden; box-shadow: var(--shadow-sm); background: transparent; opacity: 0.5; }
 .corner-carousel img { width: 24px; height: 24px; object-fit: cover; animation: carousel-fade 5s ease infinite; position: absolute; top: 0; left: 0; border-radius: 6px; }
@@ -875,7 +852,6 @@ body.is-dragging .today-btn,
 body.is-dragging .view-tab,
 body.is-dragging .weather-bar,
 body.is-dragging .month-nav,
-body.is-dragging .settings-gear,
 body.is-dragging .theme-mode-btn,
 body.is-dragging .streak-bar,
 body.is-dragging .stats-bar,
@@ -1091,7 +1067,6 @@ body.is-dragging {
 [data-theme-mode="dark"] .nav-btn:hover { background: #475569; }
 [data-theme-mode="dark"] .today-btn { background: #334155; color: #93c5fd; border-color: #475569; }
 [data-theme-mode="dark"] .today-btn:hover { background: #1e3a5f; }
-[data-theme-mode="dark"] .settings-gear { background: #1e293b; color: #94a3b8; }
 [data-theme-mode="dark"] .corner-carousel { opacity: 0.45; }
 [data-theme-mode="dark"] .day-nav-btn { background: #334155; color: #e2e8f0; }
 [data-theme-mode="dark"] .week-card { background: #1e293b; border-color: #475569; }
@@ -1149,8 +1124,7 @@ body.is-dragging {
 }
 
 /* Settings divider for export/import section */
-.settings-divider { border: none; border-top: 1px solid var(--border-primary); margin: 16px 0 12px; }
-.settings-section-title { font-size: 12px; color: var(--text-secondary); font-weight: 600; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
 
 /* ========== Weather Detail Popup ========== */
 .weather-detail-overlay {
@@ -2528,37 +2502,9 @@ body.is-dragging {
     通知权限未开启，点击开启
   </div>
 
-  <div class="divider-dashed"></div>
-  <div class="update-bar" id="updateBar">v2.1.0 · 已是最新</div>
 
-  <button class="today-btn" onclick="goToday()">回到今天</button>
 </div>
 
-<div class="settings-overlay" id="settingsOverlay" onclick="closeSettings(event)">
-  <div class="settings-panel" onclick="event.stopPropagation()">
-    <div class="settings-title-row">
-      <h3>设置</h3>
-      <button class="settings-close" onclick="closeSettingsDirect()" title="关闭" aria-label="关闭">&#x2715;</button>
-    </div>
-    <div class="settings-info">
-      <span>当前版本</span>
-      <span id="settingsVersion">v1.0.0 (build 1)</span>
-    </div>
-    <div class="settings-actions">
-      <button class="settings-btn" onclick="checkUpdate(true)">检查更新</button>
-      <button class="settings-btn primary" onclick="saveSettings()">保存设置</button>
-    </div>
-    <hr class="settings-divider">
-    <div class="settings-section-title">数据备份</div>
-    <div class="settings-actions">
-      <button class="settings-btn" onclick="exportData()">导出数据</button>
-      <button class="settings-btn" onclick="importData()">导入数据</button>
-    </div>
-    <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleImportFile(event)">
-  </div>
-</div>
-
-<div class="settings-gear" id="settingsGear" onclick="toggleSettings()" title="设置">&#9881;<span class="backup-dot" id="backupDot"></span></div>
 <div class="corner-carousel" id="cornerCarousel"></div>
 
 <div class="pixel-guy" id="pixelGuy">
@@ -2583,14 +2529,6 @@ body.is-dragging {
 
     <!-- Scrollable body -->
     <div class="modal-body">
-      <!-- Voice wave + result -->
-      <div class="voice-wave-container" id="voiceWave">
-        <div class="voice-wave-bar"></div><div class="voice-wave-bar"></div><div class="voice-wave-bar"></div>
-        <div class="voice-wave-bar"></div><div class="voice-wave-bar"></div><div class="voice-wave-bar"></div>
-        <div class="voice-wave-bar"></div>
-      </div>
-      <div class="voice-result" id="voiceResult"></div>
-
       <!-- Schedule tab content -->
       <div class="modal-tab-content active" id="tabSchedule">
         <ul class="event-list" id="eventList"></ul>
@@ -2618,7 +2556,6 @@ body.is-dragging {
               <span class="tag-option" data-tag="娱乐" style="--tag-color:#f59e0b">娱乐</span>
               <span class="tag-option active" data-tag="生活" style="--tag-color:#6b7280">生活</span>
             </div>
-            <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="语音输入">🎤</button>
           </div>
           <div class="add-form-repeat-row">
             <select class="repeat-select" id="eventRepeat">
@@ -2631,6 +2568,14 @@ body.is-dragging {
           </div>
           <button class="add-btn" onclick="addEvent()">添加行程</button>
         </div>
+        <!-- Voice input below add-form -->
+        <div class="voice-wave-container" id="voiceWave">
+          <div class="voice-wave-bar"></div><div class="voice-wave-bar"></div><div class="voice-wave-bar"></div>
+          <div class="voice-wave-bar"></div><div class="voice-wave-bar"></div><div class="voice-wave-bar"></div>
+          <div class="voice-wave-bar"></div>
+        </div>
+        <div class="voice-result" id="voiceResult"></div>
+        <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="语音输入">🎤</button>
         <!-- Fitness templates always visible below -->
         <hr class="modal-divider" style="margin-top:16px;">
         <div class="fitness-subtitle">选择训练模板，一键填充到当日行程</div>
@@ -4745,53 +4690,51 @@ var UPDATE_URL = 'https://raw.githubusercontent.com/MarziTT/planner/main/version
 function getLocalVersion() {
   return { version: '1.0.0', build: 1 };
 }
+// ==================== 更新机制 ====================
+function showUpdateDialog(remote) {
+  // 移除旧弹窗（如果有）
+  var old = document.getElementById('updateDialogOverlay');
+  if (old) old.remove();
 
-function updateVersionDisplay() {
-  var v = getLocalVersion();
-  var el = document.getElementById('settingsVersion');
-  if (el) el.textContent = 'v' + v.version + ' (build ' + v.build + ')';
-}
+  var notes = remote.release_notes || '';
+  var notesHtml = notes ? '<div style="font-size:12px;color:#6b7280;margin:12px 0;text-align:left;line-height:1.6;white-space:pre-wrap;">' + notes.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>' : '';
 
-// 更新状态条
-function setUpdateBar(state) {
-  var bar = document.getElementById('updateBar');
-  if (!bar) return;
-  bar.className = 'update-bar';
-  if (state === 'checking') {
-    bar.className = 'update-bar checking';
-    bar.textContent = '检查更新中...';
-    bar.onclick = null;
-  } else if (state === 'latest') {
-    var v = getLocalVersion();
-    bar.textContent = 'v' + v.version + ' · 已是最新';
-    bar.onclick = null;
-  } else if (state && state.newVersion) {
-    bar.className = 'update-bar has-update';
-    bar.textContent = '发现新版本 v' + state.newVersion + '！点击更新';
-    bar.onclick = function() { doUpdate(state.remoteUrl); };
-  }
-}
+  var overlay = document.createElement('div');
+  overlay.id = 'updateDialogOverlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:center;z-index:250;animation:fadeIn 0.2s ease;';
 
-// SW 更新提示
-function showSWUpdatePrompt() {
-  var bar = document.getElementById('updateBar');
-  if (!bar) return;
-  bar.className = 'update-bar has-update';
-  bar.textContent = '[ 新版本已就绪！点击刷新 ]';
-  bar.onclick = function() {
-    // 通知 SW 跳过等待
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-    } else {
-      window.location.reload();
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border-radius:20px;padding:28px 24px 20px;width:340px;max-width:90vw;box-shadow:0 10px 40px rgba(0,0,0,0.2);animation:modalIn 0.3s ease forwards;text-align:center;font-family:var(--font-stack);';
+
+  card.innerHTML =
+    '<div style="font-size:18px;font-weight:800;color:#1f2937;margin-bottom:8px;">发现新版本 v' + remote.version + '</div>' +
+    notesHtml +
+    '<div style="display:flex;gap:10px;margin-top:16px;">' +
+      '<button id="updateDeferBtn" style="flex:1;padding:12px;border:1.5px solid #e5e7eb;border-radius:12px;background:#fff;color:#6b7280;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font-stack);">先等等</button>' +
+      '<button id="updateGoBtn" style="flex:1;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--font-stack);box-shadow:0 4px 16px rgba(59,130,246,0.35);">更新</button>' +
+    '</div>';
+
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  document.getElementById('updateGoBtn').onclick = function() {
+    overlay.remove();
+    doUpdate(UPDATE_URL);
+  };
+  document.getElementById('updateDeferBtn').onclick = function() {
+    overlay.remove();
+    localStorage.setItem('pixel_update_deferred', new Date().toISOString());
+  };
+  // 点击遮罩关闭 = 先等等
+  overlay.onclick = function(e) {
+    if (e.target === overlay) {
+      overlay.remove();
+      localStorage.setItem('pixel_update_deferred', new Date().toISOString());
     }
   };
 }
 
-// 检查更新
 function checkUpdate(manual) {
-  setUpdateBar('checking');
-
   fetch(UPDATE_URL + '?t=' + Date.now())
     .then(function(res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -4800,30 +4743,20 @@ function checkUpdate(manual) {
     .then(function(remote) {
       var local = getLocalVersion();
       if (remote.build > local.build) {
-        setUpdateBar({ newVersion: remote.version, remoteUrl: UPDATE_URL });
-        if (manual) {
-          if (confirm('发现新版本 v' + remote.version + '（build ' + remote.build + '）\n\n' + (remote.release_notes || '') + '\n\n是否立即更新？')) {
-            doUpdate(UPDATE_URL);
-          }
-        }
-      } else {
-        setUpdateBar('latest');
-        if (manual) alert('已是最新版本 v' + local.version);
+        showUpdateDialog(remote);
+      } else if (manual) {
+        alert('已是最新版本 v' + local.version);
       }
     })
     .catch(function(err) {
-      setUpdateBar('latest');
       if (manual) alert('检查更新失败: ' + err.message);
     });
 }
 
 // 执行更新
 function doUpdate(remoteUrl) {
-  // 从 remoteUrl 推断 HTML 文件路径
   var baseUrl = remoteUrl.replace(/\/version\.json$/, '');
   var htmlUrl = baseUrl + '/pixel_calendar.html';
-
-  setUpdateBar('checking');
 
   fetch(htmlUrl + '?t=' + Date.now())
     .then(function(res) {
@@ -4831,47 +4764,29 @@ function doUpdate(remoteUrl) {
       return res.text();
     })
     .then(function(html) {
-      // 直接用新 HTML 替换当前页面
       document.open();
       document.write(html);
       document.close();
     })
     .catch(function(err) {
-      setUpdateBar('latest');
       alert('更新失败: ' + err.message + '\n请检查网络连接或更新URL配置');
     });
 }
 
-// 保存设置
-function saveSettings() {
-  closeSettingsDirect();
-  checkUpdate(false);
-  alert('设置已保存');
-}
-
-// 设置面板开关
-function toggleSettings() {
-  var overlay = document.getElementById('settingsOverlay');
-  if (overlay.classList.contains('open')) {
-    closeSettingsDirect();
-  } else {
-    updateVersionDisplay();
-    overlay.classList.add('open');
-  }
-}
-
-function closeSettings(e) {
-  if (e && e.target !== document.getElementById('settingsOverlay')) return;
-  closeSettingsDirect();
-}
-
-function closeSettingsDirect() {
-  document.getElementById('settingsOverlay').classList.remove('open');
-}
-
-// 页面加载后自动检查更新
+// 页面加载后自动检查更新（3天延迟策略）
 (function initAutoCheck() {
-  updateVersionDisplay();
+  var deferred = localStorage.getItem('pixel_update_deferred');
+  if (deferred) {
+    var deferredTime = new Date(deferred).getTime();
+    var now = Date.now();
+    var threeDays = 3 * 24 * 60 * 60 * 1000;
+    if (now - deferredTime < threeDays) {
+      // 不到3天，跳过检查
+      return;
+    }
+    // 超过3天，清除标记继续检查
+    localStorage.removeItem('pixel_update_deferred');
+  }
   setTimeout(function() { checkUpdate(false); }, 3000);
 })();
 
@@ -4918,7 +4833,6 @@ function exportData() {
   // 记录导出时间并隐藏红点
   localStorage.setItem(LAST_EXPORT_KEY, ds);
   updateBackupDot();
-  closeSettingsDirect();
 }
 
 function importData() {
@@ -5022,18 +4936,6 @@ function updateBackupDot() {
   dot.style.display = shouldShow ? 'block' : 'none';
 }
 
-// 修改 toggleSettings：打开时隐藏红点
-var _origToggleSettings = toggleSettings;
-toggleSettings = function() {
-  var overlay = document.getElementById('settingsOverlay');
-  if (overlay.classList.contains('open')) {
-    closeSettingsDirect();
-  } else {
-    document.getElementById('backupDot').style.display = 'none';
-    _origToggleSettings();
-  }
-};
-
 // ==================== 语音输入 ====================
 var SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
 var recognition = null;
@@ -5086,7 +4988,14 @@ function initVoice() {
 
 // 切换语音
 function toggleVoice() {
-  if (voiceUnavailable || !SpeechRecognitionAPI) return;
+  if (voiceUnavailable) {
+    showVoiceError('当前浏览器不支持语音识别，请使用 Chrome 或 Edge 桌面版');
+    return;
+  }
+  if (!SpeechRecognitionAPI) {
+    showVoiceError('当前浏览器不支持语音识别，请使用 Chrome 或 Edge 桌面版');
+    return;
+  }
   if (isRecording) {
     stopRecording();
   } else {
@@ -5127,11 +5036,21 @@ function startRecording() {
           stopRecording();
           return;
         }
-        // 无声继续等，递增间隔避免高频触发
         voiceSilenceTimer = setTimeout(function() { stopRecording(); }, 3000);
         return;
       }
-      showVoiceError('识别出错: ' + event.error);
+      // 映射常见错误码到中文
+      var errMap = {
+        'not-allowed': '语音功能需要 HTTPS 或在 localhost 下使用，或者您拒绝了麦克风权限',
+        'network': '网络连接异常，语音识别服务暂不可用',
+        'service-not-allowed': '语音识别服务不可用，请检查网络或稍后重试',
+        'aborted': '语音识别已中止',
+        'audio-capture': '未检测到麦克风设备，请检查麦克风连接',
+        'bad-grammar': '语音识别语法错误',
+        'language-not-supported': '当前语言不支持，请使用中文'
+      };
+      var msg = errMap[event.error] || ('识别出错: ' + event.error);
+      showVoiceError(msg);
       stopRecording();
     };
 
@@ -5159,7 +5078,15 @@ function startRecording() {
     showWave();
     sessionStorage.setItem('voice_used', '1');
   } catch(e) {
-    showVoiceError('语音启动失败: ' + e.message);
+    // 根据异常消息分类提示
+    var msg = e.message || '';
+    if (msg.indexOf('not-allowed') !== -1 || e.name === 'NotAllowedError') {
+      showVoiceError('语音功能需要 HTTPS 或在 localhost 下使用，或者您拒绝了麦克风权限');
+    } else if (msg.indexOf('network') !== -1) {
+      showVoiceError('网络连接异常，语音识别服务暂不可用');
+    } else {
+      showVoiceError('语音启动失败: ' + msg);
+    }
   }
 }
 
