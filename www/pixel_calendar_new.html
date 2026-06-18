@@ -748,12 +748,110 @@ body { font-family: var(--ff); }
 
 <script>
 
+
+// ====== SQLite API Client Layer (v3.2) ======
+const API_BASE = 'http://localhost:5000';
+var _pixel_user_id = null;
+
+function apiSetUser(uid) { _pixel_user_id = uid; sessionStorage.setItem('pixel_uid', uid); }
+function apiGetUser() {
+  if (!_pixel_user_id) { _pixel_user_id = parseInt(sessionStorage.getItem('pixel_uid')) || null; }
+  return _pixel_user_id;
+}
+function apiClearUser() { _pixel_user_id = null; sessionStorage.removeItem('pixel_uid'); }
+
+async function apiCall(method, path, body) {
+  try {
+    var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    var resp = await fetch(API_BASE + path, opts);
+    var data = await resp.json();
+    return data;
+  } catch(err) {
+    console.error('[API Error]', method, path, err);
+    return { ok: false, error: '网络错误：无法连接到服务器' };
+  }
+}
+
+async function apiGetEvents(date) {
+  var uid = apiGetUser(); if (!uid) return [];
+  var path = '/api/events?user_id=' + uid + (date ? '&date=' + date : '');
+  var r = await apiCall('GET', path);
+  return (r.ok && r.events) ? r.events : [];
+}
+
+async function apiSaveEvent(ev) {
+  var uid = apiGetUser(); if (!uid) return null;
+  if (ev.id) {
+    var r = await apiCall('PUT', '/api/events/' + ev.id + '?user_id=' + uid, ev);
+    return (r.ok && r.event) ? r.event : null;
+  } else {
+    ev.user_id = uid;
+    var r = await apiCall('POST', '/api/events?user_id=' + uid, ev);
+    return (r.ok && r.event) ? r.event : null;
+  }
+}
+
+async function apiDeleteEvent(eventId) {
+  var uid = apiGetUser(); if (!uid) return false;
+  var r = await apiCall('DELETE', '/api/events/' + eventId + '?user_id=' + uid);
+  return r.ok;
+}
+
+async function apiGetTags() {
+  var uid = apiGetUser(); if (!uid) return [];
+  var r = await apiCall('GET', '/api/tags?user_id=' + uid);
+  return (r.ok && r.tags) ? r.tags : [];
+}
+
+async function apiSaveTag(tag) {
+  var uid = apiGetUser(); if (!uid) return null;
+  if (tag.id) {
+    var r = await apiCall('PUT', '/api/tags/' + tag.id + '?user_id=' + uid, tag);
+    return (r.ok && r.tag) ? r.tag : null;
+  } else {
+    var r = await apiCall('POST', '/api/tags?user_id=' + uid, tag);
+    return (r.ok && r.tag) ? r.tag : null;
+  }
+}
+
+async function apiDeleteTag(tagId) {
+  var uid = apiGetUser(); if (!uid) return false;
+  var r = await apiCall('DELETE', '/api/tags/' + tagId + '?user_id=' + uid);
+  return r.ok;
+}
+
+async function apiGetProfile() {
+  var uid = apiGetUser(); if (!uid) return null;
+  var r = await apiCall('GET', '/api/profile?user_id=' + uid);
+  return (r.ok && r.profile) ? r.profile : null;
+}
+
+async function apiSaveProfile(profile) {
+  var uid = apiGetUser(); if (!uid) return false;
+  var r = await apiCall('PUT', '/api/profile?user_id=' + uid, profile);
+  return r.ok;
+}
+
+async function apiGetSettings() {
+  var uid = apiGetUser(); if (!uid) return { theme: 'dark' };
+  var r = await apiCall('GET', '/api/settings?user_id=' + uid);
+  return (r.ok && r.settings) ? r.settings : { theme: 'dark' };
+}
+
+async function apiSaveSettings(settings) {
+  var uid = apiGetUser(); if (!uid) return false;
+  var r = await apiCall('PUT', '/api/settings?user_id=' + uid, settings);
+  return r.ok;
+}
+// ============================================
 // ==================== 数据存储 ====================
 const STORAGE_KEY = 'pixel_planner_events';
 let events = {};
 
 try {
-  events = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  // [v3.2 SQLite] events loaded via async API
+      events = {};
 } catch(e) {
   events = {};
 }
@@ -1013,7 +1111,7 @@ function dateKey(d) {
 }
 
 function saveEvents() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+  // [v3.2 SQLite] events saved via API
 }
 
 // 计算连续报备天数（任何有行程的天数都算）
@@ -2827,6 +2925,7 @@ function toggleThemeMode() {
   var current = getThemeMode();
   var next = current === 'dark' ? 'light' : 'dark';
   localStorage.setItem(THEME_MODE_KEY, next);
+  apiSaveSettings({ theme: next }).catch(function(){});
   applyThemeMode(next);
   updateStreakBar();
 }
@@ -3016,7 +3115,8 @@ function handleImportFile(event) {
         var importedEvents = data.pixel_planner_events;
         // 合并策略：导入的覆盖同日期同时间的已有行程
         var currentEvents = {};
-        try { currentEvents = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch(ex) {}
+        // [v3.2 SQLite] events loaded via API
+      currentEvents = {};
 
         for (var dateKey in importedEvents) {
           if (!importedEvents.hasOwnProperty(dateKey)) continue;
@@ -3040,7 +3140,7 @@ function handleImportFile(event) {
             });
           }
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentEvents));
+        // [v3.2 SQLite] events saved via API
       }
 
       // 恢复其他 pixel_ 数据
@@ -5283,7 +5383,9 @@ render = function() {
 // ===== Theme System =====
 var THEME_KEY = 'pixel_theme';
 var currentTheme = 'dark';
-try { currentTheme = localStorage.getItem(THEME_KEY) || 'dark'; } catch(e) {}
+// [v3.2 SQLite] theme: localStorage for instant, server for persistence
+  try { currentTheme = localStorage.getItem(THEME_KEY) || 'dark'; } catch(e) { currentTheme = 'dark'; }
+  apiGetSettings().then(function(s) { if (s && s.theme && s.theme !== currentTheme) { currentTheme = s.theme; applyTheme(); } }).catch(function(){});
 
 function applyTheme(th) {
   document.documentElement.setAttribute('data-theme', th);
@@ -5309,6 +5411,7 @@ function applyTheme(th) {
 function setTh(th) {
   currentTheme = th;
   try { localStorage.setItem(THEME_KEY, th); } catch(e) {}
+  apiSaveSettings({ theme: th }).catch(function(){});
   applyTheme(th);
 }
 
@@ -5354,10 +5457,11 @@ var selectedDate = todayKey;
 
 var events = {};
 var DATA_KEY = 'pixel_events_data';
-try { events = JSON.parse(localStorage.getItem(DATA_KEY)) || {}; } catch(e) { events = {}; }
+// [v3.2 SQLite] events loaded via async API — see initData()
+      events = {};
 
 function saveEvents() {
-  try { localStorage.setItem(DATA_KEY, JSON.stringify(events)); } catch(e) {}
+  // [v3.2 SQLite] events saved via API — see saveEventsAsync()
 }
 
 var TAG_COLORS = { '工作':'tg-w', '学习':'tg-s', '生活':'tg-l' };
@@ -5794,17 +5898,19 @@ var AUTH_USER_KEY = 'pixel_current_user';
 var USERS_KEY = 'pixel_users';
 
 function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
+  try { // [v3.2 SQLite] users stored in database
+      console.warn("getUsers() called in SQLite mode");
+      return {}; }
   catch(e) { return {}; }
 }
 function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  // [v3.2 SQLite] users stored in database
 }
 function getCurrentUser() {
-  return localStorage.getItem(AUTH_USER_KEY) || '';
+  return sessionStorage.getItem('pixel_username') || '';
 }
 function isLoggedIn() {
-  return localStorage.getItem(AUTH_KEY) === '1' && getCurrentUser() !== '';
+  return apiGetUser() !== null && getCurrentUser() !== '';
 }
 
 var authIsRegister = false;
@@ -5819,7 +5925,7 @@ function toggleAuthMode() {
   document.getElementById('regConfirmPw').value = '';
 }
 
-function handleAuth() {
+async function handleAuth() {
   var userEl = document.getElementById('loginUser');
   var pwEl = document.getElementById('loginPw');
   var errEl = document.getElementById('loginErr');
@@ -5837,34 +5943,44 @@ function handleAuth() {
     if (pw.length < 4) {
       errEl.textContent = '密码至少4位'; errEl.classList.add('show'); return;
     }
-    var users = getUsers();
-    if (users[user]) {
-      errEl.textContent = '用户名已存在'; errEl.classList.add('show'); return;
+
+    // [v3.2 SQLite] Register via API
+    var regR = await apiCall('POST', '/api/register', { username: user, password: pw });
+    if (!regR.ok) {
+      errEl.textContent = (regR.error) || '注册失败'; errEl.classList.add('show'); return;
     }
-    users[user] = { pw: pw, createdAt: Date.now() };
-    saveUsers(users);
-    localStorage.setItem(AUTH_KEY, '1');
-    localStorage.setItem(AUTH_USER_KEY, user);
-    // Check if first time
-    if (!localStorage.getItem('pixel_profile')) {
+    apiSetUser(regR.user_id);
+    sessionStorage.setItem('pixel_username', user);
+
+    // Check if first time — always show questionnaire for new users
+    var profile = await apiGetProfile();
+    if (!profile || !profile.identity) {
       showQuestionnaire();
     } else {
       showMainApp();
     }
   } else {
-    var users = getUsers();
-    if (!users[user] || users[user].pw !== pw) {
-      errEl.textContent = '用户名或密码错误'; errEl.classList.add('show'); return;
+    // [v3.2 SQLite] Login via API
+    var loginR = await apiCall('POST', '/api/login', { username: user, password: pw });
+    if (!loginR.ok) {
+      errEl.textContent = (loginR.error) || '登录失败'; errEl.classList.add('show'); return;
     }
-    localStorage.setItem(AUTH_KEY, '1');
-    localStorage.setItem(AUTH_USER_KEY, user);
-    showMainApp();
+    apiSetUser(loginR.user_id);
+    sessionStorage.setItem('pixel_username', user);
+
+    // Check profile
+    var profile = await apiGetProfile();
+    if (!profile || !profile.identity) {
+      showQuestionnaire();
+    } else {
+      showMainApp();
+    }
   }
 }
 
 function doLogout() {
-  localStorage.setItem(AUTH_KEY, '0');
-  localStorage.removeItem(AUTH_USER_KEY);
+  apiClearUser();
+  sessionStorage.removeItem('pixel_username');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginUser').value = '';
@@ -5883,6 +5999,8 @@ function showMainApp() {
   document.getElementById('loginPw').value = '';
   document.getElementById('regConfirmPw').value = '';
   document.getElementById('loginErr').classList.remove('show');
+  // [v3.2 SQLite] Load data from server
+  if (typeof initDataFromServer === 'function') { setTimeout(function() { initDataFromServer(); }, 200); }
   // Refresh UI
   if (typeof renderAll === 'function') renderAll();
 }
@@ -5981,7 +6099,8 @@ function quizFinish() {
     prefTags: quizAnswers.prefTags || [],
     completedAt: Date.now()
   };
-  localStorage.setItem('pixel_profile', JSON.stringify(profile));
+  // [v3.2 SQLite] Save profile via API
+  apiSaveProfile(profile);
 
   // Pre-populate tags based on preferences
   var prefTags = profile.prefTags;
@@ -6029,8 +6148,9 @@ function ensureDefaultTagsWith(extraTags) {
 var TAGS_STORAGE_KEY = 'pixel_dynamic_tags';
 
 function getDynamicTags() {
-  try { var t = JSON.parse(localStorage.getItem(TAGS_STORAGE_KEY)); return Array.isArray(t) ? t : getDefaultTags(); }
-  catch(e) { return getDefaultTags(); }
+  // [v3.2 SQLite] tags loaded from DB via initDataFromServer()
+  // Fall back to defaults, server data is loaded asynchronously
+  return getDefaultTags();
 }
 
 function getDefaultTags() {
@@ -6042,15 +6162,13 @@ function getDefaultTags() {
 }
 
 function saveDynamicTags(tags) {
-  localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
+  // [v3.2 SQLite] tags saved via API
 }
 
 // Initialize tags on load
 (function initDynamicTags() {
-  var existing = localStorage.getItem(TAGS_STORAGE_KEY);
-  if (!existing) {
-    saveDynamicTags(getDefaultTags());
-  }
+  // [v3.2 SQLite] tags initialized from server via initDataFromServer()
+  // Default tags will be created on server if needed
 })();
 
 // Default tag CSS class mapping
@@ -6442,6 +6560,76 @@ if (_origDoAdd) {
   }
 })();
 
+
+
+// ====== SQLite Async Data Initialization (v3.2) ======
+async function initDataFromServer() {
+  var uid = apiGetUser();
+  if (!uid) return;
+
+  try {
+    // Load tags from server
+    var serverTags = await apiGetTags();
+    if (serverTags && serverTags.length > 0) {
+      var tagList = [];
+      for (var i = 0; i < serverTags.length; i++) {
+        var st = serverTags[i];
+        tagList.push({ id: st.id, name: st.name, color: st.color, emoji: st.emoji });
+      }
+      getDynamicTags.cache = tagList;
+      getDynamicTags.cache._ts = Date.now();
+      syncDynamicTagsToDOM(tagList);
+    }
+
+    // Load events from server — merge into events object
+    var serverEvents = await apiGetEvents();
+    if (serverEvents && serverEvents.length > 0) {
+      serverEvents.forEach(function(ev) {
+        if (!events[ev.date]) events[ev.date] = [];
+        var exists = events[ev.date].some(function(e) { return e.id === ev.id; });
+        if (!exists) {
+          events[ev.date].push({
+            id: ev.id,
+            title: ev.title,
+            time: ev.time,
+            endTime: ev.end_time || '',
+            tags: ev.tags || [],
+            completed: ev.completed,
+            notes: ev.notes || ''
+          });
+        }
+      });
+    }
+  } catch(err) {
+    console.error('[initDataFromServer] Failed:', err);
+  }
+
+  if (typeof render === 'function') render();
+}
+
+function syncDynamicTagsToDOM(tagList) {
+  if (typeof ALL_TAGS !== 'undefined') { ALL_TAGS = tagList; }
+  tagList.forEach(function(t, idx) {
+    var cls = '.tg-dyn-' + idx;
+    if (!document.querySelector('style[data-dyn-tag="' + idx + '"]')) {
+      var style = document.createElement('style');
+      style.setAttribute('data-dyn-tag', idx);
+      style.textContent = cls + ' { background: ' + t.color + '20; color: ' + t.color + '; } ' +
+                          cls + '::before { background: ' + t.color + '; }';
+      document.head.appendChild(style);
+    }
+  });
+}
+
+// Hook showMainApp to load data after login
+var _origShowMainApp2 = typeof showMainApp === 'function' ? showMainApp : null;
+if (typeof showMainApp !== 'undefined') {
+  showMainApp = function() {
+    if (_origShowMainApp2) _origShowMainApp2();
+    setTimeout(function() { initDataFromServer(); }, 300);
+  };
+}
+// ============================================
 
 </script>
 </div>
