@@ -1,6 +1,6 @@
 {
-  "version": "1.0.0",
-  "build": 1,
+  "version": "1.0.1",
+  "build": 2,
   "apkUrl": "https://raw.githubusercontent.com/MarziTT/planner/main/pixel_planner.apk",
-  "release_notes": "首次发布：通知栏行程常驻、AI语音添加日程、入职调研引导、锁屏行程显示"
+  "release_notes": "v1.0.1：硬编码远程更新URL，移除设置入口，打开即用"
 }
