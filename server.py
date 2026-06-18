@@ -771,6 +771,13 @@ def ping():
         extra["pg_connected"] = PG_CONNECTED
         if not PG_CONNECTED:
             extra["pg_error"] = PG_CONNECT_ERROR
+    else:
+        # Debug: is DATABASE_URL set but not detected?
+        raw_url = os.environ.get("DATABASE_URL", "")
+        extra["DATABASE_URL_set"] = bool(raw_url)
+        if raw_url:
+            extra["DATABASE_URL_preview"] = raw_url[:30] + "..."
+            extra["contains_postgres"] = "postgres" in raw_url
     return jsonify({"ok": True, "message": f"Pixel Planner API v3.2 ({db_type})", **extra})
 
 
