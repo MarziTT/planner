@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel Planner v3.0</title>
+<title>语程</title>
 <style>
 /* ================================================================
-   Pixel Planner v3.0 — 卡片流主屏 + 侧滑日历 + 底部添加面板
+   语程 — 卡片流主屏 + 侧滑日历 + 底部添加面板
    5 主题: warm / clean / dark / brutal / kamen
    ================================================================ */
 
@@ -569,7 +569,7 @@ body { font-family: var(--ff); }
 <!-- ===== Login / Register Screen ===== -->
 <div id="loginScreen">
   <div class="login-card">
-    <h1>Pixel Planner</h1>
+    <h1>语程</h1>
     <p class="login-sub" id="loginSub">登录以继续</p>
     <div class="field" id="confirmField" style="display:none">
       <label>确认密码</label>
@@ -1374,7 +1374,7 @@ var onboardStep = 0;
 var onboardSteps = [
   {
     icon: '📅',
-    title: '欢迎使用 Pixel Planner',
+    title: '欢迎使用语程',
     desc: '每天花 30 秒报备行程，让生活井井有条',
     btn: '下一步'
   },
@@ -2857,7 +2857,7 @@ function checkEventReminders() {
       if (notifiedToday[dedupKey]) continue;
       notifiedToday[dedupKey] = true;
 
-      var title = '⏰ 行程提醒 - Pixel Planner';
+      var title = '⏰ 行程提醒 - 语程';
       body = t + ' - ' + e.content;
       sendNotification(title, body);
     }
@@ -6131,7 +6131,7 @@ function quizFinish() {
   }
 
   showMainApp();
-  showToast('欢迎使用 Pixel Planner！');
+  showToast('欢迎使用语程！');
 }
 
 function ensureDefaultTagsWith(extraTags) {

@@ -1,6 +1,6 @@
-# Pixel Planner v3.2
+# 语程
 
-像素风日程管理应用，Android WebView APK + Python Flask 后端。
+语音优先的日程管理应用，说句话就能记录日程。Android WebView APK + Python Flask 后端。
 
 ## 技术栈
 
@@ -24,12 +24,11 @@ PixelPlanner/
 
 ## 功能
 
-- 日程与事件管理
-- 语音 AI 标签识别
+- 语音输入 + AI 解析自动生成日程
 - 动态标签系统
 - 用户注册/登录
 - AI 身份信息采集
-- 多主题切换（solar / dark / warm / clean / brutal）
+- 多主题切换（solar / dark / warm / clean / brutal / kamen）
 
 ## 部署
 
