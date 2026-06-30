@@ -98,8 +98,12 @@ function getDefaultTags() {
   ];
 }
 
-function saveDynamicTags(tags) {
-  // [v3.2 SQLite] tags saved via API
+async function saveDynamicTags(tags) {
+  try {
+    await apiCall('POST', '/api/tags/sync', { tags: tags });
+  } catch(e) {
+    console.warn('saveDynamicTags failed:', e);
+  }
 }
 
 // Initialize tags on load

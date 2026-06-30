@@ -97,7 +97,14 @@ public class HotUpdateManager {
                 }
 
                 String loadUrl = getLoadUrl();
-                mainHandler.post(() -> callback.onReady(loadUrl));
+                // 带上版本号参数，前端可据此显示更新提示
+                if (loadUrl.contains("?")) {
+                    loadUrl += "&huver=" + serverVersion;
+                } else {
+                    loadUrl += "?huver=" + serverVersion;
+                }
+                final String finalUrl = loadUrl;
+                mainHandler.post(() -> callback.onReady(finalUrl));
 
             } catch (Exception e) {
                 Log.e(TAG, "Update check failed, falling back to asset", e);
