@@ -2,6 +2,14 @@ plugins {
     id 'com.android.application'
 }
 
+// Auto-sync www/ assets before each build
+task syncWebAssets(type: Copy) {
+    from file("${project.rootDir}/../www")
+    into file("${projectDir}/src/main/assets")
+    include "**/*.html", "**/*.css", "**/*.js", "**/*.svg", "**/*.json", "**/*.gif", "**/*.png", "**/*.ico"
+}
+preBuild.dependsOn syncWebAssets
+
 android {
     namespace 'com.pixelplanner.app'
     compileSdk 34

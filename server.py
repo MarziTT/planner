@@ -13,13 +13,14 @@ Railway / Cloud (PostgreSQL):
 Default port: 5000 (local) or $PORT (Railway)
 """
 
+import hashlib
 import json
 import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, g, jsonify, request
+from flask import Flask, g, jsonify, request, send_file
 from flask_cors import CORS
 
 # ---------------------------------------------------------------------------
@@ -779,6 +780,72 @@ def ping():
             extra["DATABASE_URL_preview"] = raw_url[:30] + "..."
             extra["contains_postgres"] = "postgres" in raw_url
     return jsonify({"ok": True, "message": f"Pixel Planner API v3.2 ({db_type})", **extra})
+
+
+# ---------------------------------------------------------------------------
+# Hot Update — Version & File Serving
+# ---------------------------------------------------------------------------
+
+WWW_DIR = BASE_DIR / "www"
+
+
+def _compute_md5(file_path):
+    """Compute MD5 hash of a file."""
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+
+@app.route("/api/version", methods=["GET"])
+def api_version():
+    """Return current project version and all www/ file paths with MD5 hashes."""
+    # Read version from package.json
+    pkg_path = BASE_DIR / "package.json"
+    try:
+        with open(pkg_path, "r", encoding="utf-8") as f:
+            pkg = json.load(f)
+        version = pkg.get("version", "0.0.0")
+    except Exception:
+        version = "0.0.0"
+
+    # Scan www/ directory recursively
+    files = []
+    if WWW_DIR.exists():
+        for file_path in sorted(WWW_DIR.rglob("*")):
+            if file_path.is_file():
+                rel_path = str(file_path.relative_to(WWW_DIR)).replace("\\", "/")
+                md5 = _compute_md5(file_path)
+                files.append({"path": rel_path, "md5": md5})
+
+    return jsonify({"version": version, "files": files})
+
+
+@app.route("/api/update/<path:file_path>", methods=["GET"])
+def api_update(file_path):
+    """Serve a file from www/ directory."""
+    safe_path = (WWW_DIR / file_path).resolve()
+
+    # Security: prevent path traversal outside www/
+    if not str(safe_path).startswith(str(WWW_DIR.resolve())):
+        return jsonify({"ok": False, "error": "Invalid path"}), 403
+
+    if not safe_path.is_file():
+        return jsonify({"ok": False, "error": "File not found"}), 404
+
+    return send_file(str(safe_path))
+
+
+@app.route("/<path:filename>")
+def serve_www_file(filename):
+    """Serve any file from www/ directory at root path (for APK download etc)."""
+    safe_path = (WWW_DIR / filename).resolve()
+    if not str(safe_path).startswith(str(WWW_DIR.resolve())):
+        return jsonify({"ok": False, "error": "Invalid path"}), 403
+    if not safe_path.is_file():
+        return jsonify({"ok": False, "error": "Not found"}), 404
+    return send_file(str(safe_path))
 
 
 # ---------------------------------------------------------------------------

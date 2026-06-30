@@ -4,7 +4,31 @@
 var events = {};
 
 function saveEvents() {
-  // [v3.2 SQLite] events saved via API
+  var dates = Object.keys(events);
+  for (var i = 0; i < dates.length; i++) {
+    var dk = dates[i];
+    var evts = events[dk];
+    for (var j = 0; j < evts.length; j++) {
+      var ev = evts[j];
+      var apiEv = {
+        id: ev.id,
+        date: dk,
+        title: ev.content || ev.title || '',
+        time: ev.time || '',
+        end_time: ev.endTime || '',
+        tags: ev.tag ? [ev.tag] : (ev.tags || []),
+        completed: ev.done || ev.completed || false,
+        notes: ev.notes || ''
+      };
+      (function(idx, dateKey) {
+        apiSaveEvent(apiEv).then(function(saved) {
+          if (saved && saved.id && events[dateKey] && events[dateKey][idx]) {
+            events[dateKey][idx].id = saved.id;
+          }
+        }).catch(function() { /* silent */ });
+      })(j, dk);
+    }
+  }
 }
 
 function getEvts(dk) { return events[dk] || []; }

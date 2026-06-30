@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (url.contains("pixel_calendar.html")) {
+                if (url.contains("pixel_calendar_new.html") || url.contains("pixel_calendar.html")) {
                     jsReady = true;
                     refreshScheduleNotification();
                     startPolling();
@@ -50,7 +50,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        webView.loadUrl("file:///android_asset/index.html");
+        // 热更新：启动时自动检查版本并下载，内部存储优先
+        HotUpdateManager hotUpdate = new HotUpdateManager(this);
+        hotUpdate.checkAndUpdate(loadUrl -> webView.loadUrl(loadUrl));
     }
 
     private void refreshScheduleNotification() {

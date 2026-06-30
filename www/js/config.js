@@ -5,12 +5,12 @@
 var API_BASE = (window.location.hostname === 'localhost') ? 'http://localhost:5000' : 'https://planner-production-d1ee.up.railway.app';
 var _pixel_user_id = null;
 
-function apiSetUser(uid) { _pixel_user_id = uid; sessionStorage.setItem('pixel_uid', uid); }
+function apiSetUser(uid) { _pixel_user_id = uid; localStorage.setItem('pixel_uid', uid); }
 function apiGetUser() {
-  if (!_pixel_user_id) { _pixel_user_id = parseInt(sessionStorage.getItem('pixel_uid')) || null; }
+  if (!_pixel_user_id) { _pixel_user_id = parseInt(localStorage.getItem('pixel_uid')) || null; }
   return _pixel_user_id;
 }
-function apiClearUser() { _pixel_user_id = null; sessionStorage.removeItem('pixel_uid'); }
+function apiClearUser() { _pixel_user_id = null; localStorage.removeItem('pixel_uid'); }
 
 async function apiCall(method, path, body) {
   try {

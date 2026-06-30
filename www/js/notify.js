@@ -3,6 +3,9 @@
 
 var notifiedToday = {};       // 去重集合: { 'HH:MM_content': true }
 var lastCheckDate = '';       // 用于跨天重置
+var notificationGranted = false;
+var notificationDenied = false;
+var morningRemindedToday = false;
 
 // 请求通知权限（延迟2秒 + 用户首次交互都触发，但只请求一次）
 var permRequested = false;
@@ -12,9 +15,25 @@ function requestNotificationPermission() {
   if (Notification.permission === 'granted') {
     notificationGranted = true;
     notificationDenied = false;
-    updatePermHint();
     return;
   }
+  if (Notification.permission === 'denied') {
+    notificationDenied = true;
+    permRequested = true;
+    return;
+  }
+  // Request permission on user interaction
+  document.addEventListener('click', function askPerm() {
+    if (permRequested) return;
+    permRequested = true;
+    Notification.requestPermission().then(function(perm) {
+      notificationGranted = (perm === 'granted');
+      notificationDenied = (perm === 'denied');
+    });
+    document.removeEventListener('click', askPerm);
+  }, { once: false });
+}
+
 function sendNotification(title, body) {
   if (!notificationGranted) return;
   try {
@@ -27,13 +46,17 @@ function sendNotification(title, body) {
   } catch(e) {
     // 静默处理
   }
+}
+
 function resetDailyNotifyState() {
-  var dk = dateKey(new Date());
+  var dk = (typeof dateKey === 'function') ? dateKey(new Date()) : '';
   if (lastCheckDate !== dk) {
     lastCheckDate = dk;
     notifiedToday = {};
     morningRemindedToday = false;
   }
+}
+
 function checkEventReminders() {
   resetDailyNotifyState();
   if (!notificationGranted) return;
@@ -41,13 +64,13 @@ function checkEventReminders() {
   var now = new Date();
   var currentHour = now.getHours();
   var currentMinute = now.getMinutes();
-  var todayEvts = events[todayKey] || [];
+  var todayEvts = (typeof events !== 'undefined' && typeof todayKey !== 'undefined') ? (events[todayKey] || []) : [];
 
   for (var i = 0; i < todayEvts.length; i++) {
     var e = todayEvts[i];
     var t = e.time;
     // 跳过无具体时间的项目（如健身模板的 '—'）
-    if (!t || t === '—' || t === '--:--') continue;
+    if (!t || t === '\u2014' || t === '--:--') continue;
 
     var parts = t.split(':');
     if (parts.length !== 2) continue;
@@ -61,10 +84,13 @@ function checkEventReminders() {
       if (notifiedToday[dedupKey]) continue;
       notifiedToday[dedupKey] = true;
 
-      var title = '⏰ 行程提醒 - 语程';
-      body = t + ' - ' + e.content;
+      var title = '\u23F0 行程提醒 - 语程';
+      var body = t + ' - ' + e.content;
       sendNotification(title, body);
     }
+  }
+}
+
 function initNotifications() {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'granted') {
@@ -73,3 +99,4 @@ function initNotifications() {
   } else if (Notification.permission === 'denied') {
     notificationDenied = true;
   }
+}

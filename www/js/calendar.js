@@ -187,6 +187,7 @@ function getLunarDateForCell(key) {
   }
   
   return { text: lunar.dayName, cssClass: 'lunar-date' };
+}
 
 // ==================== 日历面板渲染与交互 ====================
 // ===== Calendar Panel =====

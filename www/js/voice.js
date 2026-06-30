@@ -1,7 +1,7 @@
 // 语程 — 语音交互模块
 // 职责: 语音区交互(toggleVoiceZone)、文本提交、确认卡片、语音标签分类
 
-// ==================== 语音区 v3.3 ====================
+// ==================== 语音区 v3.3 (纯文本模式) ====================
 function toggleVoiceZone() {
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
@@ -11,21 +11,21 @@ function toggleVoiceZone() {
     clearTimeout(voiceRecTimer);
     zone.classList.remove('recording');
     voiceIsRecording = false;
-    hint.textContent = '正在识别...';
 
-    // Simulate AI parsing -> populate confirm overlay
-    setTimeout(function() {
-      hint.textContent = '点击开始语音记录';
-      populateVoiceConfirm('明天上午10点产品评审会议');
-      showVoiceConfirm();
-    }, 2000);
+    // Read text from input
+    var input = document.getElementById('voiceTextInput');
+    var text = input ? input.value.trim() : '';
+    if (text) {
+      submitVoiceText();
+    } else {
+      hint.textContent = '请在上方输入框输入内容';
+    }
   } else {
-    // Start recording (simulated)
+    // Start recording (animation only, no Web Speech API)
     zone.classList.add('recording');
     voiceIsRecording = true;
     hint.textContent = '正在聆听...';
 
-    // Auto-stop after 8s
     voiceRecTimer = setTimeout(function() {
       toggleVoiceZone();
     }, 8000);
@@ -37,31 +37,155 @@ function submitVoiceText() {
   var text = input.value.trim();
   if (!text) return;
 
-  // Parse time from text
-  var timeMatch = text.match(/(\d{1,2}[:：]\d{2})/);
-  if (timeMatch) {
-    document.getElementById('cfmVoiceTime').value = timeMatch[1].replace('：', ':');
-    document.getElementById('cfmVoiceTitle').value = text.replace(timeMatch[0], '').trim();
+  // Parse time from text — support Chinese time expressions
+  var parsed = parseChineseTime(text);
+  if (parsed) {
+    document.getElementById('cfmVoiceTime').value = parsed.time;
+    document.getElementById('cfmVoiceTitle').value = parsed.title;
   } else {
-    document.getElementById('cfmVoiceTitle').value = text;
+    // Also try colon-based time match
+    var timeMatch = text.match(/(\d{1,2}[:：]\d{2})/);
+    if (timeMatch) {
+      document.getElementById('cfmVoiceTime').value = timeMatch[1].replace('：', ':');
+      document.getElementById('cfmVoiceTitle').value = text.replace(timeMatch[0], '').trim();
+    } else {
+      document.getElementById('cfmVoiceTitle').value = text;
+    }
   }
 
   input.value = '';
   showVoiceConfirm();
 }
 
+// ==================== 中文时间解析 ====================
+// 支持: "上午10点"、"下午七点"、"晚上8点"、"早上六点"、"中午12点"、"傍晚5点"、"凌晨3点"
+// 也支持: "明天上午10点"、"后天下午3点" 等含日期前缀的
+// 也支持: 裸时间表达式 "六点半下班"、"3点开会" 等（通过语境推断 AM/PM）
+
+// 推断无时段前缀时间的 AM/PM
+function inferAmPm(h, text) {
+  // 语境线索优先
+  if (/下班|晚饭|晚餐|晚上/.test(text)) return 'pm';
+  if (/上班|早|晨/.test(text)) return 'am';
+  // 默认推断：8-11 点 → AM，1-6点或12点 → PM，7点 → AM
+  if (h >= 8 && h <= 11) return 'am';
+  if ((h >= 1 && h <= 6) || h === 12) return 'pm';
+  return 'am';
+}
+
+function parseChineseTime(text) {
+  // Pattern: optional date prefix + period word + digits + optional (点/时) + optional minutes
+  var periodMap = {
+    '早上': 0, '早晨': 0, '凌晨': 0,
+    '上午': 0,
+    '中午': 12,
+    '下午': 12,
+    '傍晚': 12, '晚上': 12, '夜里': 12, '夜间': 12
+  };
+
+  // Match: (optional prefix) + period + number + optional 点/时 + optional 分
+  // Support both Arabic and Chinese digits
+  var cnDigits = { '零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
+                   '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15 };
+
+  // Try Arabic digit pattern: (prefix) + period + digits + (点/时) + optional 半 + optional digits分
+  var re1 = /(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/;
+  var m = text.match(re1);
+  if (m) {
+    var period = m[1];
+    var h = parseInt(m[2]);
+    var hasHalf = !!m[3];
+    var min = m[4] ? parseInt(m[4]) : (hasHalf ? 30 : 0);
+    var offset = periodMap[period] || 0;
+    if (period === '中午' && h === 12) h = 12;
+    else if (period === '中午' && h < 12) h += 12;
+    else if (period === '下午' && h === 12) h = 12;
+    else h += offset;
+    // Special: 凌晨/早上/早晨 的 12 点 = 0 点
+    if ((period === '凌晨' || period === '早上' || period === '早晨') && h === 12) h = 0;
+    if (h > 23) h = h - 24;
+    var time = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+
+    // Extract title: remove the matched time portion
+    var title = text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim();
+    return { time: time, title: title };
+  }
+
+  // Try Chinese digit pattern: 下午七点, 晚上八点半
+  var re2 = /(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/;
+  var m2 = text.match(re2);
+  if (m2) {
+    var period2 = m2[1];
+    var hcn = m2[2];
+    var hasHalf2 = !!m2[3];
+    var mincn = m2[4] || '';
+    var h2 = cnDigits[hcn] !== undefined ? cnDigits[hcn] : parseInt(hcn);
+    var min2 = hasHalf2 ? 30 : (mincn ? (cnDigits[mincn] !== undefined ? cnDigits[mincn] : parseInt(mincn)) : 0);
+    if (isNaN(h2)) return null;
+    var offset2 = periodMap[period2] || 0;
+    if (period2 === '中午' && h2 === 12) h2 = 12;
+    else if (period2 === '中午' && h2 < 12) h2 += 12;
+    else if (period2 === '下午' && h2 === 12) h2 = 12;
+    else h2 += offset2;
+    if ((period2 === '凌晨' || period2 === '早上' || period2 === '早晨') && h2 === 12) h2 = 0;
+    if (h2 > 23) h2 = h2 - 24;
+    var time2 = String(h2).padStart(2, '0') + ':' + String(min2).padStart(2, '0');
+    var title2 = text.replace(m2[0], '').replace(/[在的于从去要]/g, '').trim();
+    return { time: time2, title: title2 };
+  }
+
+  // Try bare Arabic digit pattern (no period prefix): "六点半下班", "3点开会"
+  var re3 = /(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/;
+  var m3 = text.match(re3);
+  if (m3) {
+    var h3 = parseInt(m3[1]);
+    var hasHalf3 = !!m3[2];
+    var min3 = m3[3] ? parseInt(m3[3]) : (hasHalf3 ? 30 : 0);
+    var ampm3 = inferAmPm(h3, text);
+    if (ampm3 === 'pm' && h3 < 12) h3 += 12;
+    if (ampm3 === 'am' && h3 === 12) h3 = 0;
+    var time3 = String(h3).padStart(2, '0') + ':' + String(min3).padStart(2, '0');
+    var title3 = text.replace(m3[0], '').replace(/[在的于从去要]/g, '').trim();
+    return { time: time3, title: title3 };
+  }
+
+  // Try bare Chinese digit pattern: "六点半下班"
+  var re4 = /([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/;
+  var m4 = text.match(re4);
+  if (m4) {
+    var hcn4 = m4[1];
+    var hasHalf4 = !!m4[2];
+    var mincn4 = m4[3] || '';
+    var h4 = cnDigits[hcn4] !== undefined ? cnDigits[hcn4] : parseInt(hcn4);
+    var min4 = hasHalf4 ? 30 : (mincn4 ? (cnDigits[mincn4] !== undefined ? cnDigits[mincn4] : parseInt(mincn4)) : 0);
+    if (isNaN(h4)) return null;
+    var ampm4 = inferAmPm(h4, text);
+    if (ampm4 === 'pm' && h4 < 12) h4 += 12;
+    if (ampm4 === 'am' && h4 === 12) h4 = 0;
+    var time4 = String(h4).padStart(2, '0') + ':' + String(min4).padStart(2, '0');
+    var title4 = text.replace(m4[0], '').replace(/[在的于从去要]/g, '').trim();
+    return { time: time4, title: title4 };
+  }
+
+  return null;
+}
+
 function populateVoiceConfirm(rawText) {
-  // AI simulation: parse "明天上午10点产品评审会议" -> time=10:00, title=产品评审会议
-  // Simple extraction
+  // Try parse with full Chinese time logic first
+  var parsed = parseChineseTime(rawText);
+  if (parsed) {
+    document.getElementById('cfmVoiceTime').value = parsed.time;
+    document.getElementById('cfmVoiceTitle').value = parsed.title;
+    return;
+  }
+
+  // Fallback: simple extraction for legacy patterns
   var time = '09:00';
   var title = rawText;
 
-  // Try extract time patterns
   var timePatterns = [
     /(\d{1,2})[点:：](\d{0,2})/,
-    /(\d{1,2})[点时]/,
-    /上午(\d{1,2})/,
-    /下午(\d{1,2})/
+    /(\d{1,2})[点时]/
   ];
 
   for (var i = 0; i < timePatterns.length; i++) {
@@ -69,6 +193,7 @@ function populateVoiceConfirm(rawText) {
     if (m) {
       var h = parseInt(m[1]);
       if (rawText.indexOf('下午') !== -1 && h < 12) h += 12;
+      if (rawText.indexOf('晚上') !== -1 && h < 12) h += 12;
       if (rawText.indexOf('中午') !== -1 && h < 12) h += 12;
       time = String(h).padStart(2, '0') + ':00';
       title = rawText.replace(m[0], '').replace(/[上午下午中午早晨晚上]/g, '').replace(/[在的于从]/g, '').trim();

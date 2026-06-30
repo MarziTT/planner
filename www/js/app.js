@@ -185,6 +185,7 @@ openAddPanel = function() {
   setTimeout(function(){
     if (typeof renderAddTags === 'function') renderAddTags();
   }, 50);
+};
 
 // ==================== 标签选择器面板 ====================
 // ====== 4. TAG PICKER PANEL ======
@@ -260,6 +261,7 @@ function addNewTagFromPicker() {
   syncAllTags();
   // Refresh picker
   openTagPicker();
+}
 
 // ==================== 设置 - 标签管理 ====================
 // ====== 6. SETTINGS — TAG MANAGEMENT ======
@@ -359,6 +361,7 @@ function deleteTagInSettings(idx) {
 function redoQuestionnaire() {
   document.getElementById('mainApp').style.display = 'none';
   showQuestionnaire();
+}
 
 // ==================== Toast ====================
 // ====== 7. TOAST ======
@@ -372,6 +375,7 @@ function showToast(msg) {
   _toastTimer = setTimeout(function(){
     el.classList.remove('show');
   }, 2000);
+}
 
 // ==================== 应用入口 ====================
 // ====== 8. INIT — App Entry Gate ======
@@ -384,6 +388,7 @@ function showToast(msg) {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
   }
+})();
 
 // ==================== 钩子：doAdd后刷新标签 ====================
 // ====== 9. Override doAdd to refresh tags ======
@@ -396,6 +401,7 @@ if (_origDoAdd) {
       setTimeout(function(){ renderAddTags(); }, 50);
     }
   };
+}
 
 // ==================== 登录框回车键 ====================
 // ====== 10. Enter key on login ======
@@ -452,11 +458,10 @@ async function initDataFromServer() {
         if (!exists) {
           events[ev.date].push({
             id: ev.id,
-            title: ev.title,
+            content: ev.title,
             time: ev.time,
-            endTime: ev.end_time || '',
-            tags: ev.tags || [],
-            completed: ev.completed,
+            done: ev.completed || false,
+            tag: (ev.tags && ev.tags.length > 0) ? ev.tags[0] : '工作',
             notes: ev.notes || ''
           });
         }
