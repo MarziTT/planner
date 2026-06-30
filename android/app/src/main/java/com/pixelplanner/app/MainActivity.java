@@ -50,7 +50,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 热更新：启动时自动检查版本并下载，内部存储优先
+        // 立即加载 APK 内置 assets，避免白屏等待
+        webView.loadUrl("file:///android_asset/pixel_calendar_new.html");
+
+        // 热更新：后台检查新版本，下载完成后自动切换到最新文件
         HotUpdateManager hotUpdate = new HotUpdateManager(this);
         hotUpdate.checkAndUpdate(loadUrl -> webView.loadUrl(loadUrl));
     }
