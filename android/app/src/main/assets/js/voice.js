@@ -1,112 +1,138 @@
-// 语程 — 语音交互模块
-// 职责: 语音区交互(toggleVoiceZone)、文本提交、确认卡片、语音标签分类
-
-// ==================== 语音区 v3.11 (Android 原生语音识别) ====================
+// 语程 — 语音交互模块 v4.0
+// Web Speech API 驱动，兼容 Android WebView / 鸿蒙 ArkWeb / 桌面浏览器
+// 内核：window.SpeechRecognition（或 webkitSpeechRecognition）
+// 特性：连续识别、实时文字、静音自停、错误友好提示
 
 var voiceResultText = '';
-var voicePartialText = '';
+var recognition = null;
+var voiceRecTimer = null;
+var silenceTimer = null;
 
+// ── 平台检测 ──
+var OHOS = /OpenHarmony|HarmonyOS/i.test(navigator.userAgent);
+var ANDROID = /Android/i.test(navigator.userAgent) && !OHOS;
+document.documentElement.classList.add(OHOS ? 'ohos' : ANDROID ? 'android' : 'desktop');
+
+// ── 入口：点击语音环 ──
 function toggleVoiceZone() {
-  console.log('toggleVoiceZone called, isRecording:', voiceIsRecording);
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
   var input = document.getElementById('voiceTextInput');
+  var SRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  // 调试：写入反馈文字
-  if (input) input.value = '点击已触发...';
+  if (!SRec) {
+    hint.textContent = '当前浏览器不支持语音识别';
+    if (input) input.value = '请使用 Chrome / Edge / 鸿蒙浏览器';
+    return;
+  }
 
   if (voiceIsRecording) {
-    // 停止录音
+    // ── 手动停止 → 提交结果 ──
     clearTimeout(voiceRecTimer);
+    clearTimeout(silenceTimer);
+    if (recognition) {
+      try { recognition.stop(); } catch (_) {}
+      recognition = null;
+    }
     zone.classList.remove('recording');
     voiceIsRecording = false;
     hint.textContent = '点击开始语音记录';
 
-    if (typeof AndroidBridge !== 'undefined' && AndroidBridge.stopVoiceRecognition) {
-      AndroidBridge.stopVoiceRecognition();
-    }
-
-    if (voiceResultText) {
+    var text = voiceResultText || (input ? input.value.trim() : '');
+    if (text) {
+      voiceResultText = text;
+      if (input) input.value = text;
       submitVoiceText();
     }
   } else {
-    // 检查 Android 桥接是否可用
-    if (typeof AndroidBridge === 'undefined') {
-      hint.textContent = 'Android 桥接未就绪';
-      if (input) input.value = '桥接未就绪，请重启 App';
-      return;
-    }
-    if (!AndroidBridge.startVoiceRecognition) {
-      hint.textContent = '语音识别接口不可用';
-      if (input) input.value = '接口不可用';
-      return;
-    }
-
+    // ── 开始识别 ──
     voiceResultText = '';
-    voicePartialText = '';
-    zone.classList.add('recording');
-    voiceIsRecording = true;
-    hint.textContent = '正在聆听...';
-    if (input) input.value = '正在聆听...';
-    AndroidBridge.startVoiceRecognition();
+    if (input) input.value = '';
 
-    voiceRecTimer = setTimeout(function() {
-      toggleVoiceZone();
-    }, 8000);
+    recognition = new SRec();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'zh-CN';
+
+    recognition.onstart = function () {
+      zone.classList.add('recording');
+      voiceIsRecording = true;
+      hint.textContent = '正在聆听...';
+    };
+
+    recognition.onresult = function (event) {
+      var interim = '', finalText = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        var t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) { finalText += t; }
+        else { interim += t; }
+      }
+      var display = finalText || interim;
+      if (display) {
+        hint.textContent = display;
+        voiceResultText = finalText || display;
+        if (input) input.value = display;
+      }
+
+      // 静音 2.5 秒后自动停止
+      clearTimeout(silenceTimer);
+      if (display && !finalText) {
+        silenceTimer = setTimeout(function () {
+          if (recognition && voiceIsRecording) {
+            try { recognition.stop(); } catch (_) {}
+          }
+        }, 2500);
+      }
+    };
+
+    recognition.onerror = function (event) {
+      clearTimeout(voiceRecTimer); clearTimeout(silenceTimer);
+      voiceIsRecording = false;
+      zone.classList.remove('recording');
+      recognition = null;
+      var map = {
+        'not-allowed': '麦克风权限被拒绝 — 请在系统设置中授权',
+        'no-speech':   '未检测到语音',
+        'aborted':     '识别已取消',
+        'audio-capture': '麦克风不可用',
+        'network':     '网络错误'
+      };
+      var msg = map[event.error] || ('识别异常: ' + event.error);
+      hint.textContent = msg;
+      if (input) input.value = msg;
+    };
+
+    recognition.onend = function () {
+      clearTimeout(silenceTimer);
+      if (!voiceIsRecording) return;
+      voiceIsRecording = false;
+      zone.classList.remove('recording');
+      recognition = null;
+      if (voiceResultText) {
+        hint.textContent = '已识别，点击确认 ▸';
+      } else {
+        hint.textContent = '点击开始语音记录';
+      }
+    };
+
+    try { recognition.start(); } catch (e) {
+      hint.textContent = '启动失败: ' + e.message;
+      recognition = null;
+      return;
+    }
+
+    // 30 秒硬超时
+    voiceRecTimer = setTimeout(function () {
+      if (recognition && voiceIsRecording) {
+        try { recognition.stop(); } catch (_) {}
+        recognition = null;
+        toggleVoiceZone();
+      }
+    }, 30000);
   }
 }
 
-// ==================== Android 语音回调 ====================
-
-function onVoiceStart() {
-  console.log('Voice: start');
-}
-
-function onVoiceReady() {
-  console.log('Voice: ready');
-  document.getElementById('voiceHint').textContent = '请说话...';
-}
-
-function onVoiceSpeaking() {
-  console.log('Voice: speaking');
-  document.getElementById('voiceHint').textContent = '识别中...';
-}
-
-function onVoiceEnd() {
-  console.log('Voice: end');
-  document.getElementById('voiceHint').textContent = '处理中...';
-}
-
-function onVoiceResult(text) {
-  console.log('Voice: result =', text);
-  voiceResultText = text;
-  document.getElementById('voiceTextInput').value = text;
-}
-
-function onVoicePartial(text) {
-  console.log('Voice: partial =', text);
-  voicePartialText = text;
-  document.getElementById('voiceHint').textContent = text;
-}
-
-function onVoiceError(msg) {
-  console.log('Voice: error =', msg);
-  voiceIsRecording = false;
-  clearTimeout(voiceRecTimer);
-  document.getElementById('voiceZone').classList.remove('recording');
-  document.getElementById('voiceHint').textContent = msg || '识别失败，请重试';
-  if (typeof showToast === 'function') {
-    showToast('语音识别失败: ' + (msg || '未知错误'));
-  }
-}
-
-function onVoicePermissionGranted() {
-  // 权限授予后自动重试
-  if (typeof AndroidBridge !== 'undefined' && AndroidBridge.startVoiceRecognition) {
-    AndroidBridge.startVoiceRecognition();
-  }
-}
-
+// ── 提交文本 ──
 function submitVoiceText() {
   var text = voiceResultText || '';
   if (!text) {
@@ -115,13 +141,11 @@ function submitVoiceText() {
   }
   if (!text) return;
 
-  // Parse time from text — support Chinese time expressions
   var parsed = parseChineseTime(text);
   if (parsed) {
     document.getElementById('cfmVoiceTime').value = parsed.time;
     document.getElementById('cfmVoiceTitle').value = parsed.title;
   } else {
-    // Also try colon-based time match
     var timeMatch = text.match(/(\d{1,2}[:：]\d{2})/);
     if (timeMatch) {
       document.getElementById('cfmVoiceTime').value = timeMatch[1].replace('：', ':');
@@ -131,179 +155,107 @@ function submitVoiceText() {
     }
   }
 
-  input.value = '';
+  document.getElementById('voiceTextInput').value = '';
   showVoiceConfirm();
 }
 
-// ==================== 中文时间解析 ====================
-// 支持: "上午10点"、"下午七点"、"晚上8点"、"早上六点"、"中午12点"、"傍晚5点"、"凌晨3点"
-// 也支持: "明天上午10点"、"后天下午3点" 等含日期前缀的
-// 也支持: 裸时间表达式 "六点半下班"、"3点开会" 等（通过语境推断 AM/PM）
-
-// 推断无时段前缀时间的 AM/PM
+// ── 中文时间解析 ──
 function inferAmPm(h, text) {
-  // 语境线索优先
   if (/下班|晚饭|晚餐|晚上/.test(text)) return 'pm';
   if (/上班|早|晨/.test(text)) return 'am';
-  // 默认推断：8-11 点 → AM，1-6点或12点 → PM，7点 → AM
   if (h >= 8 && h <= 11) return 'am';
   if ((h >= 1 && h <= 6) || h === 12) return 'pm';
   return 'am';
 }
 
 function parseChineseTime(text) {
-  // Pattern: optional date prefix + period word + digits + optional (点/时) + optional minutes
-  var periodMap = {
-    '早上': 0, '早晨': 0, '凌晨': 0,
-    '上午': 0,
-    '中午': 12,
-    '下午': 12,
-    '傍晚': 12, '晚上': 12, '夜里': 12, '夜间': 12
-  };
-
-  // Match: (optional prefix) + period + number + optional 点/时 + optional 分
-  // Support both Arabic and Chinese digits
   var cnDigits = { '零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
                    '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15 };
+  var periodMap = { '早上':0,'早晨':0,'凌晨':0,'上午':0,'中午':12,'下午':12,'傍晚':12,'晚上':12,'夜里':12,'夜间':12 };
 
-  // Try Arabic digit pattern: (prefix) + period + digits + (点/时) + optional 半 + optional digits分
-  var re1 = /(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/;
-  var m = text.match(re1);
+  // 阿拉伯数字 + 时段前缀
+  var m = text.match(/(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/);
   if (m) {
-    var period = m[1];
-    var h = parseInt(m[2]);
-    var hasHalf = !!m[3];
-    var min = m[4] ? parseInt(m[4]) : (hasHalf ? 30 : 0);
-    var offset = periodMap[period] || 0;
-    if (period === '中午' && h === 12) h = 12;
-    else if (period === '中午' && h < 12) h += 12;
-    else if (period === '下午' && h === 12) h = 12;
-    else h += offset;
-    // Special: 凌晨/早上/早晨 的 12 点 = 0 点
-    if ((period === '凌晨' || period === '早上' || period === '早晨') && h === 12) h = 0;
-    if (h > 23) h = h - 24;
-    var time = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
-
-    // Extract title: remove the matched time portion
-    var title = text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim();
-    return { time: time, title: title };
+    var p = periodMap[m[1]], h = parseInt(m[2]), hasHalf = !!m[3], min = m[4] ? parseInt(m[4]) : (hasHalf ? 30 : 0);
+    if (m[1] === '中午' && h === 12) h = 12;
+    else if (m[1] === '中午' && h < 12) h += 12;
+    else if (m[1] === '下午' && h === 12) h = 12;
+    else h += p;
+    if ((m[1] === '凌晨' || m[1] === '早上' || m[1] === '早晨') && h === 12) h = 0;
+    var time = String(h % 24).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+    return { time: time, title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
   }
 
-  // Try Chinese digit pattern: 下午七点, 晚上八点半
-  var re2 = /(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/;
-  var m2 = text.match(re2);
-  if (m2) {
-    var period2 = m2[1];
-    var hcn = m2[2];
-    var hasHalf2 = !!m2[3];
-    var mincn = m2[4] || '';
-    var h2 = cnDigits[hcn] !== undefined ? cnDigits[hcn] : parseInt(hcn);
-    var min2 = hasHalf2 ? 30 : (mincn ? (cnDigits[mincn] !== undefined ? cnDigits[mincn] : parseInt(mincn)) : 0);
+  // 中文数字 + 时段前缀
+  m = text.match(/(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/);
+  if (m) {
+    var p2 = periodMap[m[1]], h2 = cnDigits[m[2]], hasHalf2 = !!m[3], min2 = m[4] ? (cnDigits[m[4]] || parseInt(m[4])) : (hasHalf2 ? 30 : 0);
     if (isNaN(h2)) return null;
-    var offset2 = periodMap[period2] || 0;
-    if (period2 === '中午' && h2 === 12) h2 = 12;
-    else if (period2 === '中午' && h2 < 12) h2 += 12;
-    else if (period2 === '下午' && h2 === 12) h2 = 12;
-    else h2 += offset2;
-    if ((period2 === '凌晨' || period2 === '早上' || period2 === '早晨') && h2 === 12) h2 = 0;
-    if (h2 > 23) h2 = h2 - 24;
-    var time2 = String(h2).padStart(2, '0') + ':' + String(min2).padStart(2, '0');
-    var title2 = text.replace(m2[0], '').replace(/[在的于从去要]/g, '').trim();
-    return { time: time2, title: title2 };
+    if (m[1] === '中午' && h2 === 12) h2 = 12;
+    else if (m[1] === '中午' && h2 < 12) h2 += 12;
+    else if (m[1] === '下午' && h2 === 12) h2 = 12;
+    else h2 += p2;
+    if ((m[1] === '凌晨' || m[1] === '早上' || m[1] === '早晨') && h2 === 12) h2 = 0;
+    var time2 = String(h2 % 24).padStart(2, '0') + ':' + String(min2).padStart(2, '0');
+    return { time: time2, title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
   }
 
-  // Try bare Arabic digit pattern (no period prefix): "六点半下班", "3点开会"
-  var re3 = /(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/;
-  var m3 = text.match(re3);
-  if (m3) {
-    var h3 = parseInt(m3[1]);
-    var hasHalf3 = !!m3[2];
-    var min3 = m3[3] ? parseInt(m3[3]) : (hasHalf3 ? 30 : 0);
-    var ampm3 = inferAmPm(h3, text);
-    if (ampm3 === 'pm' && h3 < 12) h3 += 12;
-    if (ampm3 === 'am' && h3 === 12) h3 = 0;
-    var time3 = String(h3).padStart(2, '0') + ':' + String(min3).padStart(2, '0');
-    var title3 = text.replace(m3[0], '').replace(/[在的于从去要]/g, '').trim();
-    return { time: time3, title: title3 };
+  // 裸阿拉伯数字
+  m = text.match(/(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/);
+  if (m) {
+    var h3 = parseInt(m[1]), hasHalf3 = !!m[2], min3 = m[3] ? parseInt(m[3]) : (hasHalf3 ? 30 : 0);
+    var ampm = inferAmPm(h3, text);
+    if (ampm === 'pm' && h3 < 12) h3 += 12;
+    if (ampm === 'am' && h3 === 12) h3 = 0;
+    return { time: String(h3).padStart(2, '0') + ':' + String(min3).padStart(2, '0'), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
   }
 
-  // Try bare Chinese digit pattern: "六点半下班"
-  var re4 = /([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/;
-  var m4 = text.match(re4);
-  if (m4) {
-    var hcn4 = m4[1];
-    var hasHalf4 = !!m4[2];
-    var mincn4 = m4[3] || '';
-    var h4 = cnDigits[hcn4] !== undefined ? cnDigits[hcn4] : parseInt(hcn4);
-    var min4 = hasHalf4 ? 30 : (mincn4 ? (cnDigits[mincn4] !== undefined ? cnDigits[mincn4] : parseInt(mincn4)) : 0);
+  // 裸中文数字
+  m = text.match(/([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/);
+  if (m) {
+    var h4 = cnDigits[m[1]], hasHalf4 = !!m[2], min4 = m[3] ? (cnDigits[m[3]] || parseInt(m[3])) : (hasHalf4 ? 30 : 0);
     if (isNaN(h4)) return null;
-    var ampm4 = inferAmPm(h4, text);
-    if (ampm4 === 'pm' && h4 < 12) h4 += 12;
-    if (ampm4 === 'am' && h4 === 12) h4 = 0;
-    var time4 = String(h4).padStart(2, '0') + ':' + String(min4).padStart(2, '0');
-    var title4 = text.replace(m4[0], '').replace(/[在的于从去要]/g, '').trim();
-    return { time: time4, title: title4 };
+    var ampm2 = inferAmPm(h4, text);
+    if (ampm2 === 'pm' && h4 < 12) h4 += 12;
+    if (ampm2 === 'am' && h4 === 12) h4 = 0;
+    return { time: String(h4).padStart(2, '0') + ':' + String(min4).padStart(2, '0'), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
   }
 
   return null;
 }
 
+// ── 确认卡片 ──
 function populateVoiceConfirm(rawText) {
-  // Try parse with full Chinese time logic first
   var parsed = parseChineseTime(rawText);
   if (parsed) {
     document.getElementById('cfmVoiceTime').value = parsed.time;
     document.getElementById('cfmVoiceTitle').value = parsed.title;
     return;
   }
-
-  // Fallback: simple extraction for legacy patterns
-  var time = '09:00';
-  var title = rawText;
-
-  var timePatterns = [
-    /(\d{1,2})[点:：](\d{0,2})/,
-    /(\d{1,2})[点时]/
-  ];
-
-  for (var i = 0; i < timePatterns.length; i++) {
-    var m = rawText.match(timePatterns[i]);
-    if (m) {
-      var h = parseInt(m[1]);
-      if (rawText.indexOf('下午') !== -1 && h < 12) h += 12;
-      if (rawText.indexOf('晚上') !== -1 && h < 12) h += 12;
-      if (rawText.indexOf('中午') !== -1 && h < 12) h += 12;
-      time = String(h).padStart(2, '0') + ':00';
-      title = rawText.replace(m[0], '').replace(/[上午下午中午早晨晚上]/g, '').replace(/[在的于从]/g, '').trim();
-      break;
-    }
+  var timeMatch = rawText.match(/(\d{1,2})[点:：](\d{0,2})/);
+  var time = '09:00', title = rawText;
+  if (timeMatch) {
+    var h = parseInt(timeMatch[1]);
+    if (/下午|晚上|中午/.test(rawText) && h < 12) h += 12;
+    time = String(h).padStart(2, '0') + ':00';
+    title = rawText.replace(timeMatch[0], '').replace(/[上午下午中午早晨晚上]/g, '').replace(/[在的于从]/g, '').trim();
   }
-
   document.getElementById('cfmVoiceTime').value = time;
   document.getElementById('cfmVoiceTitle').value = title || rawText;
 }
 
 function showVoiceConfirm() {
-  var overlay = document.getElementById('confirmVoiceOverlay');
-  overlay.classList.add('active');
-
-  // Populate tag chips from dynamic tags
+  document.getElementById('confirmVoiceOverlay').classList.add('active');
   var container = document.getElementById('cfmVoiceTags');
   var tags = (typeof getDynamicTags === 'function') ? getDynamicTags() : [
-    { name: '工作', color: '#4A90D9' },
-    { name: '学习', color: '#50C878' },
-    { name: '生活', color: '#F5A623' }
+    { name: '工作', color: '#4A90D9' }, { name: '学习', color: '#50C878' }, { name: '生活', color: '#F5A623' }
   ];
-
-  // Detect suggested tag from title
   var title = (document.getElementById('cfmVoiceTitle') || {}).value || '';
   var suggestedTag = (typeof classifyVoiceText === 'function') ? classifyVoiceText(title) : null;
-
   var html = '';
   for (var i = 0; i < tags.length; i++) {
-    var t = tags[i];
-    var sel = (suggestedTag === t.name || (!suggestedTag && i === 0)) ? ' selected' : '';
-    html += '<button class="tag-chip' + sel + '" onclick="toggleVoiceTag(this)">' + t.name + '</button>';
+    var sel = (suggestedTag === tags[i].name || (!suggestedTag && i === 0)) ? ' selected' : '';
+    html += '<button class="tag-chip' + sel + '" onclick="toggleVoiceTag(this)">' + tags[i].name + '</button>';
   }
   container.innerHTML = html;
 }
@@ -312,89 +264,44 @@ function closeVoiceConfirm() {
   document.getElementById('confirmVoiceOverlay').classList.remove('active');
 }
 
-function toggleVoiceTag(el) {
-  el.classList.toggle('selected');
-}
+function toggleVoiceTag(el) { el.classList.toggle('selected'); }
 
 function confirmVoiceTask() {
   var time = document.getElementById('cfmVoiceTime').value;
   var title = document.getElementById('cfmVoiceTitle').value.trim();
   if (!title) return;
-
-  // Get selected tags
-  var selectedChips = document.querySelectorAll('#cfmVoiceTags .tag-chip.selected');
-  var selectedTags = [];
-  for (var i = 0; i < selectedChips.length; i++) {
-    selectedTags.push(selectedChips[i].textContent);
-  }
-
-  // Determine tag for event (use first selected or default)
-  var tag = selectedTags[0] || '工作';
-
-  // Add to events using existing data structure
+  var chips = document.querySelectorAll('#cfmVoiceTags .tag-chip.selected'), selTags = [];
+  for (var i = 0; i < chips.length; i++) selTags.push(chips[i].textContent);
+  var tag = selTags[0] || '工作';
   if (!events[selectedDate]) events[selectedDate] = [];
-  events[selectedDate].push({
-    time: time || '09:00',
-    content: title,
-    tag: tag,
-    done: false
-  });
-
-  // Persist
+  events[selectedDate].push({ time: time || '09:00', content: title, tag: tag, done: false });
   saveEvents();
-
-  // Close overlay and refresh
   closeVoiceConfirm();
-
-  // Reset form
   document.getElementById('cfmVoiceTitle').value = '';
   var allChips = document.querySelectorAll('#cfmVoiceTags .tag-chip');
   for (var j = 0; j < allChips.length; j++) allChips[j].classList.remove('selected');
   if (allChips.length > 0) allChips[0].classList.add('selected');
-
-  // Refresh UI
   renderAll();
-
-  // Show toast
-  if (typeof showToast === 'function') {
-    showToast('已添加：' + title);
-  }
+  if (typeof showToast === 'function') showToast('已添加：' + title);
 }
 
-
-// ==================== 语音标签分类 ====================
+// ── 标签分类 ──
 function classifyVoiceText(text) {
-  if (!text) return null;
-  var lower = text.toLowerCase();
-  var bestTag = null;
-  var bestScore = 0;
-
+  if (!text || typeof VOICE_TAG_RULES === 'undefined') return null;
+  var lower = text.toLowerCase(), bestTag = null, bestScore = 0;
   for (var i = 0; i < VOICE_TAG_RULES.length; i++) {
-    var rule = VOICE_TAG_RULES[i];
     var score = 0;
-    for (var j = 0; j < rule.keys.length; j++) {
-      if (lower.indexOf(rule.keys[j]) !== -1) {
-        score++;
-      }
+    for (var j = 0; j < VOICE_TAG_RULES[i].keys.length; j++) {
+      if (lower.indexOf(VOICE_TAG_RULES[i].keys[j]) !== -1) score++;
     }
-    if (score > bestScore) {
-      bestScore = score;
-      bestTag = rule.tag;
-    }
+    if (score > bestScore) { bestScore = score; bestTag = VOICE_TAG_RULES[i].tag; }
   }
-
-  // Check if the tag exists in dynamic tags, if not suggest as new
   if (bestTag && bestScore > 0) {
-    var tags = getDynamicTags();
-    var exists = false;
-    for (var k = 0; k < tags.length; k++) {
-      if (tags[k].name === bestTag) { exists = true; break; }
-    }
+    var tags = getDynamicTags(), exists = false;
+    for (var k = 0; k < tags.length; k++) { if (tags[k].name === bestTag) { exists = true; break; } }
     if (!exists) {
-      // Auto-create the tag
       var colors = ['#4A90D9','#50C878','#F5A623','#E85D75','#9B59B6','#1ABC9C','#E67E22','#3498DB'];
-      var colorIdx = tags.length % colors.length;
-      tags.push({ name: bestTag, color: colors[colorIdx], emoji: '🏷️' });
+      tags.push({ name: bestTag, color: colors[tags.length % colors.length], emoji: '🏷️' });
       saveDynamicTags(tags);
       syncAllTags();
     }
@@ -403,39 +310,19 @@ function classifyVoiceText(text) {
   return null;
 }
 
-// ==================== 事件绑定（addEventListener 替代 onclick） ====================
+// ── 事件绑定 ──
 (function initVoiceEvents() {
-  // 防重复绑定
   if (window._voiceEventsBound) return;
   window._voiceEventsBound = true;
 
-  // 语音圆环点击（只用 click，避免 touchend+click 双重触发）
   var ring = document.getElementById('voiceRing');
-  if (ring) {
-    ring.addEventListener('click', function(e) {
-      e.preventDefault();
-      toggleVoiceZone();
-    });
-  }
+  if (ring) ring.addEventListener('click', function (e) { e.preventDefault(); toggleVoiceZone(); });
 
-  // 提交按钮
   var btn = document.getElementById('voiceSubmitBtn');
-  if (btn) {
-    btn.addEventListener('click', function(e) {
-      e.preventDefault();
-      submitVoiceText();
-    });
-  }
+  if (btn) btn.addEventListener('click', function (e) { e.preventDefault(); submitVoiceText(); });
 
-  // 输入框回车提交
   var input = document.getElementById('voiceTextInput');
-  if (input) {
-    input.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submitVoiceText();
-      }
-    });
-  }
+  if (input) input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); submitVoiceText(); }
+  });
 })();
-

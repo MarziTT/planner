@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>语程 — Voice-First Mockup</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; overflow: hidden; }
+
+:root {
+  --bg: #f2f3f5;
+  --bg2: #ffffff;
+  --card: #ffffff;
+  --border: rgba(59,130,246,0.12);
+  --pri: #3b82f6;
+  --pri2: #10b981;
+  --pri-glow: rgba(59,130,246,0.15);
+  --text: #1f2937;
+  --t2: #9ca3af;
+  --t3: #d1d5db;
+  --pg-bg: #eff6ff;
+  --pg-fill: linear-gradient(90deg,#3b82f6,#10b981);
+  --fab-bg: linear-gradient(135deg,#3b82f6,#10b981);
+  --fab-sh: 0 4px 16px rgba(59,130,246,0.25);
+  --ov: rgba(0,0,0,0.3); --pnl: #ffffff; --div: rgba(0,0,0,0.06);
+  --br: 12px;
+  --ff: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* ===== Pixel GIF Theme ===== */
+[data-theme="kamen"] {
+  --bg: #0a0a0f; --bg2: #1a1020; --card: #1a1020;
+  --border: rgba(239,68,68,0.25); --pri: #ef4444; --pri2: #ef4444;
+  --pri-glow: 0 0 20px rgba(239,68,68,0.55); --text: #fefefe;
+  --t2: #c0a0c0; --t3: #805080;
+  --pg-bg: rgba(239,68,68,0.12);
+  --pg-fill: linear-gradient(90deg,#ef4444,#ff6b6b,#ef4444);
+  --fab-bg: #ef4444;
+  --fab-sh: 0 0 24px rgba(239,68,68,0.6),0 0 48px rgba(239,68,68,0.2);
+  --ov: rgba(0,0,0,0.75); --pnl: #1a1020; --div: rgba(239,68,68,0.12);
+  --br: 8px;
+}
+[data-theme="kamen"] .evt-card.activ::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:linear-gradient(180deg,#ef4444,#ff6b6b,#ef4444); animation:agp 2s ease-in-out infinite; }
+@keyframes agp { 0%,100%{box-shadow:0 0 8px rgba(239,68,68,0.5)} 50%{box-shadow:0 0 20px rgba(239,68,68,0.8)} }
+[data-theme="kamen"] #pgBarFill { animation:efl 2s linear infinite; background-size:200% 100%; }
+@keyframes efl { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
+[data-theme="kamen"] #topBar::after { content:''; position:absolute; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg,transparent,rgba(239,68,68,0.4),transparent); pointer-events:none; }
+[data-theme="kamen"] #kamenParticles { position:fixed; inset:0; pointer-events:none; z-index:100; overflow:hidden; }
+[data-theme="kamen"] .kp { position:absolute; width:2px; height:2px; background:#ef4444; border-radius:50%; opacity:0; animation:float-up 5s linear infinite; }
+@keyframes float-up { 0%{opacity:0;transform:translateY(100vh)} 10%{opacity:0.8} 90%{opacity:0.2} 100%{opacity:0;transform:translateY(-10vh)} }
+[data-theme="kamen"] #overviewCard { border-color:rgba(239,68,68,0.2); }
+[data-theme="kamen"] .task-card { border-color:rgba(239,68,68,0.25); }
+[data-theme="kamen"] .task-card:hover { border-color:#ef4444; box-shadow:0 0 16px rgba(239,68,68,0.3); }
+[data-theme="kamen"] .task-card.done { opacity:0.32; }
+[data-theme="kamen"] .tag.work { background:rgba(239,68,68,0.12); color:#c0a0c0; }
+[data-theme="kamen"] .tag.personal { background:rgba(239,68,68,0.1); color:#d0b0d0; }
+[data-theme="kamen"] .tag.health { background:rgba(239,68,68,0.18); color:#fca5a5; }
+[data-theme="kamen"] .empty-state .empty-icon { opacity:0.3; }
+[data-theme="kamen"] .time-badge { background:rgba(239,68,68,0.15); color:#fca5a5; }
+[data-theme="kamen"] .check-circle { border-color:rgba(239,68,68,0.3); }
+[data-theme="kamen"] .card-gif-bg {
+  position: absolute;
+  right: 40px; top: 50%;
+  transform: translateY(-50%);
+  width: 64px; height: 64px;
+  border-radius: 12px;
+  object-fit: cover;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+[data-theme="kamen"] .task-card { position: relative; overflow: hidden; }
+
+body {
+  font-family: var(--ff);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== Phone Frame ===== */
+.phone {
+  width: 390px;
+  height: 844px;
+  background: var(--bg);
+  border-radius: 44px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 0 0 3px #1f2937, 0 0 0 6px #e5e7eb, 0 0 0 8px #1f2937, 0 20px 60px rgba(0,0,0,0.3);
+}
+
+/* ===== Status Bar ===== */
+.status-bar {
+  height: 54px;
+  padding: 14px 28px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.status-bar .time { font-size: 14px; font-weight: 700; }
+.status-icons { display: flex; gap: 6px; align-items: center; }
+.status-icons svg { width: 16px; height: 16px; }
+
+/* ===== Header ===== */
+.header {
+  padding: 8px 24px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.header h1 span { color: var(--pri); }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: 14px;
+  border: none;
+  background: var(--bg2);
+  color: var(--t2);
+  font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.icon-btn:active { transform: scale(0.94); background: var(--t3); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* ===== Main Scroll ===== */
+.main-scroll {
+  height: calc(844px - 54px - 52px);
+  overflow-y: auto;
+  padding: 0 24px 100px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+.main-scroll::-webkit-scrollbar { display: none; }
+
+/* ===== Voice Zone ===== */
+.voice-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 0 20px;
+  position: relative;
+}
+
+.voice-ring {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.voice-ring:active { transform: scale(0.96); }
+
+/* Outer rings for pulse */
+.voice-ring::before,
+.voice-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 3px solid var(--pri);
+  opacity: 0;
+  animation: voice-pulse 2.4s ease-out infinite;
+}
+.voice-ring::after { animation-delay: 0.8s; }
+
+@keyframes voice-pulse {
+  0% { inset: -4px; opacity: 0.35; }
+  100% { inset: -28px; opacity: 0; }
+}
+
+.voice-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(150deg, #3b82f6 0%, #10b981 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(59,130,246,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+  position: relative;
+  z-index: 1;
+}
+
+.voice-circle svg { width: 48px; height: 48px; }
+
+.voice-zone.recording .voice-circle {
+  background: linear-gradient(150deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 8px 32px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  animation: rec-pulse 0.8s ease-in-out infinite;
+}
+.voice-zone.recording .voice-ring::before,
+.voice-zone.recording .voice-ring::after {
+  border-color: #ef4444;
+  animation-duration: 1.2s;
+}
+
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 8px 32px rgba(239,68,68,0.4), inset 0 1px 0 rgba(255,255,255,0.2); }
+  50% { box-shadow: 0 12px 40px rgba(239,68,68,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
+}
+
+.voice-hint {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--t2);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: all 0.2s;
+}
+.voice-zone.recording .voice-hint { color: #ef4444; font-weight: 600; }
+
+/* ===== Text Input ===== */
+.text-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  max-width: 320px;
+  margin-top: 8px;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+.text-input-row:focus-within { opacity: 1; }
+
+.text-input-row input {
+  flex: 1;
+  height: 44px;
+  border-radius: 22px;
+  border: 1.5px solid var(--t3);
+  background: var(--bg2);
+  padding: 0 18px;
+  font-size: 14px;
+  font-family: var(--ff);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.text-input-row input:focus { border-color: var(--pri); }
+.text-input-row input::placeholder { color: var(--t2); }
+
+.text-submit {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--pri);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.text-submit:active { transform: scale(0.94); background: #2563eb; }
+.text-submit svg { width: 18px; height: 18px; }
+
+/* ===== Section Divider ===== */
+.section-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 24px 0 12px;
+}
+.section-label span {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--t2);
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--t3);
+}
+
+/* ===== Overlay (原版) ===== */
+.ovl { position:fixed; inset:0; background:var(--ov); z-index:30; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+.ovl.on { opacity:1; pointer-events:auto; }
+
+/* ===== Slide Panel (原版) ===== */
+.slide-pnl { position:fixed; top:0; right:-360px; width:340px; max-width:90vw; height:100vh; background:var(--pnl); z-index:40; transition:right 0.35s cubic-bezier(0.4,0,0.2,1); display:flex; flex-direction:column; overflow-y:auto; box-shadow:-4px 0 24px rgba(0,0,0,0.2); }
+.slide-pnl.on { right:0; }
+.pnl-hd { display:flex; align-items:center; justify-content:space-between; padding:20px 16px 12px; border-bottom:1px solid var(--div); }
+.pnl-ttl { font-size:16px; font-weight:700; color:var(--text); }
+.pnl-cls { width:32px; height:32px; border-radius:50%; border:none; background:var(--bg2); color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+
+/* ===== Calendar Panel (原版) ===== */
+.pnl-cal { padding:12px 16px; }
+.pnl-mnav { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.pnl-mlbl { font-size:14px; font-weight:600; color:var(--text); }
+.pnl-mbtn { width:28px; height:28px; border-radius:6px; border:1px solid var(--div); background:var(--card); color:var(--text); font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-family:var(--ff); }
+.pnl-wk { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:var(--t3); margin-bottom:4px; padding:4px 0; }
+.pnl-dys { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+.pnl-dbtn { aspect-ratio:1; border:1px solid transparent; border-radius:var(--br); background:transparent; color:var(--text); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; transition:all 0.15s; font-family:var(--ff); }
+.pnl-dbtn:hover { background:var(--bg2); }
+.pnl-dbtn.tdy { border-color:var(--pri); font-weight:700; }
+.pnl-dbtn.sel { background:var(--pri); color:#fff; }
+.pnl-dbtn.om { color:var(--t3); opacity:0.4; }
+.pnl-dbtn .dot { position:absolute; bottom:3px; width:4px; height:4px; border-radius:50%; background:var(--pri); }
+.pnl-dbtn.sel .dot { background:#fff; }
+
+/* ===== Upcoming (原版) ===== */
+.up-sec { padding:12px 16px 24px; border-top:1px solid var(--div); }
+.up-ttl { font-size:13px; font-weight:600; color:var(--t2); margin-bottom:8px; }
+.up-itm { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; color:var(--text); transition:background 0.15s; }
+.up-itm:hover { background:var(--bg2); }
+.up-itm .up-dt { color:var(--t2); font-size:12px; }
+.up-itm .up-cnt { color:var(--pri); font-weight:600; font-size:12px; }
+
+/* ===== Task Cards ===== */
+.task-list { display: flex; flex-direction: column; gap: 10px; }
+
+.task-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.task-card:active { transform: scale(0.985); }
+
+.task-card .time-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pri);
+  background: #eff6ff;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.task-card .task-info { flex: 1; min-width: 0; }
+.task-card .task-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-card .task-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.3px;
+}
+.tag.work { background: #eff6ff; color: #3b82f6; }
+.tag.personal { background: #ecfdf5; color: #059669; }
+.tag.health { background: #fef2f2; color: #ef4444; }
+
+.task-card .check-circle {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--t3);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.task-card.done .check-circle {
+  background: var(--pri2);
+  border-color: var(--pri2);
+}
+.task-card.done .task-title { text-decoration: line-through; color: var(--t2); }
+.task-card.done .time-badge { opacity: 0.4; }
+
+/* ===== Confirm Overlay ===== */
+.confirm-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.confirm-overlay.active { opacity: 1; pointer-events: auto; }
+
+.confirm-card {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 24px;
+  width: 100%;
+  max-width: 342px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  transform: translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.confirm-overlay.active .confirm-card { transform: translateY(0); }
+
+.confirm-card h2 {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.confirm-card .subtitle {
+  font-size: 12px;
+  color: var(--t2);
+  margin-bottom: 18px;
+}
+
+.confirm-fields { display: flex; flex-direction: column; gap: 10px; }
+.confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.confirm-row label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--t2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.confirm-row input, .confirm-row select {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-family: var(--ff);
+  color: var(--text);
+  outline: none;
+}
+.tag-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1.5px solid var(--t3);
+  background: transparent;
+  color: var(--t2);
+  transition: all 0.15s;
+  font-family: var(--ff);
+}
+.tag-chip.selected { background: var(--pri); color: #fff; border-color: var(--pri); }
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.btn-secondary, .btn-primary {
+  flex: 1;
+  height: 48px;
+  border-radius: 14px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--ff);
+  transition: all 0.2s;
+}
+.btn-secondary {
+  background: var(--bg);
+  color: var(--t2);
+}
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #10b981);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.3);
+}
+.btn-secondary:active, .btn-primary:active { transform: scale(0.97); }
+
+
+/* ===== Toast ===== */
+.toast {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  background: #1f2937;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===== Empty State ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--t2);
+}
+.empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.empty-state p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+</style>
+</head>
+<body>
+
+<div class="phone" id="app">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="time">9:41</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C17.93 3.93 6.07 3.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-6-6l2 2c2.76-2.76 7.24-2.76 10 0l2-2C13.14 6.49 5.86 6.49 3 11z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><rect x="1" y="6" width="20" height="12" rx="2"/><rect x="23" y="11" width="2" height="2"/></svg>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <h1>语程</h1>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="toggleTheme()" title="切换主题" id="themeBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <button class="icon-btn" onclick="openCalendar()" title="日历">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Scroll -->
+  <div class="main-scroll">
+    <!-- Voice Zone -->
+    <div class="voice-zone" id="voiceZone">
+      <div class="voice-ring" onclick="toggleVoice()">
+        <div class="voice-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </div>
+      </div>
+      <div class="voice-hint" id="voiceHint">点击开始语音记录</div>
+
+      <!-- Text fallback -->
+      <div class="text-input-row">
+        <input type="text" id="textInput" placeholder="或直接打字输入…" onkeydown="if(event.key==='Enter')submitText()">
+        <button class="text-submit" onclick="submitText()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Today's Tasks -->
+    <div class="section-label"><span>今天</span></div>
+    <div class="task-list" id="taskList">
+      <!-- tasks injected by JS -->
+    </div>
+  </div>
+
+  <!-- Calendar Panel (原版) -->
+  <div class="ovl" id="calOvl" onclick="closeCalendar()"></div>
+  <div class="slide-pnl" id="calPnl">
+    <div class="pnl-hd"><span class="pnl-ttl">日历</span><button class="pnl-cls" onclick="closeCalendar()">&times;</button></div>
+    <div class="pnl-cal">
+      <div class="pnl-mnav">
+        <button class="pnl-mbtn" onclick="pnlNav(-1)">&#x2039;</button>
+        <span class="pnl-mlbl" id="pnlMLbl"></span>
+        <button class="pnl-mbtn" onclick="pnlNav(1)">&#x203A;</button>
+      </div>
+      <div class="pnl-wk"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+      <div class="pnl-dys" id="pnlDays"></div>
+    </div>
+    <div class="up-sec"><div class="up-ttl">即将到来</div><div id="upDays"></div></div>
+  </div>
+
+  <!-- Confirm Overlay -->
+  <div class="confirm-overlay" id="confirmOverlay">
+    <div class="confirm-card">
+      <h2>确认这条待办？</h2>
+      <div class="subtitle">AI 已为你解析语音内容</div>
+      <div class="confirm-fields">
+        <div class="confirm-row">
+          <label>时间</label>
+          <input type="time" id="cfmTime" value="09:00">
+        </div>
+        <div class="confirm-row">
+          <label>事项</label>
+          <input type="text" id="cfmTitle" value="产品评审会议">
+        </div>
+        <div class="confirm-row">
+          <label>标签</label>
+          <div class="tag-chips">
+            <button class="tag-chip selected" onclick="toggleTag(this)">工作</button>
+            <button class="tag-chip" onclick="toggleTag(this)">个人</button>
+            <button class="tag-chip" onclick="toggleTag(this)">健康</button>
+            <button class="tag-chip" onclick="toggleTag(this)">学习</button>
+          </div>
+        </div>
+      </div>
+      <div class="confirm-actions">
+        <button class="btn-secondary" onclick="closeConfirm()">取消</button>
+        <button class="btn-primary" onclick="confirmTask()">确认添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<!-- Kamen Particles (fixed overlay) -->
+<div id="kamenParticles"></div>
+
+<script>
+// ===== Theme =====
+var currentTheme = 'solar';
+var ALL_GIFS = ["1\u53f7.gif", "2\u53f7.gif", "3\u53f7.gif", "4\u53f7.gif", "5\u53f7.gif", "6\u53f7.gif", "7\u53f7.gif", "8\u53f7.gif", "9\u53f7.gif", "10\u53f7.gif", "11\u53f7.gif", "12\u53f7.gif", "13.gif", "14.gif", "15.gif", "16.gif", "17.gif", "18.gif", "19.gif", "21.gif", "22.gif", "23.gif", "24.gif", "25.gif", "26.gif", "27.gif", "28.gif", "29.gif", "30.gif", "31.gif", "32.gif", "33.gif", "34.gif", "35.gif", "36.gif", "37.gif", "38.gif", "39.gif", "40.gif", "41.gif", "42.gif", "43.gif", "\u60e9\u6212\u79e9\u5e8f.gif", "\u7b49\u79bb\u5b50.gif", "\u91cd\u529b.gif", "\u5947\u5f02.gif", "\u62a4\u76fe.gif", "\u6062\u590d.gif", "\u5206\u8eab.gif", "\u5668\u68b0.gif", "\u96e8\u5929.gif", "\u98de\u884c.gif", "\u53d8\u6362.gif", "\u51b2\u51fb.gif"];
+
+function randomGif() {
+  var paths = ["gifs/1号.gif","gifs/2号.gif","gifs/3号.gif","gifs/4号.gif","gifs/5号.gif","gifs/6号.gif","gifs/7号.gif","gifs/8号.gif","gifs/9号.gif","gifs/10号.gif","gifs/11号.gif","gifs/12号.gif","gifs/13.gif","gifs/14.gif","gifs/15.gif","gifs/16.gif","gifs/17.gif","gifs/18.gif","gifs/19.gif","gifs/21.gif","gifs/22.gif","gifs/23.gif","gifs/24.gif","gifs/25.gif","gifs/26.gif","gifs/27.gif","gifs/28.gif","gifs/29.gif","gifs/30.gif","gifs/31.gif","gifs/32.gif","gifs/33.gif","gifs/34.gif","gifs/35.gif","gifs/36.gif","gifs/37.gif","gifs/38.gif","gifs/39.gif","gifs/40.gif","gifs/41.gif","gifs/42.gif","gifs/43.gif","gifs/惩戒秩序.gif","gifs/等离子.gif","gifs/重力.gif","gifs/奇异.gif","gifs/护盾.gif","gifs/恢复.gif","gifs/分身.gif","gifs/器械.gif","gifs/雨天.gif","gifs/飞行.gif","gifs/变换.gif","gifs/冲击.gif","gifs/20.gif"];
+  return paths[Math.floor(Math.random() * paths.length)];
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'solar' ? 'kamen' : 'solar';
+  applyTheme(currentTheme);
+}
+function applyTheme(th) {
+  document.documentElement.setAttribute('data-theme', th);
+  if (th === 'kamen') {
+    initKamenParticles();
+  } else {
+    cleanupKamenParticles();
+  }
+  if (calVisible) renderTasksByDate(selDateKey);
+  else renderTasks();
+}
+
+var kpTimer = null;
+function initKamenParticles() {
+  cleanupKamenParticles();
+  var c = document.getElementById('kamenParticles');
+  if (!c) return;
+  for (var i = 0; i < 30; i++) {
+    var p = document.createElement('div'); p.className = 'kp';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDelay = Math.random() * 5 + 's';
+    p.style.animationDuration = (4 + Math.random() * 6) + 's';
+    c.appendChild(p);
+  }
+}
+function cleanupKamenParticles() {
+  var c = document.getElementById('kamenParticles');
+  if (c) c.innerHTML = '';
+}
+
+// ===== State =====
+let tasks = [
+  { id: 1, time: '08:00', title: '晨跑 5 公里', tags: ['健康'], done: false },
+  { id: 2, time: '09:30', title: '产品评审会议', tags: ['工作'], done: false },
+  { id: 3, time: '12:00', title: '和 Alex 午餐', tags: ['个人'], done: false },
+  { id: 4, time: '15:00', title: '完成周报', tags: ['工作'], done: true },
+  { id: 5, time: '18:00', title: '买水果', tags: ['个人'], done: false },
+];
+
+// Events with dateKey for calendar filtering
+var sampleEvents = [
+  { dateKey: '2026-06-29', title: '晨跑 5 公里' },
+  { dateKey: '2026-06-29', title: '产品评审会议' },
+  { dateKey: '2026-06-29', title: '和 Alex 午餐' },
+  { dateKey: '2026-06-29', title: '完成周报' },
+  { dateKey: '2026-06-29', title: '买水果' },
+  { dateKey: '2026-06-30', title: 'UI Review' },
+  { dateKey: '2026-07-01', title: '月度总结会' },
+  { dateKey: '2026-07-03', title: '牙医预约' },
+  { dateKey: '2026-07-05', title: '游泳课' },
+  { dateKey: '2026-07-08', title: '项目 Kickoff' },
+];
+
+let isRecording = false;
+let recordingTimer = null;
+
+// ===== Voice Toggle =====
+function toggleVoice() {
+  const zone = document.getElementById('voiceZone');
+  const hint = document.getElementById('voiceHint');
+
+  if (isRecording) {
+    // Stop recording (simulated: show confirm dialog after 1.5s)
+    clearTimeout(recordingTimer);
+    zone.classList.remove('recording');
+    isRecording = false;
+    hint.textContent = '正在识别…';
+
+    // Simulate AI parsing delay
+    setTimeout(() => {
+      hint.textContent = '点击开始语音记录';
+      showConfirm();
+    }, 1200);
+  } else {
+    // Start recording
+    zone.classList.add('recording');
+    isRecording = true;
+    hint.textContent = '正在聆听…';
+
+    // Auto-stop after 8s
+    recordingTimer = setTimeout(() => {
+      toggleVoice();
+    }, 8000);
+  }
+}
+
+// ===== Text Submit =====
+function submitText() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Parse simple text: try to extract time
+  const timeMatch = text.match(/(\d{1,2}[:：]\d{2})/);
+  const cfmTime = document.getElementById('cfmTime');
+  const cfmTitle = document.getElementById('cfmTitle');
+
+  if (timeMatch) {
+    cfmTime.value = timeMatch[1].replace('：', ':');
+    cfmTitle.value = text.replace(timeMatch[0], '').trim();
+  } else {
+    cfmTitle.value = text;
+  }
+
+  input.value = '';
+  showConfirm();
+}
+
+// ===== Confirm Dialog =====
+function showConfirm() {
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('active');
+}
+
+function toggleTag(el) {
+  el.classList.toggle('selected');
+}
+
+function confirmTask() {
+  const time = document.getElementById('cfmTime').value;
+  const title = document.getElementById('cfmTitle').value.trim();
+  if (!title) return;
+
+  const selectedTags = [...document.querySelectorAll('.tag-chip.selected')]
+    .map(el => el.textContent);
+
+  const newTask = {
+    id: Date.now(),
+    time: time || '--:--',
+    title: title,
+    tags: selectedTags,
+    done: false
+  };
+
+  tasks.unshift(newTask);
+  renderTasks();
+  closeConfirm();
+
+  // Reset defaults
+  document.getElementById('cfmTitle').value = '';
+  document.querySelectorAll('.tag-chip').forEach(c => c.classList.remove('selected'));
+  document.querySelector('.tag-chip').classList.add('selected');
+
+  showToast('已添加：' + title);
+}
+
+// ===== Render Tasks =====
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  if (tasks.length === 0) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">🎤</div>
+      <p>还没有待办事项<br>点击上方麦克风开始记录吧</p>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = tasks.map(t => `
+    <div class="task-card ${t.done ? 'done' : ''}" onclick="toggleDone(${t.id})">
+      <span class="time-badge">${t.time}</span>
+      <div class="task-info">
+        <div class="task-title">${t.title}</div>
+        <div class="task-tags">
+          ${t.tags.map(tag => `<span class="tag ${tag === '工作' ? 'work' : tag === '个人' ? 'personal' : 'health'}">${tag}</span>`).join('')}
+        </div>
+      </div>
+      <div class="check-circle"></div>
+      ${currentTheme === 'kamen' ? '<img class="card-gif-bg" src="'+randomGif()+'">' : ''}
+    </div>
+  `).join('');
+}
+
+function toggleDone(id) {
+  const task = tasks.find(t => t.id === id);
+  if (task) {
+    task.done = !task.done;
+    if (task.done) {
+      // Move done tasks to bottom after delay
+      setTimeout(() => {
+        tasks = [...tasks.filter(t => !t.done), ...tasks.filter(t => t.done)];
+        renderTasks();
+      }, 400);
+    }
+    renderTasks();
+  }
+}
+
+function renderTasksByDate(dateKey) {
+  const list = document.getElementById('taskList');
+  const sectionLabel = document.querySelector('.section-label');
+  if (sectionLabel) sectionLabel.style.display = dateKey === todayKey ? '' : 'none';
+  const evs = sampleEvents.filter(function(ev) { return ev.dateKey === dateKey; });
+  if (evs.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><p>这一天暂无行程</p></div>';
+    return;
+  }
+  list.innerHTML = evs.map(function(ev, i) {
+    var hour = 8 + i;
+    var time = String(hour).padStart(2,'0') + ':00';
+    return '<div class="task-card"><span class="time-badge">'+time+'</span><div class="task-info"><div class="task-title">'+ev.title+'</div></div><div class="check-circle"></div>'+(currentTheme==='kamen'?'<img class="card-gif-bg" src="'+randomGif()+'">':'')+'</div>';
+  }).join('');
+}
+
+// ===== Calendar Panel（原版）=====
+var pnlY = new Date().getFullYear();
+var pnlM = new Date().getMonth() + 1;
+var todayKey = new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0')+'-'+String(new Date().getDate()).padStart(2,'0');
+var selectedDate = todayKey;
+
+function openCalendar() {
+  document.getElementById('calPnl').classList.add('on');
+  document.getElementById('calOvl').classList.add('on');
+  renderPnlCal();
+  renderUpcoming();
+}
+function closeCalendar() {
+  document.getElementById('calPnl').classList.remove('on');
+  document.getElementById('calOvl').classList.remove('on');
+}
+function pnlNav(dir) {
+  pnlM += dir;
+  if (pnlM < 1) { pnlM = 12; pnlY--; }
+  if (pnlM > 12) { pnlM = 1; pnlY++; }
+  renderPnlCal();
+}
+function dk(date) {
+  return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+}
+function renderPnlCal() {
+  document.getElementById('pnlMLbl').textContent = pnlY+'年 '+pnlM+'月';
+  var el = document.getElementById('pnlDays');
+  var fd = new Date(pnlY, pnlM-1, 1);
+  var ld = new Date(pnlY, pnlM, 0);
+  var sd = fd.getDay();
+  var td = ld.getDate();
+  var pl = new Date(pnlY, pnlM-1, 0).getDate();
+
+  var h = '';
+  for (var i = sd-1; i >= 0; i--) {
+    var d = pl - i;
+    h += '<button class="pnl-dbtn om" onclick="selDate('+pnlY+','+(pnlM-1)+','+d+')">'+d+'</button>';
+  }
+  for (var d=1; d<=td; d++) {
+    var dkStr = pnlY+'-'+String(pnlM).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var cls = 'pnl-dbtn';
+    if (dkStr===todayKey) cls += ' tdy';
+    if (dkStr===selectedDate) cls += ' sel';
+    var hasEvents = sampleEvents.some(function(ev){ return ev.dateKey===dkStr; });
+    h += '<button class="'+cls+'" onclick="selDate('+pnlY+','+pnlM+','+d+')">'+d+(hasEvents?'<span class="dot"></span>':'')+'</button>';
+  }
+  var rem = 42 - (sd + td);
+  for (var d=1; d<=rem; d++) {
+    h += '<button class="pnl-dbtn om" onclick="selDate('+pnlY+','+(pnlM+1)+','+d+')">'+d+'</button>';
+  }
+  el.innerHTML = h;
+}
+function selDate(y,m,d) {
+  selectedDate = y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  pnlY = y; pnlM = m;
+  closeCalendar();
+  // filter tasks by date (mock)
+  renderTasksByDate(selectedDate);
+}
+function renderUpcoming() {
+  var c = document.getElementById('upDays');
+  var now = new Date();
+  var upcoming = [];
+  for (var i=0; i<14; i++) {
+    var d = new Date(now); d.setDate(d.getDate()+i+1);
+    var k = dk(d);
+    var count = sampleEvents.filter(function(ev){ return ev.dateKey===k; }).length;
+    if (count>0) upcoming.push({key:k, d:d, count:count});
+  }
+  if (upcoming.length===0) {
+    c.innerHTML = '<div style="padding:12px;text-align:center;color:var(--t3);font-size:12px;">未来两周暂无行程</div>';
+    return;
+  }
+  upcoming = upcoming.slice(0,7);
+  var dn = ['周日','周一','周二','周三','周四','周五','周六'];
+  var h = '';
+  for (var i=0; i<upcoming.length; i++) {
+    var u = upcoming[i];
+    var dateStr = (u.d.getMonth()+1)+'月'+u.d.getDate()+'日 '+dn[u.d.getDay()];
+    h += '<div class="up-itm"><span>'+dateStr+'</span><span class="up-cnt">'+u.count+'项</span></div>';
+  }
+  c.innerHTML = h;
+}
+
+// ===== Toast =====
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// ===== Init =====
+renderTasks();
+renderPnlCal();
+</script>
+
+</body>
+</html>
