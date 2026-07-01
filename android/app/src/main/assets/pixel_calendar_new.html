@@ -111,7 +111,7 @@
 
     <!-- Voice Zone (v3.3) -->
     <div class="voice-zone-wrap" id="voiceZone">
-      <div class="voice-ring" onclick="toggleVoiceZone()">
+      <div class="voice-ring" id="voiceRing">
         <div class="voice-circle">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -199,7 +199,7 @@
   <div class="tm-fine"><label>时间</label><input type="time" id="addTm" value="09:00"></div>
   <div class="add-ia">
     <input type="text" id="addCt" placeholder="行程内容..." onkeydown="if(event.key==='Enter')doAdd()">
-    <button class="add-mic" id="addMicBtn" onclick="toggleMic()" title="语音输入">&#x1F3A4;</button>
+    <button class="add-mic" id="addMicBtn" onclick="toggleVoiceZone()" title="语音输入">&#x1F3A4;</button>
   </div>
   <div class="add-tgs" id="addTgs">
     <button class="add-tbtn sel" onclick="setAddTg('工作',this)">工作</button>
