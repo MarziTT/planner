@@ -124,8 +124,8 @@
       <div class="voice-hint" id="voiceHint">点击开始语音记录</div>
 
       <div class="text-input-row">
-        <input type="text" id="voiceTextInput" placeholder="或直接打字输入..." onkeydown="if(event.key==='Enter')submitVoiceText()">
-        <button class="text-submit" onclick="submitVoiceText()">
+        <input type="text" id="voiceTextInput" placeholder="或直接打字输入...">
+        <button class="text-submit" id="voiceSubmitBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
             <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
           </svg>
@@ -168,8 +168,7 @@
 
 </div>
 
-<!-- FAB -->
-<button id="fabBtn" onclick="openAddPanel()">+</button>
+
 
 <!-- Calendar Overlay + Panel -->
 <div class="ovl" id="calOvl" onclick="closeCalendar()"></div>
@@ -264,7 +263,7 @@
 <script src="js/calendar.js"></script>
 <script src="js/events.js"></script>
 <script src="js/render.js"></script>
-<script src="js/voice.js" defer></script>
+<script src="js/voice.js"></script>
 <script src="js/auth.js" defer></script>
 <script src="js/notify.js" defer></script>
 <script src="js/app.js" defer></script>

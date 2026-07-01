@@ -3,6 +3,7 @@
 
 // ==================== 语音区 v3.3 (纯文本模式) ====================
 function toggleVoiceZone() {
+  console.log('toggleVoiceZone called, isRecording:', voiceIsRecording);
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
 
@@ -324,4 +325,40 @@ function classifyVoiceText(text) {
   }
   return null;
 }
+
+// ==================== 事件绑定（addEventListener 替代 onclick） ====================
+(function initVoiceEvents() {
+  // 防重复绑定
+  if (window._voiceEventsBound) return;
+  window._voiceEventsBound = true;
+
+  // 语音圆环点击（只用 click，避免 touchend+click 双重触发）
+  var ring = document.getElementById('voiceRing');
+  if (ring) {
+    ring.addEventListener('click', function(e) {
+      e.preventDefault();
+      toggleVoiceZone();
+    });
+  }
+
+  // 提交按钮
+  var btn = document.getElementById('voiceSubmitBtn');
+  if (btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      submitVoiceText();
+    });
+  }
+
+  // 输入框回车提交
+  var input = document.getElementById('voiceTextInput');
+  if (input) {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitVoiceText();
+      }
+    });
+  }
+})();
 
