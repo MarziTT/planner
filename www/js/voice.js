@@ -17,6 +17,9 @@ function getVoiceEngine() {
   var SRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   var hasNative = typeof AndroidBridge !== 'undefined'
                && typeof AndroidBridge.startVoiceRecognition === 'function';
+  // Android WebView 优先原生（避免 Web Speech 权限弹窗缺失被拒）
+  // 鸿蒙 / 桌面优先 Web Speech
+  if (ANDROID && hasNative) return 'native';
   if (SRec) return 'web';
   if (hasNative) return 'native';
   return 'none';
