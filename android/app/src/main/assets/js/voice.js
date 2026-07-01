@@ -10,6 +10,10 @@ function toggleVoiceZone() {
   console.log('toggleVoiceZone called, isRecording:', voiceIsRecording);
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
+  var input = document.getElementById('voiceTextInput');
+
+  // 调试：写入反馈文字
+  if (input) input.value = '点击已触发...';
 
   if (voiceIsRecording) {
     // 停止录音
@@ -18,38 +22,37 @@ function toggleVoiceZone() {
     voiceIsRecording = false;
     hint.textContent = '点击开始语音记录';
 
-    // 通知 Android 停止识别
     if (typeof AndroidBridge !== 'undefined' && AndroidBridge.stopVoiceRecognition) {
       AndroidBridge.stopVoiceRecognition();
     }
 
-    // 如果有识别结果，直接提交
     if (voiceResultText) {
       submitVoiceText();
     }
   } else {
-    // 开始录音 — 调用 Android 原生语音识别
-    if (typeof AndroidBridge !== 'undefined' && AndroidBridge.startVoiceRecognition) {
-      voiceResultText = '';
-      voicePartialText = '';
-      zone.classList.add('recording');
-      voiceIsRecording = true;
-      hint.textContent = '正在聆听...';
-      AndroidBridge.startVoiceRecognition();
-
-      // 8秒超时自动停止
-      voiceRecTimer = setTimeout(function() {
-        toggleVoiceZone();
-      }, 8000);
-    } else {
-      // 回退：Android 桥接不可用时走纯文本模式
-      voiceResultText = document.getElementById('voiceTextInput').value.trim();
-      if (voiceResultText) {
-        submitVoiceText();
-      } else {
-        hint.textContent = '请在上方输入框输入内容';
-      }
+    // 检查 Android 桥接是否可用
+    if (typeof AndroidBridge === 'undefined') {
+      hint.textContent = 'Android 桥接未就绪';
+      if (input) input.value = '桥接未就绪，请重启 App';
+      return;
     }
+    if (!AndroidBridge.startVoiceRecognition) {
+      hint.textContent = '语音识别接口不可用';
+      if (input) input.value = '接口不可用';
+      return;
+    }
+
+    voiceResultText = '';
+    voicePartialText = '';
+    zone.classList.add('recording');
+    voiceIsRecording = true;
+    hint.textContent = '正在聆听...';
+    if (input) input.value = '正在聆听...';
+    AndroidBridge.startVoiceRecognition();
+
+    voiceRecTimer = setTimeout(function() {
+      toggleVoiceZone();
+    }, 8000);
   }
 }
 
