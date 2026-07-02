@@ -245,10 +245,77 @@ function inferAmPm(h, text) {
   return 'am';
 }
 
+// 解析相对日期偏移量（明天、后天、大后天、下周X 等）
+function parseRelativeDate(text) {
+  var now = new Date();
+  // 今天：偏移0，但默认用 selectedDate 对应的日期
+  var todayDate = new Date();
+  var baseDate = selectedDate ? new Date(selectedDate + 'T00:00:00') : new Date();
+  // 如果 selectedDate 不是今天（用户在看其他日期），则基于 selectedDate
+  var useSelected = (selectedDate && selectedDate !== todayKey && selectedDate !== dateKey(todayDate));
+
+  // 绝对日期词：今天、明天、后天、大后天
+  if (/今天|今日/.test(text)) {
+    return { offset: 0, label: '今天', base: useSelected ? new Date(selectedDate + 'T00:00:00') : new Date() };
+  }
+  if (/明天|明日/.test(text)) {
+    var d = new Date(); d.setDate(d.getDate() + 1);
+    return { offset: 1, label: '明天', base: d };
+  }
+  if (/后天|后日/.test(text)) {
+    var d = new Date(); d.setDate(d.getDate() + 2);
+    return { offset: 2, label: '后天', base: d };
+  }
+  if (/大后天/.test(text)) {
+    var d = new Date(); d.setDate(d.getDate() + 3);
+    return { offset: 3, label: '大后天', base: d };
+  }
+  if (/大后天后天/.test(text)) {
+    var d = new Date(); d.setDate(d.getDate() + 4);
+    return { offset: 4, label: '大后天后天', base: d };
+  }
+
+  // 下周X / 下周一 等
+  var weekMap = { '一':1, '二':2, '三':3, '四':4, '五':5, '六':6, '天':0, '日':0, '周日':0 };
+  var nw = text.match(/下周\s*([一二三四五六天日])/);
+  if (nw) {
+    var targetDay = weekMap[nw[1]];
+    var curDay = now.getDay();
+    var diff = (7 - curDay + targetDay) % 7;
+    if (diff === 0) diff = 7; // 下周同一天 = 7天后
+    var d = new Date(); d.setDate(d.getDate() + diff);
+    return { offset: diff, label: '下周' + nw[1], base: d };
+  }
+  // 下下周X
+  var nnw = text.match(/下下周\s*([一二三四五六天日])/);
+  if (nnw) {
+    var td2 = weekMap[nnw[1]];
+    var cd2 = now.getDay();
+    var diff2 = (14 - cd2 + td2) % 14;
+    if (diff2 === 0) diff2 = 14;
+    var d = new Date(); d.setDate(d.getDate() + diff2);
+    return { offset: diff2, label: '下下周' + nnw[1], base: d };
+  }
+  // 这周X（本周）
+  var tw = text.match(/这周\s*([一二三四五六天日])/);
+  if (tw) {
+    var td3 = weekMap[tw[1]];
+    var cd3 = now.getDay();
+    var diff3 = (td3 - cd3 + 7) % 7;
+    var d = new Date(); d.setDate(d.getDate() + diff3);
+    return { offset: diff3, label: '本周' + tw[1], base: d };
+  }
+
+  return null;
+}
+
 function parseChineseTime(text) {
   var cnDigits = { '零':0,'一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,
                    '十':10,'十一':11,'十二':12,'十三':13,'十四':14,'十五':15 };
   var perMap = { '早上':0,'早晨':0,'凌晨':0,'上午':0,'中午':12,'下午':12,'傍晚':12,'晚上':12,'夜里':12,'夜间':12 };
+
+  // 先解析相对日期
+  var relDate = parseRelativeDate(text);
 
   function applyPeriod(period, h) {
     if (period === '中午' && h === 12) return 12;
@@ -264,14 +331,18 @@ function parseChineseTime(text) {
   if (m) {
     var h = parseInt(m[2]), min = m[4] ? parseInt(m[4]) : (m[3] ? 30 : 0);
     h = applyPeriod(m[1], h);
-    return { time: S(h) + ':' + S(min), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    var result = { time: S(h) + ':' + S(min), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    if (relDate) { result.date = dateKey(relDate.base); result.dateLabel = relDate.label; }
+    return result;
   }
   m = text.match(/(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/);
   if (m) {
     var h2 = cnDigits[m[2]], min2 = m[4] ? (cnDigits[m[4]] || 0) : (m[2] ? 30 : 0);
     if (isNaN(h2)) return null;
     h2 = applyPeriod(m[1], h2);
-    return { time: S(h2) + ':' + S(min2), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    var result = { time: S(h2) + ':' + S(min2), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    if (relDate) { result.date = dateKey(relDate.base); result.dateLabel = relDate.label; }
+    return result;
   }
   m = text.match(/(\d{1,2})\s*(?:点|时)\s*(半)?\s*(?:(\d{1,2})\s*分)?/);
   if (m) {
@@ -279,7 +350,9 @@ function parseChineseTime(text) {
     var ampm = inferAmPm(h3, text);
     if (ampm === 'pm' && h3 < 12) h3 += 12;
     if (ampm === 'am' && h3 === 12) h3 = 0;
-    return { time: S(h3) + ':' + S(min3), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    var result = { time: S(h3) + ':' + S(min3), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    if (relDate) { result.date = dateKey(relDate.base); result.dateLabel = relDate.label; }
+    return result;
   }
   m = text.match(/([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/);
   if (m) {
@@ -288,7 +361,9 @@ function parseChineseTime(text) {
     var ampm2 = inferAmPm(h4, text);
     if (ampm2 === 'pm' && h4 < 12) h4 += 12;
     if (ampm2 === 'am' && h4 === 12) h4 = 0;
-    return { time: S(h4) + ':' + S(min4), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    var result = { time: S(h4) + ':' + S(min4), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
+    if (relDate) { result.date = dateKey(relDate.base); result.dateLabel = relDate.label; }
+    return result;
   }
   return null;
 }
@@ -319,16 +394,29 @@ function confirmVoiceTask() {
   var chips = document.querySelectorAll('#cfmVoiceTags .tag-chip.selected'), s = [];
   for (var i = 0; i < chips.length; i++) s.push(chips[i].textContent);
   var tag = s[0] || '工作';
-  if (!events[selectedDate]) events[selectedDate] = [];
-  events[selectedDate].push({ time: time || '09:00', content: title, tag: tag, done: false });
+
+  // 尝试从原始语音文本中解析日期
+  var rawText = (document.getElementById('voiceTextInput') || {}).value || title;
+  var parsed = parseChineseTime(rawText);
+  var targetDate = (parsed && parsed.date) ? parsed.date : selectedDate;
+  var dateLabel = (parsed && parsed.dateLabel) ? ' (' + parsed.dateLabel + ')' : '';
+
+  if (!events[targetDate]) events[targetDate] = [];
+  events[targetDate].push({ time: time || (parsed ? parsed.time : '09:00'), content: title, tag: tag, done: false });
   saveEvents();
   closeVoiceConfirm();
   document.getElementById('cfmVoiceTitle').value = '';
   var all = document.querySelectorAll('#cfmVoiceTags .tag-chip');
   for (var j = 0; j < all.length; j++) all[j].classList.remove('selected');
   if (all.length > 0) all[0].classList.add('selected');
+  // 如果日期变了，更新选中日期
+  if (targetDate !== selectedDate) {
+    selectedDate = targetDate;
+    var dp = targetDate.split('-');
+    if (dp.length === 3) { pnlY = parseInt(dp[0]); pnlM = parseInt(dp[1]); }
+  }
   renderAll();
-  if (typeof showToast === 'function') showToast('已添加：' + title);
+  if (typeof showToast === 'function') showToast('已添加到 ' + targetDate + dateLabel);
 }
 
 // ═══════════ 标签分类 ═══════════

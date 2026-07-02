@@ -98,8 +98,15 @@ function gifBgHtml() {
 var TAGS_STORAGE_KEY = 'pixel_dynamic_tags';
 
 function getDynamicTags() {
-  // [v3.2 SQLite] tags loaded from DB via initDataFromServer()
-  // Fall back to defaults, server data is loaded asynchronously
+  // [v3.2 SQLite] Primary: load from localStorage cache, fallback to defaults
+  // Server data is synced via saveDynamicTags / initDataFromServer
+  try {
+    var cached = localStorage.getItem(TAGS_STORAGE_KEY);
+    if (cached) {
+      var parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch(e) {}
   return getDefaultTags();
 }
 
@@ -112,6 +119,7 @@ function getDefaultTags() {
 }
 
 async function saveDynamicTags(tags) {
+  localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
   try {
     await apiCall('POST', '/api/tags/sync', { tags: tags });
   } catch(e) {

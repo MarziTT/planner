@@ -20,7 +20,38 @@ function applyTheme(th) {
     var fl2 = document.querySelector('#fabBtn .fab-lbl');
     if (fl2) fl2.remove();
   }
-  // Re-render cards to inject/clear card GIF backgrounds
+
+  // Ocean wave effects
+  var waveC = document.getElementById('waveBg');
+  if (th === 'ocean') {
+    if (!waveC) {
+      waveC = document.createElement('div'); waveC.id = 'waveBg';
+      waveC.innerHTML = '<div class="wave wave1"></div><div class="wave wave2"></div><div class="wave wave3"></div>';
+      document.body.appendChild(waveC);
+    } else { waveC.style.display = 'block'; }
+  } else {
+    if (waveC) waveC.style.display = 'none';
+  }
+
+  // Forest leaf effects
+  var leafC = document.getElementById('leafBg');
+  if (th === 'forest') {
+    if (!leafC) {
+      leafC = document.createElement('div'); leafC.id = 'leafBg';
+      document.body.appendChild(leafC);
+      for (var i = 0; i < 15; i++) {
+        var leaf = document.createElement('div'); leaf.className = 'leaf';
+        leaf.style.left = Math.random() * 100 + '%';
+        leaf.style.animationDelay = Math.random() * 8 + 's';
+        leaf.style.animationDuration = (6 + Math.random() * 8) + 's';
+        leafC.appendChild(leaf);
+      }
+    } else { leafC.style.display = 'block'; }
+  } else {
+    if (leafC) leafC.style.display = 'none';
+  }
+
+  // Re-render cards
   if (typeof renderAll === 'function') renderAll();
 }
 

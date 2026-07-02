@@ -134,6 +134,13 @@ if USE_PG:
                     theme TEXT DEFAULT 'dark',
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 );
+                CREATE TABLE IF NOT EXISTS todolist (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    todos TEXT DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
             """)
             db.commit()
             PG_CONNECTED = True
@@ -210,6 +217,14 @@ else:
                 user_id INTEGER PRIMARY KEY,
                 theme TEXT DEFAULT 'dark',
                 FOREIGN KEY (user_id) REFERENCES users(id)
+            );
+
+            CREATE TABLE IF NOT EXISTS todolist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                todos TEXT DEFAULT '[]',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
         db.commit()
@@ -908,6 +923,60 @@ def _tc3_sign(secret_id, secret_key, service, host, action, payload, region="ap-
         "X-TC-Version": "2019-06-14",
         "X-TC-Region": region,
     }
+
+
+# ---------------------------------------------------------------------------
+# TodoList API
+# ---------------------------------------------------------------------------
+
+@app.route("/api/todolist", methods=["GET"])
+def get_todolist():
+    """Get user's todolist items."""
+    user_id = request.args.get("user_id", "")
+    if not user_id:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+    try:
+        with get_db() as conn:
+            row = conn.execute(
+                "SELECT todos FROM todolist WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            if row:
+                import json
+                todos = json.loads(row["todos"])
+                return jsonify({"ok": True, "todos": todos})
+            return jsonify({"ok": True, "todos": []})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+@app.route("/api/todolist", methods=["POST"])
+def save_todolist():
+    """Save user's todolist items (full replace)."""
+    user_id = request.args.get("user_id", "")
+    if not user_id:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+    data = request.get_json(force=True, silent=True) or {}
+    todos = data.get("todos", [])
+    import json
+    todos_json = json.dumps(todos, ensure_ascii=False)
+    try:
+        with get_db() as conn:
+            existing = conn.execute(
+                "SELECT id FROM todolist WHERE user_id = ?", (user_id,)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "UPDATE todolist SET todos = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+                    (todos_json, user_id)
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO todolist (user_id, todos) VALUES (?, ?)",
+                    (user_id, todos_json)
+                )
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/asr", methods=["POST"])

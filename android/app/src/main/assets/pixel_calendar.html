@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel Planner v3.0</title>
+<title>Pixel Planner v4.6.0</title>
 <style>
 /* ================================================================
-   Pixel Planner v3.0 — 卡片流主屏 + 侧滑日历 + 底部添加面板
-   5 主题: warm / clean / dark / brutal / kamen
+   Pixel Planner v4.6.0 — 卡片流主屏 + 侧滑日历 + 底部添加面板
+   8 主题: warm / clean / dark / brutal / kamen / ocean / forest / sunset
    ================================================================ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -92,6 +92,67 @@ body {
   --do: 0.32; --al: #ef4444; --ag: 0 0 16px rgba(239,68,68,0.7);
   --br: 8px; --ff: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
 }
+[data-theme="ocean"] {
+  --bg: #0a1628; --bg2: #122240; --card: #122240;
+  --border: rgba(56,189,248,0.22); --pri: #38bdf8; --pri2: #38bdf8;
+  --pri-glow: 0 0 20px rgba(56,189,248,0.45); --text: #e0f2fe;
+  --t2: #7dd3fc; --t3: #4a7fa0;
+  --pg-bg: rgba(56,189,248,0.1);
+  --pg-fill: linear-gradient(90deg,#38bdf8,#7dd3fc,#38bdf8);
+  --fab-bg: #38bdf8;
+  --fab-sh: 0 0 24px rgba(56,189,248,0.5),0 0 48px rgba(56,189,248,0.15);
+  --ov: rgba(0,0,0,0.7); --pnl: #0f2740; --div: rgba(56,189,248,0.12);
+  --tw: rgba(56,189,248,0.15); --twt: #bae6fd;
+  --ts: rgba(56,189,248,0.1); --tst: #7dd3fc;
+  --tl: rgba(56,189,248,0.08); --tlt: #a4d8f8;
+  --do: 0.35; --al: #38bdf8; --ag: 0 0 12px rgba(56,189,248,0.6);
+  --br: 12px; --ff: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+[data-theme="forest"] {
+  --bg: #0a1a0a; --bg2: #142914; --card: #1a301a;
+  --border: rgba(34,197,94,0.2); --pri: #22c55e; --pri2: #22c55e;
+  --pri-glow: 0 0 20px rgba(34,197,94,0.5); --text: #dcfce7;
+  --t2: #86efac; --t3: #4a8a5a;
+  --pg-bg: rgba(34,197,94,0.1);
+  --pg-fill: linear-gradient(90deg,#22c55e,#4ade80,#22c55e);
+  --fab-bg: #22c55e;
+  --fab-sh: 0 0 24px rgba(34,197,94,0.5),0 0 48px rgba(34,197,94,0.1);
+  --ov: rgba(0,0,0,0.7); --pnl: #122a12; --div: rgba(34,197,94,0.1);
+  --tw: rgba(34,197,94,0.15); --twt: #bbf7d0;
+  --ts: rgba(34,197,94,0.1); --tst: #86efac;
+  --tl: rgba(34,197,94,0.08); --tlt: #a4e8b8;
+  --do: 0.35; --al: #22c55e; --ag: 0 0 12px rgba(34,197,94,0.5);
+  --br: 10px; --ff: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+[data-theme="sunset"] {
+  --bg: #1a0a0a; --bg2: #2a1515; --card: #2a1515;
+  --border: rgba(251,146,60,0.25); --pri: #fb923c; --pri2: #f87171;
+  --pri-glow: 0 0 20px rgba(251,146,60,0.45); --text: #fff1f2;
+  --t2: #fda4af; --t3: #b0706a;
+  --pg-bg: rgba(251,146,60,0.1);
+  --pg-fill: linear-gradient(90deg,#fb923c,#f87171,#fb923c);
+  --fab-bg: #fb923c;
+  --fab-sh: 0 0 24px rgba(251,146,60,0.5),0 0 48px rgba(251,146,60,0.1);
+  --ov: rgba(0,0,0,0.7); --pnl: #2a1515; --div: rgba(251,146,60,0.12);
+  --tw: rgba(251,146,60,0.15); --twt: #fecdd3;
+  --ts: rgba(251,146,60,0.1); --tst: #fda4af;
+  --tl: rgba(251,146,60,0.08); --tlt: #fde0e0;
+  --do: 0.35; --al: #fb923c; --ag: 0 0 12px rgba(251,146,60,0.5);
+  --br: 14px; --ff: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+/* Ocean wave animations */
+#waveBg { position: fixed; bottom: 0; left: 0; right: 0; height: 120px; z-index: 0; pointer-events: none; overflow: hidden; display: none; }
+.wave { position: absolute; bottom: 0; left: -50%; width: 200%; height: 60px; opacity: 0.15; border-radius: 40% 50% 0 0; }
+.wave1 { background: #38bdf8; animation: waveMove 8s linear infinite; }
+.wave2 { background: #7dd3fc; animation: waveMove 12s linear infinite; bottom: 10px; opacity: 0.12; }
+.wave3 { background: #bae6fd; animation: waveMove 16s linear infinite; bottom: 20px; opacity: 0.08; }
+@keyframes waveMove { 0% { transform: translateX(0); } 100% { transform: translateX(50%); } }
+
+/* Forest leaf animations */
+#leafBg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; display: none; }
+.leaf { position: absolute; top: -20px; width: 12px; height: 12px; background: rgba(34,197,94,0.4); border-radius: 0 50% 50% 50%; animation: leafFall linear infinite; }
+@keyframes leafFall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
 body { font-family: var(--ff); }
 
 /* ===== App Container ===== */
@@ -546,7 +607,71 @@ body { font-family: var(--ff); }
 }
 #toast.show { opacity: 1; }
 
+/* ===== TodoList Panel ===== */
+#todoListPanel { padding: 16px; overflow-y: auto; }
+.todo-filter-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+.todo-filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--div); background: var(--bg); color: var(--t2); font-size: 12px; cursor: pointer; transition: all 0.2s; font-family: var(--ff); }
+.todo-filter-btn:hover { border-color: var(--pri); color: var(--pri); }
+.todo-filter-btn.sel { background: var(--pri); color: #fff; border-color: var(--pri); }
+.todo-empty { text-align: center; padding: 40px 20px; color: var(--t3); font-size: 14px; }
+.todo-list-items { display: flex; flex-direction: column; gap: 8px; }
+.todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--bg2); border-radius: var(--br); border: 1px solid var(--div); transition: all 0.2s; }
+.todo-item:hover { border-color: var(--pri); }
+.todo-item.todo-done { opacity: 0.45; }
+.todo-item.todo-done .todo-text { text-decoration: line-through; }
+.todo-chk { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--t3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; color: transparent; cursor: pointer; transition: all 0.2s; margin-top: 1px; }
+.todo-item.todo-done .todo-chk { background: var(--pri); border-color: var(--pri); color: #fff; }
+.todo-body { flex: 1; min-width: 0; }
+.todo-text { font-size: 14px; color: var(--text); line-height: 1.5; word-break: break-word; }
+.todo-time { font-size: 12px; color: var(--pri); font-weight: 600; margin-top: 2px; }
+.todo-type-label { font-size: 10px; color: var(--t3); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+.todo-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.todo-action-btn { width: 28px; height: 28px; border-radius: 6px; border: none; background: var(--bg); color: var(--t2); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.todo-action-btn:hover { background: var(--pri); color: #fff; }
+.todo-del-btn:hover { background: #ef4444; color: #fff; }
+.todo-add-btn { width: 100%; padding: 12px; background: var(--pri); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: opacity 0.2s; }
+.todo-add-btn:hover { opacity: 0.85; }
+
+/* TodoList Add Overlay */
+#todoAddOverlay { position: fixed; inset: 0; z-index: 950; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; }
+#todoAddOverlay.active { display: flex; }
+.todo-add-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 380px; max-height: 80vh; overflow-y: auto; }
+.todo-add-card h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+.todo-add-field { margin-bottom: 12px; }
+.todo-add-field label { display: block; font-size: 12px; font-weight: 600; color: var(--t2); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.todo-add-field input[type="text"], .todo-add-field input[type="time"], .todo-add-field select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 14px; font-family: var(--ff); outline: none; }
+.todo-add-field input:focus, .todo-add-field select:focus { border-color: var(--pri); }
+.todo-repeat-days { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.todo-day-label { font-size: 12px; color: var(--t2); display: flex; align-items: center; gap: 3px; cursor: pointer; padding: 4px 8px; border-radius: 4px; background: var(--bg); border: 1px solid var(--div); }
+.todo-day-label input[type="checkbox"] { accent-color: var(--pri); }
+.todo-add-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+.todo-add-actions button { padding: 8px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; border: none; font-weight: 600; }
+.todo-btn-cancel { background: var(--bg2); color: var(--text); }
+.todo-btn-confirm { background: var(--pri); color: #fff; }
+
+/* ===== Account Page ===== */
+#accountPanel { padding: 16px; }
+.acct-avatar-section { text-align: center; margin-bottom: 24px; }
+.acct-avatar-circle { width: 80px; height: 80px; border-radius: 50%; background: var(--pg-fill); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 36px; color: #fff; font-weight: 700; box-shadow: var(--fab-sh); }
+.acct-display-name { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.acct-role-badge { display: inline-block; padding: 3px 12px; border-radius: 10px; font-size: 11px; font-weight: 600; background: var(--pg-bg); color: var(--pri); margin-top: 4px; }
+.acct-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 24px; }
+.acct-stat-card { background: var(--bg2); border: 1px solid var(--div); border-radius: 12px; padding: 14px 10px; text-align: center; }
+.acct-stat-num { font-size: 22px; font-weight: 700; color: var(--pri); }
+.acct-stat-label { font-size: 11px; color: var(--t3); margin-top: 2px; }
+.acct-section { margin-bottom: 20px; }
+.acct-section-title { font-size: 11px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.acct-info-row { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--bg2); border-radius: 10px; margin-bottom: 6px; }
+.acct-info-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--pg-bg); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.acct-info-text { flex: 1; min-width: 0; }
+.acct-info-label { font-size: 10px; color: var(--t3); text-transform: uppercase; }
+.acct-info-val { font-size: 14px; color: var(--text); font-weight: 500; }
+.acct-logout-btn { width: 100%; padding: 12px; background: transparent; border: 1px solid #ef4444; color: #ef4444; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
+.acct-logout-btn:hover { background: #ef4444; color: #fff; }
+
 </style>
+<script src="js/voice.js"></script>
+<script src="js/todolist.js"></script>
 </head>
 <body data-theme="dark">
 
@@ -629,8 +754,10 @@ body { font-family: var(--ff); }
       <div class="date-sub" id="liveDate">6月18日 星期四</div>
     </div>
     <div id="headerActions">
-      <button class="icon-btn" onclick="toggleSettings()" title="设置">&#x2699;</button>
+      <button class="icon-btn" onclick="openTodoPanel()" title="待办">&#x2611;</button>
       <button class="icon-btn" onclick="openCalendar()" title="日历">&#x1F4C5;</button>
+      <button class="icon-btn" onclick="openAccountPanel()" title="账号">&#x1F464;</button>
+      <button class="icon-btn" onclick="toggleSettings()" title="设置">&#x2699;</button>
     </div>
   </header>
 
@@ -710,6 +837,9 @@ body { font-family: var(--ff); }
       <div class="th-opt" onclick="setTh('clean')" data-th="clean"><div class="th-dots"><span style="background:#64748b"></span><span style="background:#f8fafc"></span><span style="background:#e2e8f0"></span></div><div class="th-nm">极简白灰</div><div class="th-dsc">灰蓝 · 简洁</div></div>
       <div class="th-opt" onclick="setTh('brutal')" data-th="brutal"><div class="th-dots"><span style="background:#000"></span><span style="background:#fff;border:1px solid #000"></span><span style="background:#000"></span></div><div class="th-nm">粗野主义</div><div class="th-dsc">黑白 · 等宽</div></div>
       <div class="th-opt" onclick="setTh('kamen')" data-th="kamen"><div class="th-dots"><span style="background:#ef4444"></span><span style="background:#1a1020"></span><span style="background:#ef4444"></span></div><div class="th-nm">假面骑士ZZZ</div><div class="th-dsc">霓虹 · 暗紫</div></div>
+      <div class="th-opt" onclick="setTh('ocean')" data-th="ocean"><div class="th-dots"><span style="background:#38bdf8"></span><span style="background:#0a1628"></span><span style="background:#7dd3fc"></span></div><div class="th-nm">深海幽蓝</div><div class="th-dsc">水波 · 深邃</div></div>
+      <div class="th-opt" onclick="setTh('forest')" data-th="forest"><div class="th-dots"><span style="background:#22c55e"></span><span style="background:#0a1a0a"></span><span style="background:#4ade80"></span></div><div class="th-nm">森林秘境</div><div class="th-dsc">绿意 · 自然</div></div>
+      <div class="th-opt" onclick="setTh('sunset')" data-th="sunset"><div class="th-dots"><span style="background:#fb923c"></span><span style="background:#1a0a0a"></span><span style="background:#f87171"></span></div><div class="th-nm">落日暖霞</div><div class="th-dsc">橙粉 · 温暖</div></div>
     </div>
   </div>
   <div class="set-sec">
@@ -719,6 +849,95 @@ body { font-family: var(--ff); }
     <input type="file" id="impF" accept=".json" style="display:none" onchange="doImport(event)">
     <button class="set-btn" onclick="doChkUpdate()">&#x1F504; 检查更新</button>
     <button class="set-btn dng" onclick="doClearAll()">&#x1F5D1; 清除所有数据</button>
+  </div>
+</div>
+
+<!-- TodoList Panel -->
+<div class="ovl" id="todoOvl" onclick="closeTodoPanel()"></div>
+<div class="slide-pnl" id="todoPnl">
+  <div class="pnl-hd"><span class="pnl-ttl">待办列表</span><button class="pnl-cls" onclick="closeTodoPanel()">&times;</button></div>
+  <div id="todoListPanel"><div class="todo-empty">加载中...</div></div>
+</div>
+
+<!-- TodoList Add Overlay -->
+<div id="todoAddOverlay">
+  <div class="todo-add-card">
+    <h3 id="todoAddTitle">添加待办</h3>
+    <div class="todo-add-field">
+      <label>内容</label>
+      <input type="text" id="todoAddText" placeholder="待办事项..." maxlength="100">
+    </div>
+    <div class="todo-add-field">
+      <label>时间（可选）</label>
+      <input type="time" id="todoAddTime" value="">
+    </div>
+    <div class="todo-add-field">
+      <label>循环类型</label>
+      <select id="todoAddType" onchange="todoUpdateRepeatCheckboxes()">
+        <option value="workday">工作日循环</option>
+        <option value="schoolday">上学日循环</option>
+        <option value="once">一次性</option>
+      </select>
+    </div>
+    <div class="todo-add-field" id="todoRepeatCheckboxes">
+      <div class="todo-repeat-days" id="todoRepeatDaysContainer"></div>
+    </div>
+    <div class="todo-add-actions">
+      <button class="todo-btn-cancel" onclick="todoCloseAdd()">取消</button>
+      <button class="todo-btn-confirm" id="todoAddSubmit" onclick="todoSubmit()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Panel -->
+<div class="ovl" id="acctOvl" onclick="closeAccountPanel()"></div>
+<div class="slide-pnl" id="acctPnl">
+  <div class="pnl-hd"><span class="pnl-ttl">我的账号</span><button class="pnl-cls" onclick="closeAccountPanel()">&times;</button></div>
+  <div id="accountPanel">
+    <div class="acct-avatar-section">
+      <div class="acct-avatar-circle" id="acctAvatar">?</div>
+      <div class="acct-display-name" id="acctName">用户</div>
+      <div class="acct-role-badge" id="acctRole">探索者</div>
+    </div>
+    <div class="acct-stats-grid">
+      <div class="acct-stat-card">
+        <div class="acct-stat-num" id="acctTotalEvents">0</div>
+        <div class="acct-stat-label">总行程</div>
+      </div>
+      <div class="acct-stat-card">
+        <div class="acct-stat-num" id="acctStreak">0</div>
+        <div class="acct-stat-label">连续天数</div>
+      </div>
+      <div class="acct-stat-card">
+        <div class="acct-stat-num" id="acctDoneRate">0%</div>
+        <div class="acct-stat-label">完成率</div>
+      </div>
+    </div>
+    <div class="acct-section">
+      <div class="acct-section-title">账户信息</div>
+      <div class="acct-info-row">
+        <div class="acct-info-icon">&#x1F464;</div>
+        <div class="acct-info-text">
+          <div class="acct-info-label">用户名</div>
+          <div class="acct-info-val" id="acctUsername">-</div>
+        </div>
+      </div>
+      <div class="acct-info-row">
+        <div class="acct-info-icon">&#x1F3AF;</div>
+        <div class="acct-info-text">
+          <div class="acct-info-label">身份</div>
+          <div class="acct-info-val" id="acctIdentity">-</div>
+        </div>
+      </div>
+      <div class="acct-info-row">
+        <div class="acct-info-icon">&#x1F4C5;</div>
+        <div class="acct-info-text">
+          <div class="acct-info-label">注册时间</div>
+          <div class="acct-info-val" id="acctJoinDate">-</div>
+        </div>
+      </div>
+    </div>
+    <button class="acct-logout-btn" onclick="doLogout()">退出登录</button>
   </div>
 </div>
 
@@ -5691,8 +5910,15 @@ function closeSettings() {
   document.getElementById('setOvl').classList.remove('on');
 }
 function doExport() {
-  var data = JSON.stringify(events, null, 2);
-  var blob = new Blob([data], {type:'application/json'});
+  var data = {
+    events: events,
+    todolist: (typeof todoList !== 'undefined') ? todoList : [],
+    tags: (typeof getDynamicTags === 'function') ? getDynamicTags() : [],
+    exportedAt: new Date().toISOString(),
+    version: '4.6.0'
+  };
+  var json = JSON.stringify(data, null, 2);
+  var blob = new Blob([json], {type:'application/json'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url; a.download = 'pixel_planner_backup_'+todayKey+'.json';
@@ -5706,23 +5932,117 @@ function doImport(ev) {
   r.onload = function(e) {
     try {
       var data = JSON.parse(e.target.result);
-      if (typeof data === 'object') { events = data; saveEvents(); renderAll(); alert('导入成功！'); closeSettings(); }
-      else { alert('无效格式'); }
+      if (typeof data === 'object' && data !== null) {
+        if (data.events && typeof data.events === 'object') {
+          events = data.events;
+          if (data.todolist && Array.isArray(data.todolist) && typeof todoList !== 'undefined') {
+            todoList = data.todolist;
+            if (typeof saveTodoList === 'function') saveTodoList();
+          }
+          if (data.tags && Array.isArray(data.tags) && typeof saveDynamicTags === 'function') {
+            saveDynamicTags(data.tags);
+            if (typeof syncAllTags === 'function') syncAllTags();
+          }
+        } else {
+          events = data;
+        }
+        saveEvents(); renderAll();
+        if (typeof renderTodoPanel === 'function') renderTodoPanel();
+        alert('导入成功！');
+        closeSettings();
+      } else { alert('无效格式'); }
     } catch(ex) { alert('解析失败: '+ex.message); }
   };
   r.readAsText(f);
   ev.target.value = '';
 }
 function doChkUpdate() {
-  // Use original showUpdateDialog if available
   if (typeof showUpdateDialog === 'function') { showUpdateDialog(); }
-  else { alert('更新检查: 当前版本 v3.0'); }
+  else { alert('更新检查: 当前版本 v4.6.0'); }
   closeSettings();
 }
 function doClearAll() {
-  if (confirm('此操作不可撤销！确认清除所有数据？')) {
-    events = {}; saveEvents(); renderAll(); closeSettings();
+  if (confirm('此操作不可撤销！确认清除所有数据？\n\n将清除：日历事件、待办列表、标签配置。')) {
+    events = {}; saveEvents(); renderAll();
+    if (typeof todoList !== 'undefined') { todoList = []; if (typeof saveTodoList === 'function') saveTodoList(); }
+    if (typeof renderTodoPanel === 'function') renderTodoPanel();
+    closeSettings();
   }
+}
+
+// ===== TodoList Panel =====
+function openTodoPanel() {
+  document.getElementById('todoPnl').classList.add('on');
+  document.getElementById('todoOvl').classList.add('on');
+  renderTodoPanel();
+}
+function closeTodoPanel() {
+  document.getElementById('todoPnl').classList.remove('on');
+  document.getElementById('todoOvl').classList.remove('on');
+}
+
+// ===== Account Panel =====
+function openAccountPanel() {
+  document.getElementById('acctPnl').classList.add('on');
+  document.getElementById('acctOvl').classList.add('on');
+  renderAccountPanel();
+}
+function closeAccountPanel() {
+  document.getElementById('acctPnl').classList.remove('on');
+  document.getElementById('acctOvl').classList.remove('on');
+}
+
+function renderAccountPanel() {
+  var uid = (typeof apiGetUser === 'function') ? apiGetUser() : (localStorage.getItem('pixel_user') || '');
+  var uname = uid || '用户';
+  var initial = (uname.charAt(0) || '?').toUpperCase();
+  document.getElementById('acctAvatar').textContent = initial;
+  document.getElementById('acctName').textContent = uname;
+  document.getElementById('acctUsername').textContent = uid || '未登录';
+
+  // 身份
+  var identity = localStorage.getItem('pixel_identity') || '';
+  var idMap = { student: '学生', worker: '上班族', freelancer: '自由职业', other: '探索者' };
+  document.getElementById('acctIdentity').textContent = idMap[identity] || '探索者';
+  document.getElementById('acctRole').textContent = idMap[identity] || '探索者';
+
+  // 注册时间
+  var joinDate = localStorage.getItem('pixel_join_date') || '';
+  if (!joinDate) {
+    joinDate = new Date().toISOString().slice(0, 10);
+    localStorage.setItem('pixel_join_date', joinDate);
+  }
+  document.getElementById('acctJoinDate').textContent = joinDate;
+
+  // 统计
+  var totalEvt = 0, doneEvt = 0;
+  var dates = Object.keys(events);
+  for (var i = 0; i < dates.length; i++) {
+    var evts = events[dates[i]] || [];
+    for (var j = 0; j < evts.length; j++) {
+      totalEvt++;
+      if (evts[j].done) doneEvt++;
+    }
+  }
+  document.getElementById('acctTotalEvents').textContent = totalEvt;
+  document.getElementById('acctDoneRate').textContent = totalEvt > 0 ? Math.round(doneEvt / totalEvt * 100) + '%' : '0%';
+
+  // 连续天数（简化计算）
+  var streak = 0;
+  var d = new Date();
+  while (true) {
+    var ds = dateKey(d);
+    if (events[ds] && events[ds].length > 0) { streak++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  document.getElementById('acctStreak').textContent = streak;
+}
+
+function doLogout() {
+  if (!confirm('确认退出登录？本地数据不会丢失。')) return;
+  localStorage.removeItem('pixel_user');
+  localStorage.removeItem('pixel_token');
+  location.reload();
 }
 
 // ===== Live Clock =====
