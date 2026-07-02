@@ -158,11 +158,14 @@ function stopASRRecording() {
 }
 
 // ═══════════ ASR 请求 ═══════════
+var ASR_SERVER = 'https://planner-production-d1ee.up.railway.app';
+
 function getASRUrl() {
   if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.getServerUrl === 'function') {
-    return AndroidBridge.getServerUrl() + '/api/asr';
+    var url = AndroidBridge.getServerUrl();
+    if (url) return url + '/api/asr';
   }
-  return '/api/asr';
+  return ASR_SERVER + '/api/asr';
 }
 
 function sendToASR(blob) {
