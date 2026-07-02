@@ -1,6 +1,6 @@
 {
   "name": "pixelplanner",
-  "version": "4.3",
+  "version": "4.4",
   "main": "sw.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
