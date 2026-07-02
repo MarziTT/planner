@@ -1,12 +1,11 @@
-// 语程 — 语音交互模块 v4.3
-// 腾讯云 ASR：getUserMedia 录音 → POST /api/asr → 后端代理签名
-// 兜底：AndroidBridge 原生识别 → 打字输入
+// 语程 — 语音交互模块 v4.5
+// Android：永不尝试 getUserMedia，直接走原生 AndroidBridge
+// 桌面/鸿蒙：getUserMedia 录音 → POST /api/asr → 后端代理签名
 
 var voiceResultText = '';
 var mediaRecorder = null;
 var audioChunks = [];
 var voiceRecTimer = null;
-var _getUserMediaFailed = false;  // getUserMedia 失败后降级到原生
 
 // ── 平台检测 ──
 var OHOS = /OpenHarmony|HarmonyOS/i.test(navigator.userAgent);
@@ -17,10 +16,10 @@ document.documentElement.classList.add(OHOS ? 'ohos' : ANDROID ? 'android' : 'de
 function getVoiceEngine() {
   var hasNative = typeof AndroidBridge !== 'undefined'
                && typeof AndroidBridge.startVoiceRecognition === 'function';
-  // getUserMedia 一旦失败过就不再尝试 Web 路径
-  if (!_getUserMediaFailed
-      && navigator.mediaDevices
-      && navigator.mediaDevices.getUserMedia) return 'web';
+  // Android：绝不走 getUserMedia，直通原生桥
+  if (ANDROID) return hasNative ? 'native' : 'none';
+  // 桌面/鸿蒙：可以走浏览器录音
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return 'web';
   if (hasNative) return 'native';
   return 'none';
 }
@@ -84,12 +83,9 @@ function toggleVoiceASR() {
       }, 15000);
     })
     .catch(function (err) {
-      _getUserMediaFailed = true;
-      hint.textContent = '麦克风权限被拒绝，正在降级...';
-      if (input) input.value = '';
+      hint.textContent = '麦克风权限被拒绝';
+      if (input) input.value = '请在系统设置中授权麦克风';
       voiceIsRecording = false;
-      // 降级到原生引擎再试一次
-      setTimeout(function () { toggleVoiceZone(); }, 300);
     });
 }
 

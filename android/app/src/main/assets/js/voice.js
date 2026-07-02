@@ -1,11 +1,12 @@
-// 语程 — 语音交互模块 v4.1
-// 双引擎：Web Speech API（优先）+ 原生 AndroidBridge（兜底）
-// 兼容 Android WebView / 鸿蒙 ArkWeb / Chrome / Edge
+// 语程 — 语音交互模块 v4.3
+// 腾讯云 ASR：getUserMedia 录音 → POST /api/asr → 后端代理签名
+// 兜底：AndroidBridge 原生识别 → 打字输入
 
 var voiceResultText = '';
-var recognition = null;
+var mediaRecorder = null;
+var audioChunks = [];
 var voiceRecTimer = null;
-var silenceTimer = null;
+var _getUserMediaFailed = false;  // getUserMedia 失败后降级到原生
 
 // ── 平台检测 ──
 var OHOS = /OpenHarmony|HarmonyOS/i.test(navigator.userAgent);
@@ -14,13 +15,12 @@ document.documentElement.classList.add(OHOS ? 'ohos' : ANDROID ? 'android' : 'de
 
 // ── 引擎检测 ──
 function getVoiceEngine() {
-  var SRec = window.SpeechRecognition || window.webkitSpeechRecognition;
   var hasNative = typeof AndroidBridge !== 'undefined'
                && typeof AndroidBridge.startVoiceRecognition === 'function';
-  // Android WebView 优先原生（避免 Web Speech 权限弹窗缺失被拒）
-  // 鸿蒙 / 桌面优先 Web Speech
-  if (ANDROID && hasNative) return 'native';
-  if (SRec) return 'web';
+  // getUserMedia 一旦失败过就不再尝试 Web 路径
+  if (!_getUserMediaFailed
+      && navigator.mediaDevices
+      && navigator.mediaDevices.getUserMedia) return 'web';
   if (hasNative) return 'native';
   return 'none';
 }
@@ -28,92 +28,124 @@ function getVoiceEngine() {
 // ── 入口 ──
 function toggleVoiceZone() {
   var engine = getVoiceEngine();
-  if (engine === 'web')  return toggleVoiceWeb();
+  if (engine === 'web')   return toggleVoiceASR();
   if (engine === 'native') return toggleVoiceNative();
   return toggleVoiceFallback();
 }
 
-// ═══════════ Web Speech API ═══════════
-function toggleVoiceWeb() {
+// ═══════════ 腾讯云 ASR（getUserMedia + MediaRecorder）═══════════
+function toggleVoiceASR() {
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
   var input = document.getElementById('voiceTextInput');
-  var SRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
   if (voiceIsRecording) {
-    clearTimeout(voiceRecTimer); clearTimeout(silenceTimer);
-    if (recognition) { try { recognition.stop(); } catch (_) {} recognition = null; }
-    zone.classList.remove('recording');
-    voiceIsRecording = false;
-    hint.textContent = '点击开始语音记录';
-    var text = voiceResultText || (input ? input.value.trim() : '');
-    if (text) { voiceResultText = text; if (input) input.value = text; submitVoiceText(); }
+    clearTimeout(voiceRecTimer);
+    stopASRRecording();
     return;
   }
 
   voiceResultText = '';
   if (input) input.value = '';
+  audioChunks = [];
 
-  recognition = new SRec();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = 'zh-CN';
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(function (stream) {
+      var opts = {};
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        opts.mimeType = 'audio/webm;codecs=opus';
+      }
 
-  recognition.onstart = function () {
-    zone.classList.add('recording');
-    voiceIsRecording = true;
-    hint.textContent = '正在聆听...';
-  };
+      mediaRecorder = new MediaRecorder(stream, opts);
+      mediaRecorder.ondataavailable = function (e) {
+        if (e.data && e.data.size > 0) audioChunks.push(e.data);
+      };
 
-  recognition.onresult = function (event) {
-    var interim = '', finalText = '';
-    for (var i = event.resultIndex; i < event.results.length; i++) {
-      var t = event.results[i][0].transcript;
-      if (event.results[i].isFinal) finalText += t; else interim += t;
-    }
-    var display = finalText || interim;
-    if (display) {
-      hint.textContent = display;
-      voiceResultText = finalText || display;
-      if (input) input.value = display;
-    }
-    clearTimeout(silenceTimer);
-    if (display && !finalText) {
-      silenceTimer = setTimeout(function () {
-        if (recognition && voiceIsRecording) { try { recognition.stop(); } catch (_) {} }
-      }, 2500);
-    }
-  };
+      mediaRecorder.onstop = function () {
+        stream.getTracks().forEach(function (t) { t.stop(); });
+        if (audioChunks.length === 0) {
+          hint.textContent = '未录制到音频';
+          voiceIsRecording = false;
+          zone.classList.remove('recording');
+          return;
+        }
+        var blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        hint.textContent = '识别中...';
+        sendToASR(blob);
+      };
 
-  recognition.onerror = function (event) {
-    clearTimeout(voiceRecTimer); clearTimeout(silenceTimer);
-    voiceIsRecording = false; zone.classList.remove('recording'); recognition = null;
-    var map = {
-      'not-allowed': '麦克风权限被拒绝',
-      'no-speech': '未检测到语音', 'aborted': '已取消',
-      'audio-capture': '麦克风不可用', 'network': '网络错误'
-    };
-    var msg = map[event.error] || ('异常: ' + event.error);
-    hint.textContent = msg;
-    if (input) input.value = msg;
-  };
+      mediaRecorder.start(100);
+      zone.classList.add('recording');
+      voiceIsRecording = true;
+      hint.textContent = '正在聆听...';
 
-  recognition.onend = function () {
-    clearTimeout(silenceTimer);
-    if (!voiceIsRecording) return;
-    voiceIsRecording = false; zone.classList.remove('recording'); recognition = null;
-    hint.textContent = voiceResultText ? '已识别，点击确认 ▸' : '点击开始语音记录';
-  };
-
-  try { recognition.start(); } catch (e) {
-    hint.textContent = '启动失败: ' + e.message; recognition = null;
-  }
-  voiceRecTimer = setTimeout(function () {
-    if (recognition && voiceIsRecording) { try { recognition.stop(); } catch (_) {} recognition = null; toggleVoiceZone(); }
-  }, 30000);
+      voiceRecTimer = setTimeout(function () {
+        if (voiceIsRecording) stopASRRecording();
+      }, 15000);
+    })
+    .catch(function (err) {
+      _getUserMediaFailed = true;
+      hint.textContent = '麦克风权限被拒绝，正在降级...';
+      if (input) input.value = '';
+      voiceIsRecording = false;
+      // 降级到原生引擎再试一次
+      setTimeout(function () { toggleVoiceZone(); }, 300);
+    });
 }
 
-// ═══════════ 原生 Android SpeechRecognizer ═══════════
+function stopASRRecording() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+  }
+  var zone = document.getElementById('voiceZone');
+  if (zone) zone.classList.remove('recording');
+  voiceIsRecording = false;
+  clearTimeout(voiceRecTimer);
+}
+
+function sendToASR(blob) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/asr', true);
+  xhr.setRequestHeader('Content-Type', blob.type || 'audio/webm');
+  xhr.timeout = 15000;
+  xhr.responseType = 'json';
+
+  xhr.onload = function () {
+    var hint = document.getElementById('voiceHint');
+    var input = document.getElementById('voiceTextInput');
+    if (!hint) return;
+
+    if (xhr.status === 200 && xhr.response && xhr.response.ok) {
+      var text = xhr.response.text || '';
+      voiceResultText = text;
+      hint.textContent = text || '（未识别到内容）';
+      if (input) input.value = text;
+      if (text) submitVoiceText();
+    } else {
+      var errMsg = (xhr.response && xhr.response.error) ? xhr.response.error : '识别失败';
+      hint.textContent = errMsg;
+      if (input) input.value = errMsg;
+    }
+  };
+
+  xhr.onerror = function () {
+    var hint = document.getElementById('voiceHint');
+    var input = document.getElementById('voiceTextInput');
+    hint.textContent = '网络错误，请重试';
+    if (input) input.value = '网络错误';
+  };
+
+  xhr.ontimeout = function () {
+    var hint = document.getElementById('voiceHint');
+    var input = document.getElementById('voiceTextInput');
+    hint.textContent = '识别超时，请重试';
+    if (input) input.value = '识别超时';
+  };
+
+  xhr.send(blob);
+}
+
+// ═══════════ 原生 Android SpeechRecognizer（兜底）═══════════
 function toggleVoiceNative() {
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
@@ -138,7 +170,6 @@ function toggleVoiceNative() {
   voiceRecTimer = setTimeout(function () { toggleVoiceZone(); }, 8000);
 }
 
-// Android 原生回调（由 evaluateJavascript 触发）
 function onVoiceResult(text)   { voiceResultText = text; var i = document.getElementById('voiceTextInput'); if (i) i.value = text; }
 function onVoicePartial(text)  { var h = document.getElementById('voiceHint'); if (h) h.textContent = text; }
 function onVoiceError(msg)     {
@@ -212,7 +243,7 @@ function parseChineseTime(text) {
   }
   m = text.match(/(早上|早晨|凌晨|上午|中午|下午|傍晚|晚上|夜里|夜间)\s*([零一二两三四五六七八九十]+)\s*(?:点|时)\s*(半)?\s*(?:([零一二两三四五六七八九十]+)\s*分)?/);
   if (m) {
-    var h2 = cnDigits[m[2]], min2 = m[4] ? (cnDigits[m[4]] || 0) : (m[3] ? 30 : 0);
+    var h2 = cnDigits[m[2]], min2 = m[4] ? (cnDigits[m[4]] || 0) : (m[2] ? 30 : 0);
     if (isNaN(h2)) return null;
     h2 = applyPeriod(m[1], h2);
     return { time: S(h2) + ':' + S(min2), title: text.replace(m[0], '').replace(/[在的于从去要]/g, '').trim() };
