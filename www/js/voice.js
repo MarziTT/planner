@@ -89,8 +89,6 @@ function onVoiceError(msg) {
   if (zone) zone.classList.remove('recording');
   var hint = document.getElementById('voiceHint');
   if (hint) hint.textContent = msg || '识别失败';
-  var input = document.getElementById('voiceTextInput');
-  if (input) input.value = msg || '识别失败';
 }
 
 // ═══════════ 桌面/鸿蒙 getUserMedia 录音 ═══════════
@@ -145,7 +143,6 @@ function toggleVoiceASR() {
     })
     .catch(function (err) {
       hint.textContent = '麦克风权限被拒绝';
-      if (input) input.value = '请在系统设置中授权麦克风';
       voiceIsRecording = false;
     });
 }
@@ -182,22 +179,17 @@ function sendToASR(blob) {
     } else {
       var errMsg = (xhr.response && xhr.response.error) ? xhr.response.error : '识别失败';
       hint.textContent = errMsg;
-      if (input) input.value = errMsg;
     }
   };
 
   xhr.onerror = function () {
     var hint = document.getElementById('voiceHint');
-    var input = document.getElementById('voiceTextInput');
     if (hint) hint.textContent = '网络错误，请重试';
-    if (input) input.value = '网络错误';
   };
 
   xhr.ontimeout = function () {
     var hint = document.getElementById('voiceHint');
-    var input = document.getElementById('voiceTextInput');
     if (hint) hint.textContent = '识别超时，请重试';
-    if (input) input.value = '识别超时';
   };
 
   xhr.send(blob);
