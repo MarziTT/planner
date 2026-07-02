@@ -1,12 +1,16 @@
 package com.pixelplanner.app;
 
 import android.content.Intent;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.util.Base64;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -15,10 +19,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.content.pm.PackageManager;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_RECORD_AUDIO = 1001;
+    private static final int SAMPLE_RATE = 16000;
+    private static final int MAX_RECORD_SECONDS = 15;
 
     private WebView webView;
     private ScheduleNotifier notifier;
@@ -27,6 +34,12 @@ public class MainActivity extends AppCompatActivity {
     private boolean jsReady = false;
     private SpeechRecognizer speechRecognizer;
     private boolean isListening = false;
+
+    // AudioRecord 直接录音 → base64 → 发到 Railway ASR
+    private AudioRecord audioRecorder;
+    private Thread recordThread;
+    private volatile boolean isDirectRecording = false;
+    private ByteArrayOutputStream directAudioBuffer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,9 +150,129 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @JavascriptInterface
+        public String getServerUrl() {
+            return HotUpdateManager.SERVER_URL;
+        }
+
+        // === AudioRecord 直接录音 → 发送到 Railway ASR（可靠方案） ===
+
+        @JavascriptInterface
+        public void startDirectRecording() {
+            runOnUiThread(() -> {
+                if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
+                    return;
+                }
+                if (isDirectRecording) return;
+
+                try {
+                    int minBuf = AudioRecord.getMinBufferSize(SAMPLE_RATE,
+                            AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                    int bufSize = Math.max(minBuf * 2, 2048);
+
+                    audioRecorder = new AudioRecord(MediaRecorder.AudioSource.MIC,
+                            SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
+                            AudioFormat.ENCODING_PCM_16BIT, bufSize);
+
+                    if (audioRecorder.getState() != AudioRecord.STATE_INITIALIZED) {
+                        webView.evaluateJavascript("onVoiceError('麦克风初始化失败')", null);
+                        return;
+                    }
+
+                    directAudioBuffer = new ByteArrayOutputStream();
+                    audioRecorder.startRecording();
+                    isDirectRecording = true;
+                    long startMs = System.currentTimeMillis();
+
+                    recordThread = new Thread(() -> {
+                        byte[] buf = new byte[minBuf];
+                        while (isDirectRecording) {
+                            int read = audioRecorder.read(buf, 0, buf.length);
+                            if (read > 0) {
+                                directAudioBuffer.write(buf, 0, read);
+                            }
+                            // 超时自动停止
+                            if (System.currentTimeMillis() - startMs > MAX_RECORD_SECONDS * 1000) {
+                                runOnUiThread(() -> stopDirectRecording());
+                                break;
+                            }
+                        }
+                    });
+                    recordThread.start();
+
+                    webView.evaluateJavascript("onVoiceStart()", null);
+                } catch (Exception e) {
+                    webView.evaluateJavascript("onVoiceError('录音启动失败: " + escapeJs(e.getMessage()) + "')", null);
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopDirectRecording() {
+            runOnUiThread(() -> {
+                if (!isDirectRecording) return;
+                isDirectRecording = false;
+
+                try {
+                    if (recordThread != null) {
+                        recordThread.join(2000);
+                    }
+                } catch (InterruptedException ignored) {}
+
+                if (audioRecorder != null) {
+                    try {
+                        audioRecorder.stop();
+                        audioRecorder.release();
+                    } catch (Exception ignored) {}
+                    audioRecorder = null;
+                }
+
+                byte[] pcmData = directAudioBuffer != null ? directAudioBuffer.toByteArray() : new byte[0];
+                directAudioBuffer = null;
+
+                if (pcmData.length < 1600) {
+                    // 太短，视为无效录音
+                    webView.evaluateJavascript("onVoiceError('录音太短，请再说一次')", null);
+                    return;
+                }
+
+                // 添加 WAV 头，转 base64
+                byte[] wavData = buildWav(pcmData, SAMPLE_RATE);
+                String b64 = Base64.encodeToString(wavData, Base64.NO_WRAP);
+
+                // 交给 JS 发送到 Railway ASR
+                webView.evaluateJavascript("onVoiceAudio('" + escapeJs(b64) + "')", null);
+            });
+        }
+
+        private byte[] buildWav(byte[] pcm, int sampleRate) {
+            int totalLen = pcm.length + 44;
+            int byteRate = sampleRate * 1 * 16 / 8;
+            java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(totalLen).order(java.nio.ByteOrder.LITTLE_ENDIAN);
+            buf.put("RIFF".getBytes());
+            buf.putInt(totalLen - 8);
+            buf.put("WAVE".getBytes());
+            buf.put("fmt ".getBytes());
+            buf.putInt(16);           // chunk size
+            buf.putShort((short) 1);  // PCM
+            buf.putShort((short) 1);  // mono
+            buf.putInt(sampleRate);
+            buf.putInt(byteRate);
+            buf.putShort((short) 2);  // block align
+            buf.putShort((short) 16); // bits per sample
+            buf.put("data".getBytes());
+            buf.putInt(pcm.length);
+            buf.put(pcm);
+            return buf.array();
+        }
+
+        // === 旧 SpeechRecognizer（保留作为 fallback，但 v4.5 不再使用） ===
+
+        @JavascriptInterface
         public void startVoiceRecognition() {
             runOnUiThread(() -> {
-                // 检查录音权限
                 if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.RECORD_AUDIO)
                         != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(MainActivity.this,

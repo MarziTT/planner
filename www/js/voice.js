@@ -158,9 +158,16 @@ function stopASRRecording() {
 }
 
 // ═══════════ ASR 请求 ═══════════
+function getASRUrl() {
+  if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.getServerUrl === 'function') {
+    return AndroidBridge.getServerUrl() + '/api/asr';
+  }
+  return '/api/asr';
+}
+
 function sendToASR(blob) {
   var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/asr', true);
+  xhr.open('POST', getASRUrl(), true);
   xhr.setRequestHeader('Content-Type', blob.type || 'audio/wav');
   xhr.timeout = 30000;
   xhr.responseType = 'json';
