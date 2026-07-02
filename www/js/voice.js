@@ -6,6 +6,7 @@ var voiceResultText = '';
 var mediaRecorder = null;
 var audioChunks = [];
 var voiceRecTimer = null;
+var _getUserMediaFailed = false;  // getUserMedia 失败后降级到原生
 
 // ── 平台检测 ──
 var OHOS = /OpenHarmony|HarmonyOS/i.test(navigator.userAgent);
@@ -14,10 +15,12 @@ document.documentElement.classList.add(OHOS ? 'ohos' : ANDROID ? 'android' : 'de
 
 // ── 引擎检测 ──
 function getVoiceEngine() {
-  var hasUM = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   var hasNative = typeof AndroidBridge !== 'undefined'
                && typeof AndroidBridge.startVoiceRecognition === 'function';
-  if (hasUM) return 'web';
+  // getUserMedia 一旦失败过就不再尝试 Web 路径
+  if (!_getUserMediaFailed
+      && navigator.mediaDevices
+      && navigator.mediaDevices.getUserMedia) return 'web';
   if (hasNative) return 'native';
   return 'none';
 }
@@ -81,9 +84,12 @@ function toggleVoiceASR() {
       }, 15000);
     })
     .catch(function (err) {
-      hint.textContent = '麦克风权限被拒绝';
-      if (input) input.value = '请在系统设置中授权麦克风';
+      _getUserMediaFailed = true;
+      hint.textContent = '麦克风权限被拒绝，正在降级...';
+      if (input) input.value = '';
       voiceIsRecording = false;
+      // 降级到原生引擎再试一次
+      setTimeout(function () { toggleVoiceZone(); }, 300);
     });
 }
 
