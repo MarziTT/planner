@@ -13,13 +13,17 @@ Railway / Cloud (PostgreSQL):
 Default port: 5000 (local) or $PORT (Railway)
 """
 
+import base64
 import hashlib
+import hmac
 import json
 import os
 import sqlite3
+import time as time_mod
 from datetime import datetime
 from pathlib import Path
 
+import requests
 from flask import Flask, g, jsonify, request, send_file
 from flask_cors import CORS
 
@@ -846,6 +850,115 @@ def serve_www_file(filename):
     if not safe_path.is_file():
         return jsonify({"ok": False, "error": "Not found"}), 404
     return send_file(str(safe_path))
+
+
+# ---------------------------------------------------------------------------
+# Tencent Cloud ASR — Voice Recognition Proxy
+# ---------------------------------------------------------------------------
+
+TENCENT_SECRET_ID = os.environ.get("TENCENT_SECRET_ID", "")
+TENCENT_SECRET_KEY = os.environ.get("TENCENT_SECRET_KEY", "")
+
+
+def _tc3_sign(secret_id, secret_key, service, host, action, payload, region="ap-guangzhou"):
+    """Generate TC3-HMAC-SHA256 signature headers for Tencent Cloud API."""
+    algorithm = "TC3-HMAC-SHA256"
+    timestamp = int(time_mod.time())
+    date_str = datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
+
+    # Step 1: Canonical Request
+    http_method = "POST"
+    canonical_uri = "/"
+    canonical_querystring = ""
+    ct = "application/json; charset=utf-8"
+    canonical_headers = f"content-type:{ct}\nhost:{host}\nx-tc-action:{action.lower()}\n"
+    signed_headers = "content-type;host;x-tc-action"
+    hashed_payload = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    canonical_request = (
+        f"{http_method}\n{canonical_uri}\n{canonical_querystring}\n"
+        f"{canonical_headers}\n{signed_headers}\n{hashed_payload}"
+    )
+
+    # Step 2: String to Sign
+    credential_scope = f"{date_str}/{service}/tc3_request"
+    hashed_canonical = hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+    string_to_sign = f"{algorithm}\n{timestamp}\n{credential_scope}\n{hashed_canonical}"
+
+    # Step 3: Signature
+    def _sign(key, msg):
+        return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
+
+    secret_date = _sign(("TC3" + secret_key).encode("utf-8"), date_str)
+    secret_service = _sign(secret_date, service)
+    secret_signing = _sign(secret_service, "tc3_request")
+    signature = hmac.new(secret_signing, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    # Step 4: Authorization
+    authorization = (
+        f"{algorithm} Credential={secret_id}/{credential_scope}, "
+        f"SignedHeaders={signed_headers}, Signature={signature}"
+    )
+
+    return {
+        "Authorization": authorization,
+        "Content-Type": ct,
+        "Host": host,
+        "X-TC-Action": action,
+        "X-TC-Timestamp": str(timestamp),
+        "X-TC-Version": "2019-06-14",
+        "X-TC-Region": region,
+    }
+
+
+@app.route("/api/asr", methods=["POST"])
+def asr_recognize():
+    """Proxy: receive audio from client, forward to Tencent Cloud ASR."""
+    if not TENCENT_SECRET_ID or not TENCENT_SECRET_KEY:
+        return jsonify({"ok": False, "error": "ASR credentials not configured"}), 500
+
+    audio_data = request.data
+    if not audio_data:
+        return jsonify({"ok": False, "error": "No audio data received"}), 400
+
+    # Detect audio format from Content-Type header
+    content_type = request.headers.get("Content-Type", "audio/webm")
+    fmt_map = {
+        "audio/webm": "webm",
+        "audio/wav": "wav",
+        "audio/mpeg": "mp3",
+        "audio/mp4": "m4a",
+        "audio/ogg": "ogg-opus",
+    }
+    voice_format = fmt_map.get(content_type.split(";")[0].strip(), "webm")
+
+    audio_b64 = base64.b64encode(audio_data).decode("utf-8")
+
+    req_body = json.dumps({
+        "EngSerViceType": "16k_zh",
+        "SourceType": 1,
+        "VoiceFormat": voice_format,
+        "Data": audio_b64,
+        "DataLen": len(audio_data),
+    })
+
+    host = "asr.tencentcloudapi.com"
+    headers = _tc3_sign(TENCENT_SECRET_ID, TENCENT_SECRET_KEY, "asr", host, "SentenceRecognition", req_body)
+
+    try:
+        resp = requests.post(f"https://{host}", headers=headers, data=req_body, timeout=15)
+        result = resp.json()
+        if "Response" in result:
+            if "Result" in result["Response"]:
+                return jsonify({"ok": True, "text": result["Response"]["Result"]})
+            if "Error" in result["Response"]:
+                return jsonify({"ok": False, "error": result["Response"]["Error"].get("Message", "Unknown error")})
+        return jsonify({"ok": False, "error": "Unexpected response from Tencent Cloud"}), 502
+    except requests.exceptions.Timeout:
+        return jsonify({"ok": False, "error": "ASR request timed out"}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({"ok": False, "error": "Cannot connect to Tencent Cloud ASR"}), 502
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 # ---------------------------------------------------------------------------
