@@ -1,5 +1,5 @@
-// 语程 — 语音交互模块 v4.5
-// Android：永不尝试 getUserMedia，直接走原生 AndroidBridge
+// 语程 — 语音交互模块 v4.6
+// Android：AudioRecord 原生录音 → base64 WAV → POST /api/asr → 腾讯云 ASR
 // 桌面/鸿蒙：getUserMedia 录音 → POST /api/asr → 后端代理签名
 
 var voiceResultText = '';
@@ -14,25 +14,86 @@ document.documentElement.classList.add(OHOS ? 'ohos' : ANDROID ? 'android' : 'de
 
 // ── 引擎检测 ──
 function getVoiceEngine() {
-  var hasNative = typeof AndroidBridge !== 'undefined'
-               && typeof AndroidBridge.startVoiceRecognition === 'function';
-  // Android：绝不走 getUserMedia，直通原生桥
-  if (ANDROID) return hasNative ? 'native' : 'none';
-  // 桌面/鸿蒙：可以走浏览器录音
+  var hasDirect = typeof AndroidBridge !== 'undefined'
+               && typeof AndroidBridge.startDirectRecording === 'function';
+  // Android：优先 AudioRecord 直接录音（可靠）
+  if (ANDROID && hasDirect) return 'direct';
+  // 桌面/鸿蒙：getUserMedia 录音
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return 'web';
-  if (hasNative) return 'native';
+  // Android 无原生桥：打字兜底
+  if (ANDROID) return 'none';
+  // 桌面备用
+  if (hasDirect) return 'direct';
   return 'none';
 }
 
 // ── 入口 ──
 function toggleVoiceZone() {
   var engine = getVoiceEngine();
-  if (engine === 'web')   return toggleVoiceASR();
-  if (engine === 'native') return toggleVoiceNative();
+  if (engine === 'direct') return toggleVoiceDirect();
+  if (engine === 'web')    return toggleVoiceASR();
   return toggleVoiceFallback();
 }
 
-// ═══════════ 腾讯云 ASR（getUserMedia + MediaRecorder）═══════════
+// ═══════════ Android AudioRecord 直接录音（v4.6 可靠方案）═══════════
+function toggleVoiceDirect() {
+  var zone = document.getElementById('voiceZone');
+  var hint = document.getElementById('voiceHint');
+  var input = document.getElementById('voiceTextInput');
+
+  if (voiceIsRecording) {
+    clearTimeout(voiceRecTimer);
+    zone.classList.remove('recording');
+    voiceIsRecording = false;
+    hint.textContent = '识别中...';
+    AndroidBridge.stopDirectRecording();
+    return;
+  }
+
+  voiceResultText = '';
+  if (input) input.value = '';
+  zone.classList.add('recording');
+  voiceIsRecording = true;
+  hint.textContent = '正在聆听...';
+  AndroidBridge.startDirectRecording();
+}
+
+// Java 回调：录音开始
+function onVoiceStart() {
+  var hint = document.getElementById('voiceHint');
+  if (hint) hint.textContent = '正在聆听...';
+}
+
+// Java 回调：录音完成，传入 base64 WAV
+function onVoiceAudio(b64) {
+  voiceIsRecording = false;
+  clearTimeout(voiceRecTimer);
+  var zone = document.getElementById('voiceZone');
+  if (zone) zone.classList.remove('recording');
+  var hint = document.getElementById('voiceHint');
+  if (hint) hint.textContent = '识别中...';
+
+  // 构造 Blob 发送到 Railway ASR
+  var raw = atob(b64);
+  var bytes = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  var blob = new Blob([bytes], { type: 'audio/wav' });
+  sendToASR(blob);
+}
+
+// Java 回调：识别错误
+function onVoiceError(msg) {
+  voiceIsRecording = false;
+  clearTimeout(voiceRecTimer);
+  var zone = document.getElementById('voiceZone');
+  if (zone) zone.classList.remove('recording');
+  var hint = document.getElementById('voiceHint');
+  if (hint) hint.textContent = msg || '识别失败';
+  var input = document.getElementById('voiceTextInput');
+  if (input) input.value = msg || '识别失败';
+}
+
+// ═══════════ 桌面/鸿蒙 getUserMedia 录音 ═══════════
 function toggleVoiceASR() {
   var zone = document.getElementById('voiceZone');
   var hint = document.getElementById('voiceHint');
@@ -99,11 +160,12 @@ function stopASRRecording() {
   clearTimeout(voiceRecTimer);
 }
 
+// ═══════════ ASR 请求 ═══════════
 function sendToASR(blob) {
   var xhr = new XMLHttpRequest();
   xhr.open('POST', '/api/asr', true);
-  xhr.setRequestHeader('Content-Type', blob.type || 'audio/webm');
-  xhr.timeout = 15000;
+  xhr.setRequestHeader('Content-Type', blob.type || 'audio/wav');
+  xhr.timeout = 30000;
   xhr.responseType = 'json';
 
   xhr.onload = function () {
@@ -127,54 +189,19 @@ function sendToASR(blob) {
   xhr.onerror = function () {
     var hint = document.getElementById('voiceHint');
     var input = document.getElementById('voiceTextInput');
-    hint.textContent = '网络错误，请重试';
+    if (hint) hint.textContent = '网络错误，请重试';
     if (input) input.value = '网络错误';
   };
 
   xhr.ontimeout = function () {
     var hint = document.getElementById('voiceHint');
     var input = document.getElementById('voiceTextInput');
-    hint.textContent = '识别超时，请重试';
+    if (hint) hint.textContent = '识别超时，请重试';
     if (input) input.value = '识别超时';
   };
 
   xhr.send(blob);
 }
-
-// ═══════════ 原生 Android SpeechRecognizer（兜底）═══════════
-function toggleVoiceNative() {
-  var zone = document.getElementById('voiceZone');
-  var hint = document.getElementById('voiceHint');
-  var input = document.getElementById('voiceTextInput');
-
-  if (voiceIsRecording) {
-    clearTimeout(voiceRecTimer);
-    zone.classList.remove('recording');
-    voiceIsRecording = false;
-    hint.textContent = '点击开始语音记录';
-    if (AndroidBridge.stopVoiceRecognition) AndroidBridge.stopVoiceRecognition();
-    if (voiceResultText) { if (input) input.value = voiceResultText; submitVoiceText(); }
-    return;
-  }
-
-  voiceResultText = '';
-  if (input) input.value = '';
-  zone.classList.add('recording');
-  voiceIsRecording = true;
-  hint.textContent = '正在聆听...';
-  AndroidBridge.startVoiceRecognition();
-  voiceRecTimer = setTimeout(function () { toggleVoiceZone(); }, 8000);
-}
-
-function onVoiceResult(text)   { voiceResultText = text; var i = document.getElementById('voiceTextInput'); if (i) i.value = text; }
-function onVoicePartial(text)  { var h = document.getElementById('voiceHint'); if (h) h.textContent = text; }
-function onVoiceError(msg)     {
-  voiceIsRecording = false; clearTimeout(voiceRecTimer);
-  var z = document.getElementById('voiceZone'); if (z) z.classList.remove('recording');
-  var h = document.getElementById('voiceHint'); if (h) h.textContent = msg || '识别失败';
-  var i = document.getElementById('voiceTextInput'); if (i) i.value = msg || '识别失败';
-}
-function onVoicePermissionGranted() { if (AndroidBridge && AndroidBridge.startVoiceRecognition) AndroidBridge.startVoiceRecognition(); }
 
 // ═══════════ 无引擎兜底 ═══════════
 function toggleVoiceFallback() {
