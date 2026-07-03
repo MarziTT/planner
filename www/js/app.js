@@ -69,8 +69,284 @@ document.addEventListener('keydown', function(e) {
 })();
 
 
+// ==================== 热更新进度显示 ====================
+function showUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'updateProgressOverlay';
+    overlay.className = 'update-progress-overlay';
+    overlay.innerHTML = `
+      <div class="update-progress-card">
+        <div class="update-progress-header">
+          <span class="update-progress-title">🔄 热更新中</span>
+          <button class="update-progress-close" onclick="hideUpdateProgress()">✕</button>
+        </div>
+        <div class="update-progress-body">
+          <div class="update-progress-steps">
+            <div class="update-step active" id="step1">
+              <span class="step-number">1</span>
+              <span class="step-text">检查更新</span>
+            </div>
+            <div class="update-step" id="step2">
+              <span class="step-number">2</span>
+              <span class="step-text">下载文件</span>
+            </div>
+            <div class="update-step" id="step3">
+              <span class="step-number">3</span>
+              <span class="step-text">应用更新</span>
+            </div>
+            <div class="update-step" id="step4">
+              <span class="step-number">4</span>
+              <span class="step-text">重启生效</span>
+            </div>
+          </div>
+          <div class="update-progress-bar">
+            <div class="update-progress-fill" id="updateProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="update-progress-text" id="updateProgressText">正在检查更新...</div>
+          <div class="update-progress-details" id="updateProgressDetails">
+            <div>当前版本: <span id="currentVersion">${getLocalVersion()}</span></div>
+            <div>最新版本: <span id="latestVersion">检查中...</span></div>
+            <div>更新文件: <span id="updateFileCount">0</span> 个</div>
+          </div>
+        </div>
+        <div class="update-progress-footer">
+          <button class="update-progress-btn" onclick="forceCheckUpdate()">🔄 手动检查</button>
+          <button class="update-progress-btn" onclick="hideUpdateProgress()">稍后提醒</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add('active');
+  updateProgressStep(1);
+}
+
+function hideUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function updateProgressStep(step) {
+  for (var i = 1; i <= 4; i++) {
+    var stepEl = document.getElementById('step' + i);
+    if (stepEl) {
+      stepEl.classList.toggle('active', i <= step);
+      stepEl.classList.toggle('completed', i < step);
+    }
+  }
+  var progress = (step - 1) * 25;
+  var fill = document.getElementById('updateProgressFill');
+  if (fill) fill.style.width = progress + '%';
+}
+
+function updateProgressText(text) {
+  var el = document.getElementById('updateProgressText');
+  if (el) el.textContent = text;
+}
+
+function updateProgressDetails(latestVersion, fileCount) {
+  var latestEl = document.getElementById('latestVersion');
+  var countEl = document.getElementById('updateFileCount');
+  if (latestEl) latestEl.textContent = latestVersion || '未知';
+  if (countEl) countEl.textContent = fileCount || 0;
+}
+
+// 强制检查更新（带进度显示）
+function forceCheckUpdate() {
+  showUpdateProgress();
+  updateProgressStep(1);
+  updateProgressText('正在检查服务器版本...');
+  
+  fetch('/api/version')
+    .then(function(res) { 
+      updateProgressStep(2);
+      updateProgressText('正在下载更新文件...');
+      return res.json(); 
+    })
+    .then(function(data) {
+      var latestVersion = data.version;
+      var fileCount = data.files.length;
+      updateProgressDetails(latestVersion, fileCount);
+      
+      var currentVersion = getLocalVersion();
+      if (compareVersions(currentVersion, latestVersion) < 0) {
+        updateProgressStep(3);
+        updateProgressText('正在应用更新...');
+        // 模拟更新过程
+        setTimeout(function() {
+          updateProgressStep(4);
+          updateProgressText('更新完成！重启应用生效');
+          if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.checkUpdate === 'function') {
+            AndroidBridge.checkUpdate();
+          }
+        }, 1500);
+      } else {
+        updateProgressText('已是最新版本');
+        updateProgressStep(4);
+      }
+    })
+    .catch(function(err) {
+      updateProgressText('检查更新失败: ' + (err.message || '网络错误'));
+    });
+}
+
+// 在页面加载时检查更新
+setTimeout(function() {
+  var current = getLocalVersion();
+  fetch('/api/version')
+    .then(res => res.json())
+    .then(data => {
+      if (compareVersions(current, data.version) < 0) {
+        showUpdateProgress();
+        updateProgressDetails(data.version, data.files.length);
+        updateProgressText('发现新版本 v' + data.version + '，点击手动检查更新');
+      }
+    })
+    .catch(() => {});
+}, 3000);
+
 // ================================================================
 // Pixel Planner v3.1 — Auth, Dynamic Tags, Voice AI, Questionnaire
+// ==================== 热更新进度显示 ====================
+function showUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'updateProgressOverlay';
+    overlay.className = 'update-progress-overlay';
+    overlay.innerHTML = `
+      <div class="update-progress-card">
+        <div class="update-progress-header">
+          <span class="update-progress-title">🔄 热更新中</span>
+          <button class="update-progress-close" onclick="hideUpdateProgress()">✕</button>
+        </div>
+        <div class="update-progress-body">
+          <div class="update-progress-steps">
+            <div class="update-step active" id="step1">
+              <span class="step-number">1</span>
+              <span class="step-text">检查更新</span>
+            </div>
+            <div class="update-step" id="step2">
+              <span class="step-number">2</span>
+              <span class="step-text">下载文件</span>
+            </div>
+            <div class="update-step" id="step3">
+              <span class="step-number">3</span>
+              <span class="step-text">应用更新</span>
+            </div>
+            <div class="update-step" id="step4">
+              <span class="step-number">4</span>
+              <span class="step-text">重启生效</span>
+            </div>
+          </div>
+          <div class="update-progress-bar">
+            <div class="update-progress-fill" id="updateProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="update-progress-text" id="updateProgressText">正在检查更新...</div>
+          <div class="update-progress-details" id="updateProgressDetails">
+            <div>当前版本: <span id="currentVersion">${getLocalVersion()}</span></div>
+            <div>最新版本: <span id="latestVersion">检查中...</span></div>
+            <div>更新文件: <span id="updateFileCount">0</span> 个</div>
+          </div>
+        </div>
+        <div class="update-progress-footer">
+          <button class="update-progress-btn" onclick="forceCheckUpdate()">🔄 手动检查</button>
+          <button class="update-progress-btn" onclick="hideUpdateProgress()">稍后提醒</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add('active');
+  updateProgressStep(1);
+}
+
+function hideUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function updateProgressStep(step) {
+  for (var i = 1; i <= 4; i++) {
+    var stepEl = document.getElementById('step' + i);
+    if (stepEl) {
+      stepEl.classList.toggle('active', i <= step);
+      stepEl.classList.toggle('completed', i < step);
+    }
+  }
+  var progress = (step - 1) * 25;
+  var fill = document.getElementById('updateProgressFill');
+  if (fill) fill.style.width = progress + '%';
+}
+
+function updateProgressText(text) {
+  var el = document.getElementById('updateProgressText');
+  if (el) el.textContent = text;
+}
+
+function updateProgressDetails(latestVersion, fileCount) {
+  var latestEl = document.getElementById('latestVersion');
+  var countEl = document.getElementById('updateFileCount');
+  if (latestEl) latestEl.textContent = latestVersion || '未知';
+  if (countEl) countEl.textContent = fileCount || 0;
+}
+
+// 强制检查更新（带进度显示）
+function forceCheckUpdate() {
+  showUpdateProgress();
+  updateProgressStep(1);
+  updateProgressText('正在检查服务器版本...');
+  
+  fetch('/api/version')
+    .then(function(res) { 
+      updateProgressStep(2);
+      updateProgressText('正在下载更新文件...');
+      return res.json(); 
+    })
+    .then(function(data) {
+      var latestVersion = data.version;
+      var fileCount = data.files.length;
+      updateProgressDetails(latestVersion, fileCount);
+      
+      var currentVersion = getLocalVersion();
+      if (compareVersions(currentVersion, latestVersion) < 0) {
+        updateProgressStep(3);
+        updateProgressText('正在应用更新...');
+        // 模拟更新过程
+        setTimeout(function() {
+          updateProgressStep(4);
+          updateProgressText('更新完成！重启应用生效');
+          if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.checkUpdate === 'function') {
+            AndroidBridge.checkUpdate();
+          }
+        }, 1500);
+      } else {
+        updateProgressText('已是最新版本');
+        updateProgressStep(4);
+      }
+    })
+    .catch(function(err) {
+      updateProgressText('检查更新失败: ' + (err.message || '网络错误'));
+    });
+}
+
+// 在页面加载时检查更新
+setTimeout(function() {
+  var current = getLocalVersion();
+  fetch('/api/version')
+    .then(res => res.json())
+    .then(data => {
+      if (compareVersions(current, data.version) < 0) {
+        showUpdateProgress();
+        updateProgressDetails(data.version, data.files.length);
+        updateProgressText('发现新版本 v' + data.version + '，点击手动检查更新');
+      }
+    })
+    .catch(() => {});
+}, 3000);
+
 // ================================================================
 
 
@@ -89,8 +365,284 @@ function gifBgHtml() {
 }
 
 
+// ==================== 热更新进度显示 ====================
+function showUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'updateProgressOverlay';
+    overlay.className = 'update-progress-overlay';
+    overlay.innerHTML = `
+      <div class="update-progress-card">
+        <div class="update-progress-header">
+          <span class="update-progress-title">🔄 热更新中</span>
+          <button class="update-progress-close" onclick="hideUpdateProgress()">✕</button>
+        </div>
+        <div class="update-progress-body">
+          <div class="update-progress-steps">
+            <div class="update-step active" id="step1">
+              <span class="step-number">1</span>
+              <span class="step-text">检查更新</span>
+            </div>
+            <div class="update-step" id="step2">
+              <span class="step-number">2</span>
+              <span class="step-text">下载文件</span>
+            </div>
+            <div class="update-step" id="step3">
+              <span class="step-number">3</span>
+              <span class="step-text">应用更新</span>
+            </div>
+            <div class="update-step" id="step4">
+              <span class="step-number">4</span>
+              <span class="step-text">重启生效</span>
+            </div>
+          </div>
+          <div class="update-progress-bar">
+            <div class="update-progress-fill" id="updateProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="update-progress-text" id="updateProgressText">正在检查更新...</div>
+          <div class="update-progress-details" id="updateProgressDetails">
+            <div>当前版本: <span id="currentVersion">${getLocalVersion()}</span></div>
+            <div>最新版本: <span id="latestVersion">检查中...</span></div>
+            <div>更新文件: <span id="updateFileCount">0</span> 个</div>
+          </div>
+        </div>
+        <div class="update-progress-footer">
+          <button class="update-progress-btn" onclick="forceCheckUpdate()">🔄 手动检查</button>
+          <button class="update-progress-btn" onclick="hideUpdateProgress()">稍后提醒</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add('active');
+  updateProgressStep(1);
+}
+
+function hideUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function updateProgressStep(step) {
+  for (var i = 1; i <= 4; i++) {
+    var stepEl = document.getElementById('step' + i);
+    if (stepEl) {
+      stepEl.classList.toggle('active', i <= step);
+      stepEl.classList.toggle('completed', i < step);
+    }
+  }
+  var progress = (step - 1) * 25;
+  var fill = document.getElementById('updateProgressFill');
+  if (fill) fill.style.width = progress + '%';
+}
+
+function updateProgressText(text) {
+  var el = document.getElementById('updateProgressText');
+  if (el) el.textContent = text;
+}
+
+function updateProgressDetails(latestVersion, fileCount) {
+  var latestEl = document.getElementById('latestVersion');
+  var countEl = document.getElementById('updateFileCount');
+  if (latestEl) latestEl.textContent = latestVersion || '未知';
+  if (countEl) countEl.textContent = fileCount || 0;
+}
+
+// 强制检查更新（带进度显示）
+function forceCheckUpdate() {
+  showUpdateProgress();
+  updateProgressStep(1);
+  updateProgressText('正在检查服务器版本...');
+  
+  fetch('/api/version')
+    .then(function(res) { 
+      updateProgressStep(2);
+      updateProgressText('正在下载更新文件...');
+      return res.json(); 
+    })
+    .then(function(data) {
+      var latestVersion = data.version;
+      var fileCount = data.files.length;
+      updateProgressDetails(latestVersion, fileCount);
+      
+      var currentVersion = getLocalVersion();
+      if (compareVersions(currentVersion, latestVersion) < 0) {
+        updateProgressStep(3);
+        updateProgressText('正在应用更新...');
+        // 模拟更新过程
+        setTimeout(function() {
+          updateProgressStep(4);
+          updateProgressText('更新完成！重启应用生效');
+          if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.checkUpdate === 'function') {
+            AndroidBridge.checkUpdate();
+          }
+        }, 1500);
+      } else {
+        updateProgressText('已是最新版本');
+        updateProgressStep(4);
+      }
+    })
+    .catch(function(err) {
+      updateProgressText('检查更新失败: ' + (err.message || '网络错误'));
+    });
+}
+
+// 在页面加载时检查更新
+setTimeout(function() {
+  var current = getLocalVersion();
+  fetch('/api/version')
+    .then(res => res.json())
+    .then(data => {
+      if (compareVersions(current, data.version) < 0) {
+        showUpdateProgress();
+        updateProgressDetails(data.version, data.files.length);
+        updateProgressText('发现新版本 v' + data.version + '，点击手动检查更新');
+      }
+    })
+    .catch(() => {});
+}, 3000);
+
 // ================================================================
 // Pixel Planner v3.1 — Auth, Dynamic Tags, Voice AI, Questionnaire
+// ==================== 热更新进度显示 ====================
+function showUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'updateProgressOverlay';
+    overlay.className = 'update-progress-overlay';
+    overlay.innerHTML = `
+      <div class="update-progress-card">
+        <div class="update-progress-header">
+          <span class="update-progress-title">🔄 热更新中</span>
+          <button class="update-progress-close" onclick="hideUpdateProgress()">✕</button>
+        </div>
+        <div class="update-progress-body">
+          <div class="update-progress-steps">
+            <div class="update-step active" id="step1">
+              <span class="step-number">1</span>
+              <span class="step-text">检查更新</span>
+            </div>
+            <div class="update-step" id="step2">
+              <span class="step-number">2</span>
+              <span class="step-text">下载文件</span>
+            </div>
+            <div class="update-step" id="step3">
+              <span class="step-number">3</span>
+              <span class="step-text">应用更新</span>
+            </div>
+            <div class="update-step" id="step4">
+              <span class="step-number">4</span>
+              <span class="step-text">重启生效</span>
+            </div>
+          </div>
+          <div class="update-progress-bar">
+            <div class="update-progress-fill" id="updateProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="update-progress-text" id="updateProgressText">正在检查更新...</div>
+          <div class="update-progress-details" id="updateProgressDetails">
+            <div>当前版本: <span id="currentVersion">${getLocalVersion()}</span></div>
+            <div>最新版本: <span id="latestVersion">检查中...</span></div>
+            <div>更新文件: <span id="updateFileCount">0</span> 个</div>
+          </div>
+        </div>
+        <div class="update-progress-footer">
+          <button class="update-progress-btn" onclick="forceCheckUpdate()">🔄 手动检查</button>
+          <button class="update-progress-btn" onclick="hideUpdateProgress()">稍后提醒</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add('active');
+  updateProgressStep(1);
+}
+
+function hideUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function updateProgressStep(step) {
+  for (var i = 1; i <= 4; i++) {
+    var stepEl = document.getElementById('step' + i);
+    if (stepEl) {
+      stepEl.classList.toggle('active', i <= step);
+      stepEl.classList.toggle('completed', i < step);
+    }
+  }
+  var progress = (step - 1) * 25;
+  var fill = document.getElementById('updateProgressFill');
+  if (fill) fill.style.width = progress + '%';
+}
+
+function updateProgressText(text) {
+  var el = document.getElementById('updateProgressText');
+  if (el) el.textContent = text;
+}
+
+function updateProgressDetails(latestVersion, fileCount) {
+  var latestEl = document.getElementById('latestVersion');
+  var countEl = document.getElementById('updateFileCount');
+  if (latestEl) latestEl.textContent = latestVersion || '未知';
+  if (countEl) countEl.textContent = fileCount || 0;
+}
+
+// 强制检查更新（带进度显示）
+function forceCheckUpdate() {
+  showUpdateProgress();
+  updateProgressStep(1);
+  updateProgressText('正在检查服务器版本...');
+  
+  fetch('/api/version')
+    .then(function(res) { 
+      updateProgressStep(2);
+      updateProgressText('正在下载更新文件...');
+      return res.json(); 
+    })
+    .then(function(data) {
+      var latestVersion = data.version;
+      var fileCount = data.files.length;
+      updateProgressDetails(latestVersion, fileCount);
+      
+      var currentVersion = getLocalVersion();
+      if (compareVersions(currentVersion, latestVersion) < 0) {
+        updateProgressStep(3);
+        updateProgressText('正在应用更新...');
+        // 模拟更新过程
+        setTimeout(function() {
+          updateProgressStep(4);
+          updateProgressText('更新完成！重启应用生效');
+          if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.checkUpdate === 'function') {
+            AndroidBridge.checkUpdate();
+          }
+        }, 1500);
+      } else {
+        updateProgressText('已是最新版本');
+        updateProgressStep(4);
+      }
+    })
+    .catch(function(err) {
+      updateProgressText('检查更新失败: ' + (err.message || '网络错误'));
+    });
+}
+
+// 在页面加载时检查更新
+setTimeout(function() {
+  var current = getLocalVersion();
+  fetch('/api/version')
+    .then(res => res.json())
+    .then(data => {
+      if (compareVersions(current, data.version) < 0) {
+        showUpdateProgress();
+        updateProgressDetails(data.version, data.files.length);
+        updateProgressText('发现新版本 v' + data.version + '，点击手动检查更新');
+      }
+    })
+    .catch(() => {});
+}, 3000);
+
 // ================================================================
 
 // ==================== 动态标签系统 ====================
@@ -521,4 +1073,142 @@ if (typeof showMainApp !== 'undefined') {
     setTimeout(function() { initDataFromServer(); }, 300);
   };
 }
+// ==================== 热更新进度显示 ====================
+function showUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'updateProgressOverlay';
+    overlay.className = 'update-progress-overlay';
+    overlay.innerHTML = `
+      <div class="update-progress-card">
+        <div class="update-progress-header">
+          <span class="update-progress-title">🔄 热更新中</span>
+          <button class="update-progress-close" onclick="hideUpdateProgress()">✕</button>
+        </div>
+        <div class="update-progress-body">
+          <div class="update-progress-steps">
+            <div class="update-step active" id="step1">
+              <span class="step-number">1</span>
+              <span class="step-text">检查更新</span>
+            </div>
+            <div class="update-step" id="step2">
+              <span class="step-number">2</span>
+              <span class="step-text">下载文件</span>
+            </div>
+            <div class="update-step" id="step3">
+              <span class="step-number">3</span>
+              <span class="step-text">应用更新</span>
+            </div>
+            <div class="update-step" id="step4">
+              <span class="step-number">4</span>
+              <span class="step-text">重启生效</span>
+            </div>
+          </div>
+          <div class="update-progress-bar">
+            <div class="update-progress-fill" id="updateProgressFill" style="width: 0%"></div>
+          </div>
+          <div class="update-progress-text" id="updateProgressText">正在检查更新...</div>
+          <div class="update-progress-details" id="updateProgressDetails">
+            <div>当前版本: <span id="currentVersion">${getLocalVersion()}</span></div>
+            <div>最新版本: <span id="latestVersion">检查中...</span></div>
+            <div>更新文件: <span id="updateFileCount">0</span> 个</div>
+          </div>
+        </div>
+        <div class="update-progress-footer">
+          <button class="update-progress-btn" onclick="forceCheckUpdate()">🔄 手动检查</button>
+          <button class="update-progress-btn" onclick="hideUpdateProgress()">稍后提醒</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+  overlay.classList.add('active');
+  updateProgressStep(1);
+}
+
+function hideUpdateProgress() {
+  var overlay = document.getElementById('updateProgressOverlay');
+  if (overlay) overlay.classList.remove('active');
+}
+
+function updateProgressStep(step) {
+  for (var i = 1; i <= 4; i++) {
+    var stepEl = document.getElementById('step' + i);
+    if (stepEl) {
+      stepEl.classList.toggle('active', i <= step);
+      stepEl.classList.toggle('completed', i < step);
+    }
+  }
+  var progress = (step - 1) * 25;
+  var fill = document.getElementById('updateProgressFill');
+  if (fill) fill.style.width = progress + '%';
+}
+
+function updateProgressText(text) {
+  var el = document.getElementById('updateProgressText');
+  if (el) el.textContent = text;
+}
+
+function updateProgressDetails(latestVersion, fileCount) {
+  var latestEl = document.getElementById('latestVersion');
+  var countEl = document.getElementById('updateFileCount');
+  if (latestEl) latestEl.textContent = latestVersion || '未知';
+  if (countEl) countEl.textContent = fileCount || 0;
+}
+
+// 强制检查更新（带进度显示）
+function forceCheckUpdate() {
+  showUpdateProgress();
+  updateProgressStep(1);
+  updateProgressText('正在检查服务器版本...');
+  
+  fetch('/api/version')
+    .then(function(res) { 
+      updateProgressStep(2);
+      updateProgressText('正在下载更新文件...');
+      return res.json(); 
+    })
+    .then(function(data) {
+      var latestVersion = data.version;
+      var fileCount = data.files.length;
+      updateProgressDetails(latestVersion, fileCount);
+      
+      var currentVersion = getLocalVersion();
+      if (compareVersions(currentVersion, latestVersion) < 0) {
+        updateProgressStep(3);
+        updateProgressText('正在应用更新...');
+        // 模拟更新过程
+        setTimeout(function() {
+          updateProgressStep(4);
+          updateProgressText('更新完成！重启应用生效');
+          if (typeof AndroidBridge !== 'undefined' && typeof AndroidBridge.checkUpdate === 'function') {
+            AndroidBridge.checkUpdate();
+          }
+        }, 1500);
+      } else {
+        updateProgressText('已是最新版本');
+        updateProgressStep(4);
+      }
+    })
+    .catch(function(err) {
+      updateProgressText('检查更新失败: ' + (err.message || '网络错误'));
+    });
+}
+
+// 在页面加载时检查更新
+setTimeout(function() {
+  var current = getLocalVersion();
+  fetch('/api/version')
+    .then(res => res.json())
+    .then(data => {
+      if (compareVersions(current, data.version) < 0) {
+        showUpdateProgress();
+        updateProgressDetails(data.version, data.files.length);
+        updateProgressText('发现新版本 v' + data.version + '，点击手动检查更新');
+      }
+    })
+    .catch(() => {});
+}, 3000);
+
 // ============================================

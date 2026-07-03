@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel Planner v4.6.0</title>
+<title>Pixel Planner v4.6.5</title>
 <style>
 /* ================================================================
-   Pixel Planner v4.6.0 — 卡片流主屏 + 侧滑日历 + 底部添加面板
+   Pixel Planner v4.6.5 — 卡片流主屏 + 侧滑日历 + 底部添加面板
    8 主题: warm / clean / dark / brutal / kamen / ocean / forest / sunset
    ================================================================ */
 
@@ -851,6 +851,9 @@ body { font-family: var(--ff); }
 .acct-logout-btn:hover { background: #ef4444; color: #fff; }
 
 </style>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/todolist.js"></script>
 </head>
@@ -6096,7 +6099,7 @@ function doExport() {
     todolist: (typeof todoList !== 'undefined') ? todoList : [],
     tags: (typeof getDynamicTags === 'function') ? getDynamicTags() : [],
     exportedAt: new Date().toISOString(),
-    version: '4.6.0'
+    version: '4.6.5'
   };
   var json = JSON.stringify(data, null, 2);
   var blob = new Blob([json], {type:'application/json'});
@@ -6139,7 +6142,7 @@ function doImport(ev) {
 }
 function doChkUpdate() {
   if (typeof showUpdateDialog === 'function') { showUpdateDialog(); }
-  else { alert('更新检查: 当前版本 v4.6.0'); }
+  else { alert('更新检查: 当前版本 v4.6.5'); }
   closeSettings();
 }
 function doClearAll() {
@@ -6219,12 +6222,7 @@ function renderAccountPanel() {
   document.getElementById('acctStreak').textContent = streak;
 }
 
-function doLogout() {
-  if (!confirm('确认退出登录？本地数据不会丢失。')) return;
-  localStorage.removeItem('pixel_user');
-  localStorage.removeItem('pixel_token');
-  location.reload();
-}
+
 
 // ===== Live Clock =====
 function updClock() {
@@ -6289,242 +6287,7 @@ document.addEventListener('keydown', function(e) {
 // Pixel Planner v3.1 — Auth, Dynamic Tags, Voice AI, Questionnaire
 // ================================================================
 
-// ====== 1. AUTH MODULE ======
-var AUTH_KEY = 'pixel_auth';
-var AUTH_USER_KEY = 'pixel_current_user';
-var USERS_KEY = 'pixel_users';
 
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
-  catch(e) { return {}; }
-}
-function saveUsers(users) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-}
-function getCurrentUser() {
-  return localStorage.getItem(AUTH_USER_KEY) || '';
-}
-function isLoggedIn() {
-  return localStorage.getItem(AUTH_KEY) === '1' && getCurrentUser() !== '';
-}
-
-var authIsRegister = false;
-
-function toggleAuthMode() {
-  authIsRegister = !authIsRegister;
-  document.getElementById('loginSub').textContent = authIsRegister ? '创建新账号' : '登录以继续';
-  document.getElementById('loginSubmitBtn').textContent = authIsRegister ? '注 册' : '登 录';
-  document.getElementById('toggleModeBtn').textContent = authIsRegister ? '已有账号？去登录' : '没有账号？去注册';
-  document.getElementById('confirmField').style.display = authIsRegister ? '' : 'none';
-  document.getElementById('loginErr').classList.remove('show');
-  document.getElementById('regConfirmPw').value = '';
-}
-
-function handleAuth() {
-  var userEl = document.getElementById('loginUser');
-  var pwEl = document.getElementById('loginPw');
-  var errEl = document.getElementById('loginErr');
-  var user = userEl.value.trim();
-  var pw = pwEl.value;
-
-  if (!user || !pw) {
-    errEl.textContent = '请填写用户名和密码'; errEl.classList.add('show'); return;
-  }
-  if (authIsRegister) {
-    var confirmPw = document.getElementById('regConfirmPw').value;
-    if (pw !== confirmPw) {
-      errEl.textContent = '两次密码不一致'; errEl.classList.add('show'); return;
-    }
-    if (pw.length < 4) {
-      errEl.textContent = '密码至少4位'; errEl.classList.add('show'); return;
-    }
-    var users = getUsers();
-    if (users[user]) {
-      errEl.textContent = '用户名已存在'; errEl.classList.add('show'); return;
-    }
-    users[user] = { pw: pw, createdAt: Date.now() };
-    saveUsers(users);
-    localStorage.setItem(AUTH_KEY, '1');
-    localStorage.setItem(AUTH_USER_KEY, user);
-    // Check if first time
-    if (!localStorage.getItem('pixel_profile')) {
-      showQuestionnaire();
-    } else {
-      showMainApp();
-    }
-  } else {
-    var users = getUsers();
-    if (!users[user] || users[user].pw !== pw) {
-      errEl.textContent = '用户名或密码错误'; errEl.classList.add('show'); return;
-    }
-    localStorage.setItem(AUTH_KEY, '1');
-    localStorage.setItem(AUTH_USER_KEY, user);
-    showMainApp();
-  }
-}
-
-function doLogout() {
-  localStorage.setItem(AUTH_KEY, '0');
-  localStorage.removeItem(AUTH_USER_KEY);
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPw').value = '';
-  document.getElementById('regConfirmPw').value = '';
-  document.getElementById('loginErr').classList.remove('show');
-  closeSettings();
-}
-
-function showMainApp() {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('mainApp').style.display = '';
-  document.getElementById('questionnaireOverlay').style.display = 'none';
-  // Reset auth form
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPw').value = '';
-  document.getElementById('regConfirmPw').value = '';
-  document.getElementById('loginErr').classList.remove('show');
-  // Refresh UI
-  if (typeof renderAll === 'function') renderAll();
-}
-
-// ====== 2. QUESTIONNAIRE ======
-var quizSteps = [
-  {
-    q: '你的身份是？',
-    opts: ['学生', '上班族', '自由职业', '老师', '其他'],
-    key: 'identity'
-  },
-  {
-    q: '你的主要目标？',
-    opts: ['提高效率', '健康管理', '学习规划', '工作安排', '综合'],
-    key: 'goal'
-  },
-  {
-    q: '你常用的标签偏好？（可多选）',
-    opts: ['工作', '学习', '运动', '社交', '娱乐', '健康', '出行'],
-    key: 'prefTags',
-    multi: true
-  }
-];
-var quizIdx = 0;
-var quizAnswers = {};
-var quizMultiSel = [];
-
-function showQuestionnaire() {
-  quizIdx = 0; quizAnswers = {}; quizMultiSel = [];
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('questionnaireOverlay').style.display = 'flex';
-  renderQuizStep();
-}
-
-function renderQuizStep() {
-  var step = quizSteps[quizIdx];
-  document.getElementById('quizQ').textContent = step.q;
-  document.getElementById('quizSub').textContent = '问题 ' + (quizIdx + 1) + ' / ' + quizSteps.length;
-  document.getElementById('quizSkip').style.display = '';
-
-  // Dots
-  var dotsHtml = '';
-  for (var i = 0; i < quizSteps.length; i++) {
-    dotsHtml += '<div class="dot' + (i === quizIdx ? ' active' : '') + '"></div>';
-  }
-  document.getElementById('quizDots').innerHTML = dotsHtml;
-
-  // Options
-  quizMultiSel = [];
-  var optsHtml = '';
-  for (var j = 0; j < step.opts.length; j++) {
-    var o = step.opts[j];
-    var selClass = (step.multi && quizAnswers[step.key] && quizAnswers[step.key].indexOf(o) !== -1) ? ' sel' : '';
-    var clickFn = step.multi
-      ? ('onclick="quizToggleMulti(\'' + o.replace(/'/g,"\\'") + '\', this)"')
-      : ('onclick="quizPick(\'' + o.replace(/'/g,"\\'") + '\')"');
-    optsHtml += '<div class="quiz-opt' + selClass + '" ' + clickFn + '>' + o + '</div>';
-  }
-  document.getElementById('quizOpts').innerHTML = optsHtml;
-}
-
-function quizPick(val) {
-  var step = quizSteps[quizIdx];
-  if (step.multi) return; // handled separately
-  quizAnswers[step.key] = val;
-  nextQuiz();
-}
-
-function quizToggleMulti(val, el) {
-  var step = quizSteps[quizIdx];
-  if (!quizAnswers[step.key]) quizAnswers[step.key] = [];
-  var arr = quizAnswers[step.key];
-  var idx = arr.indexOf(val);
-  if (idx === -1) { arr.push(val); el.classList.add('sel'); }
-  else { arr.splice(idx, 1); el.classList.remove('sel'); }
-}
-
-function nextQuiz() {
-  quizIdx++;
-  if (quizIdx >= quizSteps.length) {
-    quizFinish();
-  } else {
-    renderQuizStep();
-  }
-}
-
-function quizSkip() {
-  nextQuiz();
-}
-
-function quizFinish() {
-  var profile = {
-    identity: quizAnswers.identity || '',
-    goal: quizAnswers.goal || '',
-    prefTags: quizAnswers.prefTags || [],
-    completedAt: Date.now()
-  };
-  localStorage.setItem('pixel_profile', JSON.stringify(profile));
-
-  // Pre-populate tags based on preferences
-  var prefTags = profile.prefTags;
-  if (prefTags && prefTags.length > 0) {
-    ensureDefaultTagsWith(prefTags);
-  }
-
-  // Theme recommendation based on identity
-  if (profile.identity === '学生' && currentTheme !== 'clean') {
-    setTh('clean');
-  } else if (profile.identity === '上班族' && currentTheme !== 'dark') {
-    setTh('dark');
-  }
-
-  showMainApp();
-  showToast('欢迎使用 Pixel Planner！');
-}
-
-function ensureDefaultTagsWith(extraTags) {
-  var tags = getDynamicTags();
-  var existingNames = tags.map(function(t){ return t.name; });
-  var defaults = [
-    { name: '工作', color: '#4A90D9', emoji: '💼' },
-    { name: '学习', color: '#50C878', emoji: '📚' },
-    { name: '生活', color: '#F5A623', emoji: '🏠' }
-  ];
-  for (var i = 0; i < defaults.length; i++) {
-    if (existingNames.indexOf(defaults[i].name) === -1) {
-      tags.push(defaults[i]);
-      existingNames.push(defaults[i].name);
-    }
-  }
-  for (var j = 0; j < extraTags.length; j++) {
-    var en = extraTags[j];
-    if (existingNames.indexOf(en) === -1) {
-      var colors = ['#E85D75','#9B59B6','#1ABC9C','#E67E22','#3498DB'];
-      var emojis = ['🏃','🎉','🎮','🏥','✈️'];
-      tags.push({ name: en, color: colors[j % colors.length], emoji: emojis[j] || '📌' });
-    }
-  }
-  saveDynamicTags(tags);
-}
 
 // ====== 3. DYNAMIC TAG SYSTEM ======
 var TAGS_STORAGE_KEY = 'pixel_dynamic_tags';
