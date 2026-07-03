@@ -5999,6 +5999,7 @@ function selUp(dk) {
   renderAll();
 }
 function updateDt() {
+  if (!selectedDate) return;
   var p = selectedDate.split('-');
   var d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
   var dn = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
