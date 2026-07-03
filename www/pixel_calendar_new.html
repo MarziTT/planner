@@ -943,6 +943,7 @@ body { font-family: var(--ff); }
       <div class="date-sub" id="liveDate">6月18日 星期四</div>
     </div>
     <div id="headerActions">
+      <button class="icon-btn" onclick="openAddPanel()" title="添加行程">+</button>
       <button class="icon-btn" onclick="openTodoPanel()" title="待办">&#x2611;</button>
       <button class="icon-btn" onclick="openCalendar()" title="日历">&#x1F4C5;</button>
       <button class="icon-btn" onclick="openAccountPanel()" title="账号">&#x1F464;</button>
@@ -971,8 +972,7 @@ body { font-family: var(--ff); }
   </main>
 </div>
 
-<!-- FAB -->
-<button id="fabBtn" onclick="openAddPanel()">+</button>
+<!-- FAB removed per user request -->
 
 <!-- Calendar Overlay + Panel -->
 <div class="ovl" id="calOvl" onclick="closeCalendar()"></div>
@@ -3528,13 +3528,13 @@ function isWebViewEnv() {
 
 // 初始化语音识别
 function initVoice() {
-  var btn = document.getElementById('micBtn');
+  var btn = document.getElementById('addMicBtn');
   if (!btn) return;
 
   // WebView 环境不可用
   if (isWebViewEnv()) {
     voiceUnavailable = true;
-    btn.className = 'mic-btn disabled';
+    btn.className = 'add-mic rec';
     btn.title = '语音输入仅在桌面浏览器中可用';
     btn.onclick = function() {
       showVoiceError('语音输入仅在桌面浏览器中可用');
@@ -3545,7 +3545,7 @@ function initVoice() {
   // Web Speech API 不可用
   if (!SpeechRecognitionAPI) {
     voiceUnavailable = true;
-    btn.className = 'mic-btn disabled';
+    btn.className = 'add-mic rec';
     btn.title = '当前浏览器不支持语音识别';
     btn.onclick = function() {
       showVoiceError('当前浏览器不支持语音识别，请使用 Chrome 或 Edge 桌面版');
@@ -3671,16 +3671,12 @@ function stopRecording() {
 }
 
 function updateMicUI(recording) {
-  var btn = document.getElementById('micBtn');
+  var btn = document.getElementById('addMicBtn');
   if (!btn) return;
   if (recording) {
-    btn.className = 'mic-btn recording';
-    btn.textContent = '⏹';
-    btn.title = '停止录音';
+    btn.className = 'add-mic rec';
   } else {
-    btn.className = 'mic-btn';
-    btn.textContent = '🎤';
-    btn.title = '语音输入';
+    btn.className = 'add-mic';
   }
 }
 
