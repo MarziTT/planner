@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel Planner v4.6.5</title>
+<title>Pixel Planner v4.6.6</title>
 <style>
 /* ================================================================
-   Pixel Planner v4.6.5 — 卡片流主屏 + 侧滑日历 + 底部添加面板
+   Pixel Planner v4.6.6 — 卡片流主屏 + 侧滑日历 + 底部添加面板
    8 主题: warm / clean / dark / brutal / kamen / ocean / forest / sunset
    ================================================================ */
 
@@ -326,12 +326,18 @@ body { font-family: var(--ff); }
 
 /* ===== Login / Register Screen ===== */
 #loginScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   padding: 20px;
   background: var(--bg);
+  overflow-y: auto;
 }
 .login-card {
   background: var(--card);
@@ -852,7 +858,6 @@ body { font-family: var(--ff); }
 
 </style>
 <script src="js/config.js"></script>
-<script src="js/app.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/todolist.js"></script>
@@ -6099,7 +6104,7 @@ function doExport() {
     todolist: (typeof todoList !== 'undefined') ? todoList : [],
     tags: (typeof getDynamicTags === 'function') ? getDynamicTags() : [],
     exportedAt: new Date().toISOString(),
-    version: '4.6.5'
+    version: '4.6.6'
   };
   var json = JSON.stringify(data, null, 2);
   var blob = new Blob([json], {type:'application/json'});
@@ -6142,7 +6147,7 @@ function doImport(ev) {
 }
 function doChkUpdate() {
   if (typeof showUpdateDialog === 'function') { showUpdateDialog(); }
-  else { alert('更新检查: 当前版本 v4.6.5'); }
+  else { alert('更新检查: 当前版本 v4.6.6'); }
   closeSettings();
 }
 function doClearAll() {
@@ -6803,6 +6808,7 @@ function showToast(msg) {
     // Sync tags on load
     syncAllTags();
   } else {
+    document.body.style.overflow = 'hidden';
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
   }

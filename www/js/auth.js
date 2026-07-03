@@ -116,6 +116,7 @@ function setAuthLoading(loading) {
 function doLogout() {
   apiClearUser();
   localStorage.removeItem('pixel_username');
+  document.body.style.overflow = 'hidden';
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginUser').value = '';
@@ -126,6 +127,7 @@ function doLogout() {
 }
 
 function showMainApp() {
+  document.body.style.overflow = '';
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = '';
   document.getElementById('questionnaireOverlay').style.display = 'none';
