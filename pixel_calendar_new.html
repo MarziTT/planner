@@ -286,32 +286,94 @@ body { font-family: var(--ff); }
   min-height: 100vh;
   padding: 20px;
   background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+/* Ambient background glow */
+#loginScreen::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  left: -20%;
+  width: 80%;
+  height: 80%;
+  background: radial-gradient(ellipse, var(--pri-glow) 0%, transparent 70%);
+  pointer-events: none;
+  animation: loginGlow1 8s ease-in-out infinite;
+}
+#loginScreen::after {
+  content: '';
+  position: absolute;
+  bottom: -30%;
+  right: -15%;
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 70%);
+  pointer-events: none;
+  animation: loginGlow2 10s ease-in-out infinite;
+}
+@keyframes loginGlow1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5%, -5%) scale(1.1); }
+}
+@keyframes loginGlow2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-5%, 5%) scale(1.15); }
 }
 .login-card {
+  position: relative;
+  z-index: 1;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 40px 32px;
+  border-radius: 20px;
+  padding: 44px 34px 36px;
   width: 100%;
-  max-width: 380px;
+  max-width: 400px;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.2), 0 0 0 1px rgba(59,130,246,0.06) inset;
+  backdrop-filter: blur(4px);
+  animation: cardSlideUp 0.5s ease-out;
+}
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Brand icon area */
+.login-card .login-brand {
+  width: 56px; height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  background: var(--fab-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  box-shadow: var(--fab-sh);
 }
 .login-card h1 {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
-  color: var(--pri);
+  color: var(--text);
   margin-bottom: 4px;
   letter-spacing: -0.5px;
 }
+.login-card h1 span { color: var(--pri); }
 .login-card .login-sub {
   font-size: 13px;
   color: var(--t2);
   margin-bottom: 28px;
+  transition: opacity 0.25s;
 }
 .login-card .field {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   text-align: left;
+  animation: fieldFadeIn 0.4s ease-out both;
+}
+.login-card .field:nth-child(1) { animation-delay: 0.05s; }
+.login-card .field:nth-child(2) { animation-delay: 0.12s; }
+.login-card .field:nth-child(3) { animation-delay: 0.19s; }
+@keyframes fieldFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .login-card .field label {
   display: block;
@@ -319,52 +381,97 @@ body { font-family: var(--ff); }
   font-weight: 600;
   color: var(--t2);
   margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
-.login-card .field input {
+.login-card .field .input-wrap {
+  position: relative;
+}
+.login-card .field .input-wrap .input-icon {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.login-card .field .input-wrap input {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  padding: 13px 14px 13px 42px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
   font-size: 15px;
   background: var(--bg2);
   color: var(--text);
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  font-family: var(--ff);
 }
-.login-card .field input:focus {
+.login-card .field .input-wrap input:focus {
   border-color: var(--pri);
+  box-shadow: 0 0 0 3px var(--pri-glow);
+  background: var(--card);
 }
+.login-card .field .input-wrap input:focus ~ .input-icon,
+.login-card .field .input-wrap input:focus + .input-icon { opacity: 0.8; }
 .login-card .btn-primary {
   width: 100%;
-  padding: 13px;
-  background: var(--pri);
+  padding: 14px;
+  background: var(--fab-bg);
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  margin-top: 8px;
-  transition: opacity 0.2s;
+  margin-top: 12px;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.5px;
 }
-.login-card .btn-primary:hover { opacity: 0.85; }
+.login-card .btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
+}
+.login-card .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--fab-sh);
+}
+.login-card .btn-primary:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
 .login-card .btn-text {
   background: none;
   border: none;
   color: var(--pri);
   font-size: 13px;
   cursor: pointer;
-  margin-top: 16px;
+  margin-top: 18px;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  font-family: var(--ff);
 }
+.login-card .btn-text:hover { opacity: 1; }
 .login-card .login-err {
   color: #ff4d4f;
   font-size: 13px;
-  margin-top: 8px;
+  margin-top: 10px;
   display: none;
+  animation: errShake 0.4s ease;
 }
 .login-card .login-err.show { display: block; }
+@keyframes errShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
 /* ===== Questionnaire ===== */
 #questionnaireOverlay {
   position: fixed; inset: 0; z-index: 1000;
@@ -569,19 +676,29 @@ body { font-family: var(--ff); }
 <!-- ===== Login / Register Screen ===== -->
 <div id="loginScreen">
   <div class="login-card">
-    <h1>Pixel Planner</h1>
+    <div class="login-brand">&#x25A3;</div>
+    <h1><span>Pixel</span> Planner</h1>
     <p class="login-sub" id="loginSub">登录以继续</p>
     <div class="field" id="confirmField" style="display:none">
       <label>确认密码</label>
-      <input type="password" id="regConfirmPw" placeholder="再次输入密码" autocomplete="off">
+      <div class="input-wrap">
+        <span class="input-icon">&#x1F512;</span>
+        <input type="password" id="regConfirmPw" placeholder="再次输入密码" autocomplete="off">
+      </div>
     </div>
     <div class="field">
       <label>用户名</label>
-      <input type="text" id="loginUser" placeholder="请输入用户名" autocomplete="off">
+      <div class="input-wrap">
+        <span class="input-icon">&#x1F464;</span>
+        <input type="text" id="loginUser" placeholder="请输入用户名" autocomplete="off">
+      </div>
     </div>
     <div class="field">
       <label>密码</label>
-      <input type="password" id="loginPw" placeholder="请输入密码" autocomplete="off">
+      <div class="input-wrap">
+        <span class="input-icon">&#x1F511;</span>
+        <input type="password" id="loginPw" placeholder="请输入密码" autocomplete="off">
+      </div>
     </div>
     <p class="login-err" id="loginErr"></p>
     <button class="btn-primary" id="loginSubmitBtn" onclick="handleAuth()">登 录</button>
@@ -5705,6 +5822,7 @@ function doLogout() {
   sessionStorage.removeItem('pixel_username');
   document.getElementById('loginScreen').style.display = 'flex';
   document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('fabBtn').style.display = 'none';
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPw').value = '';
   document.getElementById('regConfirmPw').value = '';
@@ -5716,6 +5834,7 @@ function showMainApp() {
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('mainApp').style.display = '';
   document.getElementById('questionnaireOverlay').style.display = 'none';
+  document.getElementById('fabBtn').style.display = 'flex';
   // Reset auth form
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPw').value = '';
@@ -6243,6 +6362,7 @@ function showToast(msg) {
   } else {
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('fabBtn').style.display = 'none';
   }
 })();
 
