@@ -18,6 +18,7 @@ import hashlib
 import hmac
 import json
 import os
+import secrets
 import sqlite3
 import time as time_mod
 from datetime import datetime
@@ -35,6 +36,8 @@ DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "pixel_planner.db"
 PORT = int(os.environ.get("PORT", 5000))
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
+PASSWORD_SCHEME = "pbkdf2_sha256"
+PBKDF2_ITERATIONS = int(os.environ.get("PBKDF2_ITERATIONS", "260000"))
 
 # Ensure data directory exists (for SQLite)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -251,6 +254,13 @@ def db_commit():
     get_db().commit()
 
 
+def db_rollback():
+    try:
+        get_db().rollback()
+    except Exception:
+        pass
+
+
 def db_lastrowid(cur):
     """Return last inserted row id. PG: use RETURNING; SQLite: cur.lastrowid."""
     if USE_PG:
@@ -296,8 +306,55 @@ def get_user():
         request.json.get("user_id") if request.is_json else None
     )
     if user_id is not None:
-        return int(user_id)
+        try:
+            return int(user_id)
+        except (TypeError, ValueError):
+            return None
     return None
+
+
+def hash_password(password):
+    """Hash a password with PBKDF2-HMAC-SHA256."""
+    salt = secrets.token_hex(16)
+    digest = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        bytes.fromhex(salt),
+        PBKDF2_ITERATIONS,
+    ).hex()
+    return f"{PASSWORD_SCHEME}${PBKDF2_ITERATIONS}${salt}${digest}"
+
+
+def verify_password(stored_password, candidate_password):
+    """Verify a stored password. Plain text is accepted only for legacy migration."""
+    if not stored_password:
+        return False
+
+    parts = stored_password.split("$")
+    if len(parts) == 4 and parts[0] == PASSWORD_SCHEME:
+        _, iterations, salt, digest = parts
+        try:
+            calculated = hashlib.pbkdf2_hmac(
+                "sha256",
+                candidate_password.encode("utf-8"),
+                bytes.fromhex(salt),
+                int(iterations),
+            ).hex()
+        except (TypeError, ValueError):
+            return False
+        return hmac.compare_digest(calculated, digest)
+
+    return hmac.compare_digest(stored_password, candidate_password)
+
+
+def password_needs_rehash(stored_password):
+    parts = (stored_password or "").split("$")
+    if len(parts) != 4 or parts[0] != PASSWORD_SCHEME:
+        return True
+    try:
+        return int(parts[1]) < PBKDF2_ITERATIONS
+    except ValueError:
+        return True
 
 
 # ---------------------------------------------------------------------------
@@ -308,7 +365,7 @@ def get_user():
 def register():
     data = request.get_json(force=True)
     username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
+    password = data.get("password", "")
 
     if not username or not password:
         return jsonify({"ok": False, "error": "用户名和密码不能为空"}), 400
@@ -317,23 +374,23 @@ def register():
         return jsonify({"ok": False, "error": "密码至少4位"}), 400
 
     try:
+        password_hash = hash_password(password)
         if USE_PG:
             cur = db_execute(
                 "INSERT INTO users (username, password) VALUES (?, ?) RETURNING id",
-                (username, password),
+                (username, password_hash),
             )
             user_id = db_lastrowid(cur)
         else:
             cur = db_execute(
                 "INSERT INTO users (username, password) VALUES (?, ?)",
-                (username, password),
+                (username, password_hash),
             )
             user_id = cur.lastrowid
         db_commit()
         return jsonify({"ok": True, "user_id": user_id, "username": username})
     except Exception as e:
-        if USE_PG:
-            db_commit()  # rollback on error handled by psycopg2
+        db_rollback()
         if "UNIQUE" in str(e).upper() or "unique" in str(e).lower() or "IntegrityError" in str(type(e).__name__):
             return jsonify({"ok": False, "error": "用户名已存在"}), 409
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -343,18 +400,21 @@ def register():
 def login():
     data = request.get_json(force=True)
     username = data.get("username", "").strip()
-    password = data.get("password", "").strip()
+    password = data.get("password", "")
 
     row = db_execute(
-        "SELECT id, username FROM users WHERE username = ? AND password = ?",
-        (username, password),
+        "SELECT id, username, password FROM users WHERE username = ?",
+        (username,),
         fetchone=True,
     )
 
-    if not row:
+    if not row or not verify_password(dict(row).get("password", ""), password):
         return jsonify({"ok": False, "error": "用户名或密码错误"}), 401
 
     r = dict(row)
+    if password_needs_rehash(r.get("password", "")):
+        db_execute("UPDATE users SET password = ? WHERE id = ?", (hash_password(password), r["id"]))
+        db_commit()
     return jsonify({"ok": True, "user_id": r["id"], "username": r["username"]})
 
 
@@ -932,19 +992,19 @@ def _tc3_sign(secret_id, secret_key, service, host, action, payload, region="ap-
 @app.route("/api/todolist", methods=["GET"])
 def get_todolist():
     """Get user's todolist items."""
-    user_id = request.args.get("user_id", "")
+    user_id = get_user()
     if not user_id:
         return jsonify({"ok": False, "error": "user_id required"}), 400
     try:
-        with get_db() as conn:
-            row = conn.execute(
-                "SELECT todos FROM todolist WHERE user_id = ?", (user_id,)
-            ).fetchone()
-            if row:
-                import json
-                todos = json.loads(row["todos"])
-                return jsonify({"ok": True, "todos": todos})
-            return jsonify({"ok": True, "todos": []})
+        row = db_execute(
+            "SELECT todos FROM todolist WHERE user_id = ?",
+            (str(user_id),),
+            fetchone=True,
+        )
+        if row:
+            todos = json.loads(dict(row)["todos"])
+            return jsonify({"ok": True, "todos": todos})
+        return jsonify({"ok": True, "todos": []})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -952,30 +1012,32 @@ def get_todolist():
 @app.route("/api/todolist", methods=["POST"])
 def save_todolist():
     """Save user's todolist items (full replace)."""
-    user_id = request.args.get("user_id", "")
+    user_id = get_user()
     if not user_id:
         return jsonify({"ok": False, "error": "user_id required"}), 400
     data = request.get_json(force=True, silent=True) or {}
     todos = data.get("todos", [])
-    import json
     todos_json = json.dumps(todos, ensure_ascii=False)
     try:
-        with get_db() as conn:
-            existing = conn.execute(
-                "SELECT id FROM todolist WHERE user_id = ?", (user_id,)
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    "UPDATE todolist SET todos = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
-                    (todos_json, user_id)
-                )
-            else:
-                conn.execute(
-                    "INSERT INTO todolist (user_id, todos) VALUES (?, ?)",
-                    (user_id, todos_json)
-                )
+        existing = db_execute(
+            "SELECT id FROM todolist WHERE user_id = ?",
+            (str(user_id),),
+            fetchone=True,
+        )
+        if existing:
+            db_execute(
+                "UPDATE todolist SET todos = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+                (todos_json, str(user_id)),
+            )
+        else:
+            db_execute(
+                "INSERT INTO todolist (user_id, todos) VALUES (?, ?)",
+                (str(user_id), todos_json),
+            )
+        db_commit()
         return jsonify({"ok": True})
     except Exception as e:
+        db_rollback()
         return jsonify({"ok": False, "error": str(e)}), 500
 
 

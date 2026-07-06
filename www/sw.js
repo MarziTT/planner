@@ -1,9 +1,12 @@
 // Pixel Planner Service Worker
-const CACHE_NAME = 'pixel-planner-v1';
+const CACHE_NAME = 'pixel-planner-v2';
 
 const PRECACHE_URLS = [
+  './',
   'manifest.json',
-  'pixel_calendar.html',
+  'splash.html',
+  'pixel_calendar_new.html',
+  'style.css',
   'icon.svg',
   'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'
 ];
@@ -60,7 +63,7 @@ self.addEventListener('fetch', (event) => {
       }).catch(() => {
         // Offline fallback: return cached HTML for navigation requests
         if (event.request.mode === 'navigate') {
-          return caches.match('pixel_calendar.html');
+          return caches.match('pixel_calendar_new.html');
         }
         return new Response('Offline - Resource not available', { status: 503 });
       });

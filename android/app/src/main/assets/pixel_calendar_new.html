@@ -3326,7 +3326,7 @@ function checkUpdate(manual) {
 // 执行更新
 function doUpdate(remoteUrl) {
   var baseUrl = remoteUrl.replace(/\/version\.json$/, '');
-  var htmlUrl = baseUrl + '/pixel_calendar.html';
+  var htmlUrl = baseUrl + '/pixel_calendar_new.html';
 
   fetch(htmlUrl + '?t=' + Date.now())
     .then(function(res) {

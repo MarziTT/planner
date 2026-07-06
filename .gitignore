@@ -4,7 +4,17 @@ android/build/
 android/local.properties
 android/gradle-local/
 gradle-local/
+gradle-temp/
+node_modules/
+temp/
+output/
 build_log.txt
+build_*.log
+*.log
+gradle-*.zip
 __pycache__/
 *.pyc
+*.apk
+data/*.db
+data/*.db-*
 .DS_Store

@@ -1,45 +1,49 @@
-# 语程
+# Pixel Planner
 
-语音优先的日程管理应用，说句话就能记录日程。Android WebView APK + Python Flask 后端。
+Pixel Planner 是一个像素风日程管理应用，包含静态前端、Flask API 后端和 Capacitor Android 打包工程。应用支持账号登录、日程和标签管理、待办事项、主题切换、通知提醒、语音识别代理和热更新文件分发。
 
 ## 技术栈
 
-- **前端**: HTML5/CSS/JS，WebView 容器加载
-- **后端**: Python Flask + SQLite（本地）/ PostgreSQL（Railway）
-- **构建**: Gradle（Android APK）
+- 前端：HTML / CSS / JavaScript，入口位于 `www/splash.html`，主应用为 `www/pixel_calendar_new.html`
+- 后端：Python Flask + SQLite，本地默认数据库为 `data/pixel_planner.db`
+- 云端：设置 `DATABASE_URL` 后使用 PostgreSQL
+- Android：Capacitor + Gradle
 
-## 项目结构
+## 常用命令
 
+```bash
+npm run start
+npm run check
+npm run android:debug
 ```
+
+也可以直接启动后端：
+
+```bash
+python server.py
+```
+
+默认 API 地址为 `http://localhost:5000`。部署到 Railway 等平台时，请设置 `DATABASE_URL`，并按需设置 `TENCENT_SECRET_ID` / `TENCENT_SECRET_KEY` 以启用语音识别代理。
+
+## 目录结构
+
+```text
 PixelPlanner/
-├── pixel_calendar_new.html   # 主应用页面
-├── splash.html               # 启动闪屏
-├── server.py                 # Flask API 后端（16 个端点，5 张数据表）
+├── server.py                 # Flask API 服务
 ├── requirements.txt          # Python 依赖
-├── Procfile                  # Railway 部署配置
-├── www/                      # WebView 静态资源
-├── android/                  # Android 项目
+├── package.json              # 项目脚本和 Capacitor 依赖
+├── www/                      # Web 前端资源
+│   ├── splash.html
+│   ├── pixel_calendar_new.html
+│   ├── sw.js
+│   └── js/
+├── android/                  # Android 工程
+├── data/                     # 本地 SQLite 数据
 └── gifs/                     # 像素风 GIF 素材
 ```
 
-## 功能
+## 说明
 
-- 语音输入 + AI 解析自动生成日程
-- 动态标签系统
-- 用户注册/登录
-- AI 身份信息采集
-- 多主题切换（solar / dark / warm / clean / brutal / kamen）
-
-## 部署
-
-后端部署于 Railway，前端以 WebView 方式打包为 Android APK，API 自动连接 Railway 后端。
-
-## 开发
-
-```bash
-# 启动本地后端
-python server.py
-
-# 构建 APK
-cd android && gradlew assembleDebug
-```
+- 新账号密码会以 PBKDF2 哈希存储；旧明文账号会在下次成功登录后自动迁移。
+- Service Worker 预缓存入口已对齐为 `pixel_calendar_new.html`。
+- `node_modules`、构建日志、Gradle 临时文件、APK 和本地数据库默认不纳入版本控制。
