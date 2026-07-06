@@ -172,12 +172,12 @@ body { font-family: var(--ff); }
 { display:none !important; }
 
 /* ===== Top Bar ===== */
-#topBar { display:flex; align-items:center; justify-content:space-between; padding:16px 0 8px; position:sticky; top:0; background:var(--bg); z-index:10; }
-#topBar .date-main { font-size:22px; font-weight:700; color:var(--text); letter-spacing:-0.5px; }
+#topBar { display:flex; align-items:center; justify-content:space-between; padding:16px 0 8px; position:sticky; top:0; background:linear-gradient(180deg,var(--bg) 72%,rgba(255,255,255,0)); z-index:10; backdrop-filter:blur(14px); }
+#topBar .date-main { font-size:24px; font-weight:800; color:var(--text); letter-spacing:0; font-variant-numeric:tabular-nums; }
 #topBar .date-sub { font-size:12px; color:var(--t2); margin-top:2px; }
 #headerActions { display:flex; gap:8px; }
-.icon-btn { width:40px; height:40px; border-radius:50%; border:1px solid var(--div); background:var(--card); color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
-.icon-btn:hover { background:var(--bg2); border-color:var(--pri); }
+.icon-btn { width:40px; height:40px; border-radius:50%; border:1px solid var(--div); background:var(--card); color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; box-shadow:0 6px 16px rgba(0,0,0,0.08); }
+.icon-btn:hover { background:var(--bg2); border-color:var(--pri); transform:translateY(-1px); }
 
 /* ===== Progress ===== */
 #progressSection { margin:12px 0 20px; }
@@ -187,13 +187,40 @@ body { font-family: var(--ff); }
 #overviewCard .cnt { font-weight:700; color:var(--pri); font-size:16px; }
 #overviewCard .sep { color:var(--t3); margin:0 2px; }
 
+/* ===== Focus Dashboard ===== */
+#focusPanel { display:grid; grid-template-columns:1.35fr 0.9fr; gap:10px; margin:0 0 12px; }
+.focus-card,.metric-card { background:var(--card); border:1px solid var(--border); border-radius:var(--br); padding:14px; box-shadow:0 10px 28px rgba(0,0,0,0.08); position:relative; overflow:hidden; }
+.focus-card::before { content:''; position:absolute; inset:0 0 auto; height:3px; background:var(--pg-fill); opacity:0.9; }
+.focus-kicker,.metric-label { font-size:11px; font-weight:700; color:var(--t3); text-transform:uppercase; letter-spacing:0; }
+.focus-title { margin-top:8px; font-size:17px; line-height:1.35; color:var(--text); font-weight:800; word-break:break-word; }
+.focus-meta { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; color:var(--t2); font-size:12px; }
+.focus-pill { padding:4px 8px; border-radius:999px; background:var(--pg-bg); color:var(--pri); font-weight:700; }
+.focus-actions { display:flex; gap:8px; margin-top:12px; }
+.focus-action { height:34px; min-width:34px; padding:0 12px; border-radius:999px; border:1px solid var(--div); background:var(--bg); color:var(--text); cursor:pointer; font-size:12px; font-weight:700; font-family:var(--ff); }
+.focus-action.primary { background:var(--pri); color:#fff; border-color:var(--pri); }
+.metric-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.metric-card { min-height:82px; display:flex; flex-direction:column; justify-content:space-between; }
+.metric-value { color:var(--text); font-size:22px; font-weight:800; line-height:1; font-variant-numeric:tabular-nums; }
+.metric-sub { color:var(--t3); font-size:11px; margin-top:6px; }
+
+/* ===== Schedule Tools ===== */
+#scheduleTools { display:flex; gap:8px; align-items:center; margin:12px 0; }
+.schedule-search { flex:1; min-width:0; position:relative; }
+.schedule-search input { width:100%; height:40px; border:1px solid var(--border); border-radius:999px; background:var(--card); color:var(--text); font-size:14px; font-family:var(--ff); outline:none; padding:0 38px 0 14px; box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+.schedule-search input:focus { border-color:var(--pri); }
+.schedule-search button { position:absolute; right:5px; top:5px; width:30px; height:30px; border-radius:50%; border:none; background:var(--bg2); color:var(--t2); cursor:pointer; display:none; }
+.schedule-search.has-value button { display:flex; align-items:center; justify-content:center; }
+.filter-tabs { display:flex; padding:4px; gap:3px; border:1px solid var(--border); border-radius:999px; background:var(--card); box-shadow:0 6px 18px rgba(0,0,0,0.06); }
+.filter-tab { border:none; background:transparent; color:var(--t2); min-width:44px; height:32px; border-radius:999px; padding:0 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:var(--ff); }
+.filter-tab.sel { background:var(--pri); color:#fff; }
+
 /* ===== Card Stream ===== */
 #cardStream { display:flex; flex-direction:column; gap:10px; padding-bottom:16px; }
 .empty-state { text-align:center; padding:48px 20px; color:var(--t3); font-size:14px; }
 .empty-state .empty-icon { font-size:48px; margin-bottom:12px; opacity:0.5; }
 
 /* ===== Event Card ===== */
-.evt-card { position:relative; background:var(--card); border:1px solid var(--border); border-radius:var(--br); padding:14px 48px 14px 16px; display:flex; gap:12px; cursor:pointer; transition:all 0.2s; overflow:hidden; }
+.evt-card { position:relative; background:var(--card); border:1px solid var(--border); border-radius:var(--br); padding:14px 48px 14px 16px; display:flex; gap:12px; cursor:pointer; transition:all 0.2s; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.06); }
 .evt-card:hover { border-color:var(--pri); transform:translateY(-1px); }
 .evt-card.activ { border-left:3px solid var(--al); box-shadow:var(--ag); }
 .evt-card.don { opacity:var(--do); }
@@ -322,6 +349,14 @@ body { font-family: var(--ff); }
   #appRoot { padding:0 12px 90px; }
   #fabBtn { right:16px; bottom:20px; width:50px; height:50px; font-size:24px; }
   .slide-pnl { width:100%; max-width:100vw; right:-100%; }
+  #topBar { align-items:flex-start; gap:10px; }
+  #headerActions { gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+  .icon-btn { width:36px; height:36px; font-size:16px; }
+  #focusPanel { grid-template-columns:1fr; }
+  #scheduleTools { flex-direction:column; align-items:stretch; }
+  .filter-tabs { justify-content:space-between; }
+  .filter-tab { flex:1; }
+  .metric-grid { grid-template-columns:1fr 1fr; }
 }
 
 /* ===== Login / Register Screen ===== */
@@ -963,6 +998,20 @@ body { font-family: var(--ff); }
     </div>
   </div>
 
+  <section id="focusPanel" aria-label="今日焦点"></section>
+
+  <section id="scheduleTools" aria-label="日程筛选">
+    <div class="schedule-search" id="scheduleSearchWrap">
+      <input id="scheduleSearch" type="search" placeholder="搜索行程 / 标签" oninput="setScheduleSearch(this.value)" autocomplete="off">
+      <button onclick="clearScheduleSearch()" title="清空搜索">&times;</button>
+    </div>
+    <div class="filter-tabs" role="tablist" aria-label="完成状态">
+      <button class="filter-tab sel" id="filter-all" onclick="setEventFilter('all')">全部</button>
+      <button class="filter-tab" id="filter-open" onclick="setEventFilter('open')">待办</button>
+      <button class="filter-tab" id="filter-done" onclick="setEventFilter('done')">完成</button>
+    </div>
+  </section>
+
   <!-- GIF Gallery (kamen only) -->
   <div id="gifGallery" style="display:none;"></div>
 
@@ -1157,8 +1206,8 @@ body { font-family: var(--ff); }
 <script>
 
 // ==================== 数据存储 ====================
-const STORAGE_KEY = 'pixel_planner_events';
-let events = {};
+var STORAGE_KEY = 'pixel_planner_events';
+var events = {};
 
 try {
   events = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
@@ -1410,8 +1459,8 @@ const TRAINING_TEMPLATES = [
 ];
 
 // ==================== 工具函数 ====================
-const today = new Date();
-const todayKey = dateKey(today);
+var today = new Date();
+var todayKey = dateKey(today);
 
 function dateKey(d) {
   const y = d.getFullYear();
@@ -5776,6 +5825,8 @@ var _addTag = '工作';
 
 // ===== Edit State =====
 var _editIdx = -1;
+var scheduleSearchQuery = '';
+var eventFilterMode = 'all';
 
 // ===== Voice State =====
 var isRecording = false;
@@ -5794,6 +5845,7 @@ function getEvts(dk) { return events[dk] || []; }
 // ===== Core Render =====
 function renderAll() {
   renderProgress();
+  renderFocusPanel();
   renderCards();
 }
 function renderProgress() {
@@ -5808,10 +5860,127 @@ function renderProgress() {
   document.getElementById('remainCount').textContent = r;
   document.getElementById('pgBarFill').style.width = p + '%';
 }
+
+function parseEventMinutes(timeText) {
+  var parts = String(timeText || '').split(':');
+  if (parts.length !== 2) return null;
+  var hh = parseInt(parts[0], 10);
+  var mm = parseInt(parts[1], 10);
+  if (isNaN(hh) || isNaN(mm)) return null;
+  return hh * 60 + mm;
+}
+
+function getFilteredEventRefs(ev) {
+  var q = (scheduleSearchQuery || '').trim().toLowerCase();
+  var refs = [];
+  for (var i = 0; i < ev.length; i++) {
+    var e = ev[i];
+    if (eventFilterMode === 'open' && e.done) continue;
+    if (eventFilterMode === 'done' && !e.done) continue;
+    if (q) {
+      var hay = [e.content || '', e.tag || '', e.time || ''].join(' ').toLowerCase();
+      if (hay.indexOf(q) === -1) continue;
+    }
+    refs.push({ event: e, index: i });
+  }
+  return refs;
+}
+
+function getTodayTodoStats() {
+  if (typeof todoList === 'undefined' || typeof todoIsDueToday !== 'function') {
+    return { due: 0, done: 0 };
+  }
+  var todayStr = dk(new Date());
+  var due = 0;
+  var done = 0;
+  for (var i = 0; i < todoList.length; i++) {
+    var item = todoList[i];
+    var isDone = item.type === 'once'
+      ? item.completed
+      : (item.completedDates || []).indexOf(todayStr) !== -1;
+    if (isDone) done++;
+    if (todoIsDueToday(item)) due++;
+  }
+  return { due: due, done: done };
+}
+
+function findNextEvent(ev) {
+  var now = new Date();
+  var isTdy = selectedDate === todayKey;
+  var nmin = now.getHours() * 60 + now.getMinutes();
+  for (var i = 0; i < ev.length; i++) {
+    var e = ev[i];
+    var mins = parseEventMinutes(e.time);
+    if (e.done) continue;
+    if (!isTdy || mins === null || mins >= nmin) return e;
+  }
+  for (var j = 0; j < ev.length; j++) {
+    if (!ev[j].done) return ev[j];
+  }
+  return null;
+}
+
+function renderFocusPanel() {
+  var panel = document.getElementById('focusPanel');
+  if (!panel) return;
+  var ev = getEvts(selectedDate).slice().sort(function(a,b){ return (a.time||'99:99').localeCompare(b.time||'99:99'); });
+  var total = ev.length;
+  var done = 0;
+  for (var i = 0; i < ev.length; i++) if (ev[i].done) done++;
+  var remain = total - done;
+  var rate = total > 0 ? Math.round(done / total * 100) : 0;
+  var next = findNextEvent(ev);
+  var todos = getTodayTodoStats();
+  var title = next ? esc(next.content || '未命名行程') : (total ? '今天的行程已经清爽收尾' : '今天留白，可以安排一件重要的小事');
+  var time = next && next.time ? esc(next.time) : (selectedDate === todayKey ? '现在' : selectedDate);
+  var tag = next && next.tag ? esc(next.tag) : (total ? '已完成' : '空档');
+  var dateLabel = selectedDate === todayKey ? '今日焦点' : selectedDate.replace(/^\d{4}-/, '').replace('-', '月') + '日焦点';
+
+  panel.innerHTML =
+    '<div class="focus-card">' +
+      '<div class="focus-kicker">' + dateLabel + '</div>' +
+      '<div class="focus-title">' + title + '</div>' +
+      '<div class="focus-meta"><span class="focus-pill">' + time + '</span><span>' + tag + '</span><span>剩余 ' + remain + '</span></div>' +
+      '<div class="focus-actions">' +
+        '<button class="focus-action primary" onclick="openAddPanel()">添加</button>' +
+        '<button class="focus-action" onclick="openTodoPanel()">待办</button>' +
+        '<button class="focus-action" onclick="openCalendar()">日历</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="metric-grid">' +
+      '<div class="metric-card"><div><div class="metric-label">完成率</div><div class="metric-sub">行程推进</div></div><div class="metric-value">' + rate + '%</div></div>' +
+      '<div class="metric-card"><div><div class="metric-label">今日待办</div><div class="metric-sub">未完成</div></div><div class="metric-value">' + todos.due + '</div></div>' +
+    '</div>';
+}
+
+function setScheduleSearch(value) {
+  scheduleSearchQuery = value || '';
+  var wrap = document.getElementById('scheduleSearchWrap');
+  if (wrap) wrap.classList.toggle('has-value', scheduleSearchQuery.trim().length > 0);
+  renderCards();
+}
+
+function clearScheduleSearch() {
+  scheduleSearchQuery = '';
+  var input = document.getElementById('scheduleSearch');
+  if (input) input.value = '';
+  var wrap = document.getElementById('scheduleSearchWrap');
+  if (wrap) wrap.classList.remove('has-value');
+  renderCards();
+}
+
+function setEventFilter(mode) {
+  eventFilterMode = mode || 'all';
+  var tabs = document.querySelectorAll('.filter-tab');
+  tabs.forEach(function(tab){ tab.classList.toggle('sel', tab.id === 'filter-' + eventFilterMode); });
+  renderCards();
+}
+
 function renderCards() {
   var c = document.getElementById('cardStream');
   var ev = getEvts(selectedDate);
   ev.sort(function(a,b){ return (a.time||'99:99').localeCompare(b.time||'99:99'); });
+  var visibleRefs = getFilteredEventRefs(ev);
   var now = new Date();
   var isTdy = (selectedDate === todayKey);
   var nmin = now.getHours()*60 + now.getMinutes();
@@ -5821,10 +5990,15 @@ function renderCards() {
       (selectedDate === todayKey ? '今天还没有行程' : '这天没有行程') + '</div></div>';
     return;
   }
+  if (visibleRefs.length === 0) {
+    c.innerHTML = '<div class="empty-state"><div class="empty-icon">&#x1F50D;</div><div>没有匹配的行程</div></div>';
+    return;
+  }
 
   var h = '';
-  for (var i = 0; i < ev.length; i++) {
-    var e = ev[i];
+  for (var vi = 0; vi < visibleRefs.length; vi++) {
+    var i = visibleRefs[vi].index;
+    var e = visibleRefs[vi].event;
     var isD = e.done === true;
     var isA = false;
     if (!isD && isTdy) {
@@ -5999,6 +6173,7 @@ function selUp(dk) {
   renderAll();
 }
 function updateDt() {
+  if (!selectedDate) return;
   var p = selectedDate.split('-');
   var d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
   var dn = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];

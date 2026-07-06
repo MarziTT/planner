@@ -89,6 +89,7 @@ function todoToggle(id, dateStr) {
     }
   }
   saveTodoList();
+  if (typeof renderFocusPanel === 'function') renderFocusPanel();
 }
 
 // ====== 判断是否今日需显示 ======
@@ -240,6 +241,7 @@ function todoSubmitAdd() {
   todoAdd(text, time, type, repeatDays);
   todoCloseAdd();
   renderTodoPanel();
+  if (typeof renderFocusPanel === 'function') renderFocusPanel();
   showToast('待办已添加');
 }
 
@@ -287,6 +289,7 @@ function todoSubmitEdit() {
   saveTodoList();
   todoCloseAdd();
   renderTodoPanel();
+  if (typeof renderFocusPanel === 'function') renderFocusPanel();
   var btn = document.getElementById('todoAddSubmit');
   if (btn) btn.textContent = '添加';
   showToast('待办已更新');
@@ -298,6 +301,7 @@ function todoDelete(id) {
   todoList = todoList.filter(function(item) { return item.id !== id; });
   saveTodoList();
   renderTodoPanel();
+  if (typeof renderFocusPanel === 'function') renderFocusPanel();
   showToast('待办已删除');
 }
 
