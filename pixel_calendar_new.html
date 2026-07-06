@@ -3307,7 +3307,10 @@ function toggleThemeMode() {
 var UPDATE_URL = 'https://raw.githubusercontent.com/MarziTT/planner/main/version.json';
 
 function getLocalVersion() {
-  return { version: '4.6.10', build: 4610 };
+  return '4.6.10';
+}
+function getLocalBuild() {
+  return 4610;
 }
 // ==================== 更新机制 ====================
 function showUpdateDialog(remote) {
@@ -3360,11 +3363,12 @@ function checkUpdate(manual) {
       return res.json();
     })
     .then(function(remote) {
-      var local = getLocalVersion();
-      if (remote.build > local.build) {
+      var localVersion = getLocalVersion();
+      var localBuild = getLocalBuild();
+      if ((remote.build || 0) > localBuild) {
         showUpdateDialog(remote);
       } else if (manual) {
-        alert('已是最新版本 v' + local.version);
+        alert('已是最新版本 v' + localVersion);
       }
     })
     .catch(function(err) {
