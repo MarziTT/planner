@@ -1,0 +1,345 @@
+{
+    "version":  "4.6.10",
+    "files":  [
+                  {
+                      "path":  ".gitignore",
+                      "md5":  "e709f64373b97eef1b11eb4ff298bec1"
+                  },
+                  {
+                      "path":  "apk_qrcode.png",
+                      "md5":  "5ae0032cec46949d2060c4beaa981f87"
+                  },
+                  {
+                      "path":  "icon.svg",
+                      "md5":  "1dfbeb786c8208ad4ef2fa22897e2d6f"
+                  },
+                  {
+                      "path":  "index.html",
+                      "md5":  "bffff4bd45e77d6e40890852fc1fb4e5"
+                  },
+                  {
+                      "path":  "manifest.json",
+                      "md5":  "47da958558710657edb356d70da91ad2"
+                  },
+                  {
+                      "path":  "pixel_calendar_new.html",
+                      "md5":  "7f07e551c70d63777b6b10c58de627e1"
+                  },
+                  {
+                      "path":  "qr_v3.6.png",
+                      "md5":  "3d99201b2f445cf26dbd303755f5bb6d"
+                  },
+                  {
+                      "path":  "qr_v3.8.png",
+                      "md5":  "301e03b7b86e861c0089b9cabe1a817a"
+                  },
+                  {
+                      "path":  "serve-mockup.py",
+                      "md5":  "0806e81ae73a940ebfdc0de5369b9a50"
+                  },
+                  {
+                      "path":  "splash.html",
+                      "md5":  "9d96ad5e770405d1e2d4d1e3fe3f6420"
+                  },
+                  {
+                      "path":  "style.css",
+                      "md5":  "b88c3f0005512d551607f55a3233b7ad"
+                  },
+                  {
+                      "path":  "sw.js",
+                      "md5":  "a69bcd6b16c9f566a24a67a2a880ed57"
+                  },
+                  {
+                      "path":  "v3.3-mockup.html",
+                      "md5":  "02590d9e69d017636f2bbcceda0d6169"
+                  },
+                  {
+                      "path":  "vercel.json",
+                      "md5":  "6e2aaab24ebc388e911f3c0463aaaa78"
+                  },
+                  {
+                      "path":  "语程_v3.3.apk",
+                      "md5":  "f58c4e82cdec2ba4fcb13c984be85391"
+                  },
+                  {
+                      "path":  "语程_v3.3_hotfix.apk",
+                      "md5":  "c9f54ba5ce0bb823567aa2f6e55a45dd"
+                  },
+                  {
+                      "path":  "语程_v3.5.apk",
+                      "md5":  "590f94a01ee9f4724d93aa3047d61b2a"
+                  },
+                  {
+                      "path":  "语程_v3.6.apk",
+                      "md5":  "ca64d39915fad1bd3793d8d7f9a86d4a"
+                  },
+                  {
+                      "path":  "语程_v3.8.apk",
+                      "md5":  "ca40f73f9f62c77d7835cad60a91635b"
+                  },
+                  {
+                      "path":  ".vercel/project.json",
+                      "md5":  "ae00c5a6d3609098a7511435e0936609"
+                  },
+                  {
+                      "path":  ".vercel/README.txt",
+                      "md5":  "2b13c79d37d6ed82a3255b83b6815034"
+                  },
+                  {
+                      "path":  "gifs/10号.gif",
+                      "md5":  "384b43f5c946a761526edf01ba985431"
+                  },
+                  {
+                      "path":  "gifs/11号.gif",
+                      "md5":  "560f01b7501094e1051ec32112e5a889"
+                  },
+                  {
+                      "path":  "gifs/12号.gif",
+                      "md5":  "8d960291a9bfad51f91aa60070bd1ee7"
+                  },
+                  {
+                      "path":  "gifs/13.gif",
+                      "md5":  "d34fd2be0ac381eedf06d96c05378783"
+                  },
+                  {
+                      "path":  "gifs/14.gif",
+                      "md5":  "6a49eed9e3444fc4ec85bfff6519899b"
+                  },
+                  {
+                      "path":  "gifs/15.gif",
+                      "md5":  "f7a9bde7ae83915d451ce5e327b8a9c8"
+                  },
+                  {
+                      "path":  "gifs/16.gif",
+                      "md5":  "30424155c8129df99d591e81ad9ac278"
+                  },
+                  {
+                      "path":  "gifs/17.gif",
+                      "md5":  "e06093eeb629d0a4164fc656b7fdf9b1"
+                  },
+                  {
+                      "path":  "gifs/18.gif",
+                      "md5":  "76a4c96006a8f59a273e5be5b7b900b5"
+                  },
+                  {
+                      "path":  "gifs/19.gif",
+                      "md5":  "a6586c58616e70e7d8662024b82615af"
+                  },
+                  {
+                      "path":  "gifs/1号.gif",
+                      "md5":  "9b0bda051e8a1d26e72ce656ade3c27b"
+                  },
+                  {
+                      "path":  "gifs/21.gif",
+                      "md5":  "43073c56017756f3ab00136ae16efb74"
+                  },
+                  {
+                      "path":  "gifs/22.gif",
+                      "md5":  "3765d061b7a20faae6ea5d751adc43bc"
+                  },
+                  {
+                      "path":  "gifs/23.gif",
+                      "md5":  "6a6fb20a1722495417db1d747ac749e6"
+                  },
+                  {
+                      "path":  "gifs/24.gif",
+                      "md5":  "b6550e63eec204f8bd5c19129e0c575b"
+                  },
+                  {
+                      "path":  "gifs/25.gif",
+                      "md5":  "d9ea4235a3fbcce8809c8ae7ca1e5c3d"
+                  },
+                  {
+                      "path":  "gifs/26.gif",
+                      "md5":  "dd6d623a27523a4c86f5dc4556a65962"
+                  },
+                  {
+                      "path":  "gifs/27.gif",
+                      "md5":  "b02936408a9461cdc5bf7023d44788c5"
+                  },
+                  {
+                      "path":  "gifs/28.gif",
+                      "md5":  "552d5e6e3648bc1ea41550bb443421f5"
+                  },
+                  {
+                      "path":  "gifs/29.gif",
+                      "md5":  "9671f778718daddfb491a43e2ce3db9c"
+                  },
+                  {
+                      "path":  "gifs/2号.gif",
+                      "md5":  "34a21a8cd621d235b8f9a7a0f02d4620"
+                  },
+                  {
+                      "path":  "gifs/30.gif",
+                      "md5":  "7a04d9859fd62baeebba0ecde5f51d33"
+                  },
+                  {
+                      "path":  "gifs/31.gif",
+                      "md5":  "274f169b85388a7c6523020e51dc8dbd"
+                  },
+                  {
+                      "path":  "gifs/32.gif",
+                      "md5":  "4c77b6c1fb3554f681c80beec2615a02"
+                  },
+                  {
+                      "path":  "gifs/33.gif",
+                      "md5":  "5e2c6d672a8364721b35a860b71a7da5"
+                  },
+                  {
+                      "path":  "gifs/34.gif",
+                      "md5":  "f9fc8338c5852318b7941e419a66d2f7"
+                  },
+                  {
+                      "path":  "gifs/35.gif",
+                      "md5":  "6ca923d1140df17c5c324992fd66cd00"
+                  },
+                  {
+                      "path":  "gifs/36.gif",
+                      "md5":  "32bb92e5fc76ee6b5c338c595a0689a8"
+                  },
+                  {
+                      "path":  "gifs/37.gif",
+                      "md5":  "d6ea42186b3cb7e4e1b7669f84e1b88d"
+                  },
+                  {
+                      "path":  "gifs/38.gif",
+                      "md5":  "7ad2d830845e41d65c92211d334a2b51"
+                  },
+                  {
+                      "path":  "gifs/39.gif",
+                      "md5":  "e65b01292a91c3b7c98c2375f8d1f306"
+                  },
+                  {
+                      "path":  "gifs/3号.gif",
+                      "md5":  "853f9677c9b7c3596f8e4b2f180c60c3"
+                  },
+                  {
+                      "path":  "gifs/40.gif",
+                      "md5":  "4f828920a2f0ef2aba2a7f1bc6df6a6c"
+                  },
+                  {
+                      "path":  "gifs/41.gif",
+                      "md5":  "4feec69f7e2592aedbc471cf1d06f3a0"
+                  },
+                  {
+                      "path":  "gifs/42.gif",
+                      "md5":  "f91926fc0bd8d34b78030d54a99a846c"
+                  },
+                  {
+                      "path":  "gifs/43.gif",
+                      "md5":  "189d774b79d1ac88f1a18b439f17bb62"
+                  },
+                  {
+                      "path":  "gifs/4号.gif",
+                      "md5":  "7848eeab1904110488a902554c45d227"
+                  },
+                  {
+                      "path":  "gifs/5号.gif",
+                      "md5":  "e840001fdebc8b79c4ca9776084f5e8d"
+                  },
+                  {
+                      "path":  "gifs/6号.gif",
+                      "md5":  "b361754e8af10a6691ba3d1684ea4981"
+                  },
+                  {
+                      "path":  "gifs/7号.gif",
+                      "md5":  "754e3d11b77f4d433082bd7e1e7bc028"
+                  },
+                  {
+                      "path":  "gifs/8号.gif",
+                      "md5":  "2e161e5b6836fe3a9199aef95218437d"
+                  },
+                  {
+                      "path":  "gifs/9号.gif",
+                      "md5":  "e21b84da75ac73cd90a601830b772478"
+                  },
+                  {
+                      "path":  "gifs/冲击.gif",
+                      "md5":  "30e271530b260a80bcd8c15f8dc59833"
+                  },
+                  {
+                      "path":  "gifs/分身.gif",
+                      "md5":  "2fdfc0a3c95a1b2f682119660b5961ad"
+                  },
+                  {
+                      "path":  "gifs/变换.gif",
+                      "md5":  "3f5a2bbdf3cd8b8d93212f061b608ed8"
+                  },
+                  {
+                      "path":  "gifs/器械.gif",
+                      "md5":  "08b7041f10c7479146e0f9e7628dd63e"
+                  },
+                  {
+                      "path":  "gifs/奇异.gif",
+                      "md5":  "a71781f9e9a9778859cfe2d04f227ad8"
+                  },
+                  {
+                      "path":  "gifs/恢复.gif",
+                      "md5":  "634676522d6606e20a8acc0d2ab2fe05"
+                  },
+                  {
+                      "path":  "gifs/惩戒秩序.gif",
+                      "md5":  "82a922a29dd5b9b15e4812edea227ea6"
+                  },
+                  {
+                      "path":  "gifs/护盾.gif",
+                      "md5":  "07e43760f19a414016d18ee3825a8c89"
+                  },
+                  {
+                      "path":  "gifs/等离子.gif",
+                      "md5":  "f13fac04af0fb74c6ba7e348ae9b0dea"
+                  },
+                  {
+                      "path":  "gifs/重力.gif",
+                      "md5":  "d6cd898d3a153963724b51d08b803f5c"
+                  },
+                  {
+                      "path":  "gifs/雨天.gif",
+                      "md5":  "b397bc2fdde6cd44da846a346e9c4bcc"
+                  },
+                  {
+                      "path":  "gifs/飞行.gif",
+                      "md5":  "ae0ada0fcc8f90deb19f91c1270022a2"
+                  },
+                  {
+                      "path":  "js/app.js",
+                      "md5":  "fd4c0dd047ac4176056871a8b48cf6e7"
+                  },
+                  {
+                      "path":  "js/auth.js",
+                      "md5":  "04fd2ad57dacd9c435c818dde96bcfb8"
+                  },
+                  {
+                      "path":  "js/calendar.js",
+                      "md5":  "11aafe72124005a48386fb7b3531179c"
+                  },
+                  {
+                      "path":  "js/config.js",
+                      "md5":  "f1ae06b9dd8e786dab91ebeae64ecca9"
+                  },
+                  {
+                      "path":  "js/events.js",
+                      "md5":  "44ff69459880ebe81f7a49908ed1eebd"
+                  },
+                  {
+                      "path":  "js/notify.js",
+                      "md5":  "77e2e55d24ac5101e372223a1ebff4c6"
+                  },
+                  {
+                      "path":  "js/render.js",
+                      "md5":  "6da84702056598081d182dce254bade5"
+                  },
+                  {
+                      "path":  "js/theme.js",
+                      "md5":  "ec825bb0631816f8962bbb8695c2af44"
+                  },
+                  {
+                      "path":  "js/todolist.js",
+                      "md5":  "ddd50e839225dc617a8bdb6192fbafe7"
+                  },
+                  {
+                      "path":  "js/voice.js",
+                      "md5":  "a6b4efed69a904d0d944ae38120eb6f9"
+                  }
+              ]
+}
