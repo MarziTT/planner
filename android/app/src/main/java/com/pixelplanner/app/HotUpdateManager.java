@@ -28,7 +28,7 @@ public class HotUpdateManager {
 
     private static final String PREFS_NAME = "hot_update_prefs";
     private static final String KEY_VERSION = "local_version";
-
+    private static final String APK_BUNDLED_VERSION = "4.6.11";
     private final Context context;
     private final Handler mainHandler;
 
@@ -60,7 +60,7 @@ public class HotUpdateManager {
             try {
                 SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
                 String localVersion = prefs.getString(KEY_VERSION, "");
-
+                localVersion = reconcileBundledVersion(prefs, localVersion);
                 Log.i(TAG, "Checking update — local version: '" + localVersion + "'");
 
                 JSONObject versionInfo = fetchVersionInfo();
@@ -202,6 +202,30 @@ public class HotUpdateManager {
     /**
      * 确定 WebView 应加载的 URL：内部存储优先，回退到 android_asset。
      */
+
+    /**
+     * If the bundled APK is newer than the cached hot-update bundle, discard the cached
+     * HTML entrypoint so the app falls back to the APK assets on next load.
+     */
+    private String reconcileBundledVersion(SharedPreferences prefs, String localVersion) {
+        if (localVersion.isEmpty()) {
+            return localVersion;
+        }
+        if (compareVersions(localVersion, APK_BUNDLED_VERSION) < 0) {
+            clearCachedEntrypoint();
+            prefs.edit().putString(KEY_VERSION, APK_BUNDLED_VERSION).apply();
+            Log.i(TAG, "Bundled APK is newer than cached hot-update bundle; using assets " + APK_BUNDLED_VERSION);
+            return APK_BUNDLED_VERSION;
+        }
+        return localVersion;
+    }
+
+    private void clearCachedEntrypoint() {
+        File mainHtml = new File(context.getFilesDir(), "pixel_calendar_new.html");
+        if (mainHtml.exists() && !mainHtml.delete()) {
+            Log.w(TAG, "Failed to delete cached entrypoint: " + mainHtml.getAbsolutePath());
+        }
+    }
     private String getLoadUrl() {
         File mainHtml = new File(context.getFilesDir(), "pixel_calendar_new.html");
         if (mainHtml.exists()) {

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel Planner v4.6.10</title>
+<title>Pixel Planner v4.6.11</title>
 <style>
 /* ================================================================
-   Pixel Planner v4.6.10 — 卡片流主屏 + 侧滑日历 + 底部添加面板
+   Pixel Planner v4.6.11 — 卡片流主屏 + 侧滑日历 + 底部添加面板
    8 主题: warm / clean / dark / brutal / kamen / ocean / forest / sunset
    ================================================================ */
 
@@ -3307,10 +3307,10 @@ function toggleThemeMode() {
 var UPDATE_URL = 'https://raw.githubusercontent.com/MarziTT/planner/main/version.json';
 
 function getLocalVersion() {
-  return '4.6.10';
+  return '4.6.11';
 }
 function getLocalBuild() {
-  return 4610;
+  return 4611;
 }
 // ==================== 更新机制 ====================
 function showUpdateDialog(remote) {
@@ -6279,7 +6279,7 @@ function doExport() {
     todolist: (typeof todoList !== 'undefined') ? todoList : [],
     tags: (typeof getDynamicTags === 'function') ? getDynamicTags() : [],
     exportedAt: new Date().toISOString(),
-    version: '4.6.10'
+    version: '4.6.11'
   };
   var json = JSON.stringify(data, null, 2);
   var blob = new Blob([json], {type:'application/json'});
@@ -6322,7 +6322,7 @@ function doImport(ev) {
 }
 function doChkUpdate() {
   if (typeof showUpdateDialog === 'function') { showUpdateDialog(); }
-  else { alert('更新检查: 当前版本 v4.6.10'); }
+  else { alert('更新检查: 当前版本 v4.6.11'); }
   closeSettings();
 }
 function doClearAll() {

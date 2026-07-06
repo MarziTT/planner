@@ -18,8 +18,8 @@ android {
         applicationId "com.pixelplanner.app"
         minSdk 21
         targetSdk 34
-        versionCode 4610
-        versionName "4.6.10"
+        versionCode 4611
+        versionName "4.6.11"
     }
 
     buildTypes {

@@ -1,6 +1,6 @@
 {
-    "version":  "4.6.10",
-    "build":  4610,
+    "version":  "4.6.11",
+    "build":  4611,
     "files":  [
                   {
                       "path":  ".gitignore",
@@ -24,7 +24,7 @@
                   },
                   {
                       "path":  "pixel_calendar_new.html",
-                      "md5":  "089cd1b57bdff37240c59f7ca6d0f6f1"
+                      "md5":  "2005746964ea44ed46d0968aef3fc825"
                   },
                   {
                       "path":  "qr_v3.6.png",
