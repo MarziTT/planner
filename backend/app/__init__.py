@@ -42,18 +42,20 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
 def _ensure_tables(app: Flask) -> None:
     """Create tables and repair broken ones from prior partial deploys."""
     with app.app_context():
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        if not tables:
-            db.create_all()
-            return
-
-        # Check if users table is broken (prior partial deploy on Railway)
-        if "users" in tables:
-            cols = {c["name"] for c in inspector.get_columns("users")}
-            if "email" not in cols:
-                # Drop all tables with CASCADE (PostgreSQL FK constraints)
-                for table in tables:
-                    db.session.execute(text(f'DROP TABLE "{table}" CASCADE'))
-                db.session.commit()
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            if not tables:
                 db.create_all()
+                return
+
+            if "users" in tables:
+                cols = {c["name"] for c in inspector.get_columns("users")}
+                if "email" not in cols:
+                    # Drop schema + recreate: handles PostgreSQL FK cleanly
+                    db.session.execute(text("DROP SCHEMA public CASCADE"))
+                    db.session.execute(text("CREATE SCHEMA public"))
+                    db.session.commit()
+                    db.create_all()
+        except Exception:
+            pass  # Table repair is best-effort; app starts regardless
