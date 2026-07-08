@@ -1,0 +1,19 @@
+{
+  "latestVersion": "5.0.0",
+  "buildNumber": "50000",
+  "required": false,
+  "downloadUrl": "",
+  "releaseNotes": [
+    "Flutter 客户端重构骨架已建立",
+    "后端已切换到 Flask app factory + Blueprint 架构",
+    "更新系统拆分为资源清单与应用版本提醒"
+  ],
+  "resources": [
+    {
+      "key": "themes",
+      "version": "2026.07.07",
+      "hash": "placeholder",
+      "url": "/assets/themes.bundle.json"
+    }
+  ]
+}
