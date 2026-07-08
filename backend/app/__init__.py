@@ -1,4 +1,5 @@
 from flask import Flask
+from sqlalchemy import inspect
 
 from .api.auth import auth_bp
 from .api.planner import planner_bp
@@ -20,6 +21,20 @@ def create_app(config_name: str | None = None) -> Flask:
     migrate.init_app(app, db)
 
     register_models()
+
+    # Auto-create / repair tables (Railway PostgreSQL / SQLite)
+    with app.app_context():
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        if tables:
+            # Check if tables are broken (missing columns from prior partial deploy)
+            users_cols = {c["name"] for c in inspector.get_columns("users")} if "users" in tables else set()
+            if not users_cols or "email" not in users_cols:
+                db.drop_all()
+                tables = []
+        if not tables:
+            db.create_all()
+
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(planner_bp, url_prefix="/api/v1")
     app.register_blueprint(profile_bp, url_prefix="/api/v1")
