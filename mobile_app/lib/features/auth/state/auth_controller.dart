@@ -1,4 +1,5 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_repository.dart';
 import '../domain/auth_models.dart';
@@ -56,11 +57,14 @@ class AuthController extends StateNotifier<AuthState> {
     try {
       final session = await _repository.login(email: email, password: password);
       state = AuthState(session: session, loading: false, restoring: false);
-    } catch (_) {
+    } catch (e) {
+      final msg = e is DioException
+          ? '登录失败：${_dioErrorMsg(e)}'
+          : '登录失败：$e';
       state = state.copyWith(
         loading: false,
         restoring: false,
-        errorMessage: '登录失败，请检查账号或接口是否可用。',
+        errorMessage: msg,
       );
     }
   }
@@ -78,12 +82,31 @@ class AuthController extends StateNotifier<AuthState> {
         nickname: nickname,
       );
       state = AuthState(session: session, loading: false, restoring: false);
-    } catch (_) {
+    } catch (e) {
+      final msg = e is DioException
+          ? '注册失败：${_dioErrorMsg(e)}'
+          : '注册失败：$e';
       state = state.copyWith(
         loading: false,
         restoring: false,
-        errorMessage: '注册失败，请检查邮箱是否已被使用。',
+        errorMessage: msg,
       );
+    }
+  }
+
+  static String _dioErrorMsg(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+        return '连接超时';
+      case DioExceptionType.receiveTimeout:
+        return '响应超时';
+      case DioExceptionType.connectionError:
+        return '无法连接服务器';
+      case DioExceptionType.badResponse:
+        final msg = e.response?.data?['error']?['message'] ?? e.message;
+        return '服务器错误：$msg';
+      default:
+        return e.message ?? '未知网络错误';
     }
   }
 
