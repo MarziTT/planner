@@ -17,4 +17,5 @@ __pycache__/
 *.apk
 data/*.db
 data/*.db-*
+backend/.env
 .DS_Store
