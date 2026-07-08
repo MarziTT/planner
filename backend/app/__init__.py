@@ -1,5 +1,5 @@
 from flask import Flask
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from .api.auth import auth_bp
 from .api.planner import planner_bp
@@ -12,7 +12,7 @@ from .extensions import cors, db, migrate
 from .models import register_models
 
 
-def create_app(config_name: str | None = None) -> Flask:
+def create_app(config_name: str | None = None, repair_tables: bool = False) -> Flask:
     app = Flask(__name__)
     app.config.from_object(get_config(config_name))
 
@@ -22,18 +22,8 @@ def create_app(config_name: str | None = None) -> Flask:
 
     register_models()
 
-    # Auto-create / repair tables (Railway PostgreSQL / SQLite)
-    with app.app_context():
-        inspector = inspect(db.engine)
-        tables = inspector.get_table_names()
-        if tables:
-            # Check if tables are broken (missing columns from prior partial deploy)
-            users_cols = {c["name"] for c in inspector.get_columns("users")} if "users" in tables else set()
-            if not users_cols or "email" not in users_cols:
-                db.drop_all()
-                tables = []
-        if not tables:
-            db.create_all()
+    if repair_tables:
+        _ensure_tables(app)
 
     app.register_blueprint(auth_bp, url_prefix="/api/v1/auth")
     app.register_blueprint(planner_bp, url_prefix="/api/v1")
@@ -47,3 +37,23 @@ def create_app(config_name: str | None = None) -> Flask:
         return {"ok": True, "data": {"status": "healthy"}, "error": None, "meta": {}}
 
     return app
+
+
+def _ensure_tables(app: Flask) -> None:
+    """Create tables and repair broken ones from prior partial deploys."""
+    with app.app_context():
+        inspector = inspect(db.engine)
+        tables = inspector.get_table_names()
+        if not tables:
+            db.create_all()
+            return
+
+        # Check if users table is broken (prior partial deploy on Railway)
+        if "users" in tables:
+            cols = {c["name"] for c in inspector.get_columns("users")}
+            if "email" not in cols:
+                # Drop all tables with CASCADE (PostgreSQL FK constraints)
+                for table in tables:
+                    db.session.execute(text(f'DROP TABLE "{table}" CASCADE'))
+                db.session.commit()
+                db.create_all()
