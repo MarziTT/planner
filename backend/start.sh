@@ -7,7 +7,9 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "Running database migrations..."
+cd /app/backend
 flask --app wsgi db upgrade
 
 echo "Starting gunicorn..."
-exec gunicorn --bind 0.0.0.0:$PORT wsgi:app
+cd /app
+exec gunicorn --bind 0.0.0.0:$PORT backend.wsgi:app
