@@ -52,9 +52,16 @@ def _ensure_tables(app: Flask) -> None:
             if "users" in tables:
                 cols = {c["name"] for c in inspector.get_columns("users")}
                 if "email" not in cols:
-                    # Drop schema + recreate: handles PostgreSQL FK cleanly
-                    db.session.execute(text("DROP SCHEMA public CASCADE"))
-                    db.session.execute(text("CREATE SCHEMA public"))
+                    # Drop all user tables with CASCADE, then recreate
+                    db.session.execute(text("""
+                        DO $$ DECLARE
+                            r RECORD;
+                        BEGIN
+                            FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
+                                EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+                            END LOOP;
+                        END $$;
+                    """))
                     db.session.commit()
                     db.create_all()
         except Exception:
