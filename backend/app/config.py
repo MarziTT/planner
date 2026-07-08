@@ -7,13 +7,24 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 
+def _normalize_database_url(raw_url: str | None) -> str:
+    if not raw_url:
+        db_path = BASE_DIR / "data" / "pixel_planner.db"
+        return f"sqlite:///{db_path.as_posix()}"
+    if raw_url.startswith("postgres://"):
+        return raw_url.replace("postgres://", "postgresql+psycopg://", 1)
+    if raw_url.startswith("postgresql://"):
+        return raw_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return raw_url
+
+
 class BaseConfig:
     SECRET_KEY = os.getenv("PIXEL_SECRET_KEY", "pixel-planner-dev-secret")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_AS_ASCII = False
 
     DB_PATH = BASE_DIR / "data" / "pixel_planner.db"
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or f"sqlite:///{DB_PATH.as_posix()}"
+    SQLALCHEMY_DATABASE_URI = _normalize_database_url(os.getenv("DATABASE_URL"))
 
     JWT_ISSUER = os.getenv("JWT_ISSUER", "pixel-planner")
     JWT_ACCESS_TTL_SECONDS = int(os.getenv("JWT_ACCESS_TTL_SECONDS", "3600"))
