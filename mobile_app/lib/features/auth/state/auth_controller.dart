@@ -100,13 +100,18 @@ class AuthController extends StateNotifier<AuthState> {
         return '连接超时';
       case DioExceptionType.receiveTimeout:
         return '响应超时';
+      case DioExceptionType.sendTimeout:
+        return '发送超时';
       case DioExceptionType.connectionError:
-        return '无法连接服务器';
+        return '无法连接服务器（DNS或网络不通）';
       case DioExceptionType.badResponse:
         final msg = e.response?.data?['error']?['message'] ?? e.message;
         return '服务器错误：$msg';
+      case DioExceptionType.cancel:
+        return '请求已取消';
       default:
-        return e.message ?? '未知网络错误';
+        final detail = e.error?.toString() ?? e.message ?? '';
+        return '网络异常：$detail';
     }
   }
 
