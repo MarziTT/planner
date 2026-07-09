@@ -37,5 +37,6 @@ def update_profile():
     profile.city = payload.get("city", profile.city) or ""
     profile.bio = payload.get("bio", profile.bio) or ""
     profile.fitness_goal = payload.get("fitnessGoal", profile.fitness_goal) or ""
+    g.current_user.onboarding_done = True
     db.session.commit()
-    return success({"item": _profile_to_dict(profile)})
+    return success({"item": _profile_to_dict(profile), "onboardingDone": True})

@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/auth_repository.dart';
@@ -92,6 +92,23 @@ class AuthController extends StateNotifier<AuthState> {
         errorMessage: msg,
       );
     }
+  }
+
+  Future<void> completeOnboarding() async {
+    final session = state.session;
+    if (session == null || session.user.onboardingDone) {
+      return;
+    }
+    final updatedSession = session.copyWith(
+      user: session.user.copyWith(onboardingDone: true),
+    );
+    await _repository.persistSession(updatedSession);
+    state = state.copyWith(
+      session: updatedSession,
+      loading: false,
+      restoring: false,
+      clearError: true,
+    );
   }
 
   static String _dioErrorMsg(DioException e) {

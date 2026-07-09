@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
@@ -83,6 +83,14 @@ class AuthRepository {
       user: user,
       accessToken: tokens['accessToken'] as String,
       refreshToken: tokens['refreshToken'] as String,
+    );
+  }
+
+  Future<void> persistSession(AuthSession session) async {
+    await _storage.saveSession(
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      user: session.user.toJson(),
     );
   }
 
