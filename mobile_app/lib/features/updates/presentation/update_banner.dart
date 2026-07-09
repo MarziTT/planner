@@ -55,9 +55,10 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
     final promptToken = '${decision.kind.name}:${info.version}:${info.buildNumber}:${info.resourceCount}';
     if (!_dialogOpen && state.lastPromptToken != promptToken) {
       _dialogOpen = true;
-      ref.read(updateControllerProvider.notifier).markPromptShown(promptToken);
+      final token = promptToken;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
+        ref.read(updateControllerProvider.notifier).markPromptShown(token);
         await _showUpdateDialog(context, info, decision);
         _dialogOpen = false;
       });
