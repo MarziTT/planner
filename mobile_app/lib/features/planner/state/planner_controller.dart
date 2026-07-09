@@ -1,7 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/planner_repository.dart';
 import '../domain/planner_models.dart';
+
+final selectedPlannerEventIdProvider = StateProvider<int?>((ref) => null);
 
 class PlannerState {
   const PlannerState({
@@ -77,7 +79,7 @@ class PlannerController extends StateNotifier<PlannerState> {
     } catch (_) {
       state = state.copyWith(
         loading: false,
-        errorMessage: '首页数据拉取失败，请确认后端 /api/v1/* 已启动。',
+        errorMessage: '首页数据加载失败，请确认后端 /api/v1/* 已启动。',
       );
     }
   }

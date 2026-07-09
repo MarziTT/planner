@@ -52,6 +52,20 @@ class SettingsController extends StateNotifier<SettingsState> {
       state = state.copyWith(loading: false, errorMessage: '设置保存失败');
     }
   }
+
+  Future<void> updateNotifications({
+    required bool enabled,
+    int? leadMinutes,
+  }) async {
+    final current = state.settings ?? PlannerSettings.fromJson(const {});
+    await save(
+      current.copyWith(
+        notificationsEnabled: enabled,
+        notificationsLeadMinutes:
+            leadMinutes ?? current.notificationsLeadMinutes,
+      ),
+    );
+  }
 }
 
 final settingsControllerProvider = StateNotifierProvider<SettingsController, SettingsState>(

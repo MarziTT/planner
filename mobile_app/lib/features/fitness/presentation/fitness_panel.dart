@@ -1,14 +1,21 @@
 ﻿import 'package:flutter/material.dart';
 
 class FitnessPanel extends StatelessWidget {
-  const FitnessPanel({super.key});
+  const FitnessPanel({
+    super.key,
+    required this.modeLabel,
+    required this.goal,
+  });
+
+  final String modeLabel;
+  final String goal;
 
   @override
   Widget build(BuildContext context) {
-    final items = const [
-      ('力量训练', '胸背腿分化、器械记录、组间休息'),
-      ('有氧恢复', '步行、慢跑、骑行与恢复提醒'),
-      ('饮食执行', '蛋白、饮水、补剂和打卡节奏'),
+    final items = [
+      ('训练方式', modeLabel),
+      ('执行重点', goal.isEmpty ? '先把每周固定训练节奏跑起来。' : goal),
+      ('训练提醒', '训练前热身、训练后拉伸和饮水提醒会在这里承接。'),
     ];
 
     return Card(
@@ -19,7 +26,7 @@ class FitnessPanel extends StatelessWidget {
           children: [
             Text('训练模块', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text('这里会承接旧版健身模板和训练流程，但用原生卡片和状态管理重写。'),
+            Text('你已经在资料页开启了健身安排，这里会按你的训练方式展示更贴近的模块。'),
             const SizedBox(height: 12),
             ...items.map(
               (item) => Padding(

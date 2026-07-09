@@ -16,6 +16,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _loaded = false;
   String? _lastAppliedSettingsKey;
+  static const _notificationLeadOptions = [5, 10, 15, 30, 60];
 
   @override
   void didChangeDependencies() {
@@ -71,13 +72,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     if (value == null || settings == null) return;
                     themeController.switchPreset(value);
                     await ref.read(settingsControllerProvider.notifier).save(
-                          PlannerSettings(
-                            theme: value.name,
-                            themeMode: settings.themeMode,
-                            notificationsEnabled: settings.notificationsEnabled,
-                            voiceEnabled: settings.voiceEnabled,
-                            updateChannel: settings.updateChannel,
-                          ),
+                          settings.copyWith(theme: value.name),
                         );
                   },
                 ),
@@ -94,13 +89,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     themeController.setThemeMode(selected);
                     if (settings == null) return;
                     await ref.read(settingsControllerProvider.notifier).save(
-                          PlannerSettings(
-                            theme: settings.theme,
-                            themeMode: selected.name,
-                            notificationsEnabled: settings.notificationsEnabled,
-                            voiceEnabled: settings.voiceEnabled,
-                            updateChannel: settings.updateChannel,
-                          ),
+                          settings.copyWith(themeMode: selected.name),
                         );
                   },
                 ),
@@ -117,13 +106,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       : (value) async {
                           if (value == null) return;
                           await ref.read(settingsControllerProvider.notifier).save(
-                                PlannerSettings(
-                                  theme: settings.theme,
-                                  themeMode: settings.themeMode,
-                                  notificationsEnabled: settings.notificationsEnabled,
-                                  voiceEnabled: settings.voiceEnabled,
-                                  updateChannel: value,
-                                ),
+                                settings.copyWith(updateChannel: value),
                               );
                         },
                 ),
@@ -132,29 +115,43 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   value: settings?.notificationsEnabled ?? true,
                   onChanged: settings == null
                       ? null
-                      : (value) => ref.read(settingsControllerProvider.notifier).save(
-                            PlannerSettings(
-                              theme: settings.theme,
-                              themeMode: settings.themeMode,
-                              notificationsEnabled: value,
-                              voiceEnabled: settings.voiceEnabled,
-                              updateChannel: settings.updateChannel,
-                            ),
-                          ),
+                      : (value) => ref
+                          .read(settingsControllerProvider.notifier)
+                          .updateNotifications(enabled: value),
                   title: const Text('通知提醒'),
+                  subtitle: const Text('在通知栏和亮屏时提醒即将开始的日程'),
                 ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  value: settings?.notificationsLeadMinutes ?? 15,
+                  decoration: const InputDecoration(labelText: '提前提醒时间'),
+                  items: _notificationLeadOptions
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text('提前 $value 分钟'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: settings == null || !(settings.notificationsEnabled)
+                      ? null
+                      : (value) async {
+                          if (value == null) return;
+                          await ref
+                              .read(settingsControllerProvider.notifier)
+                              .updateNotifications(
+                                enabled: settings.notificationsEnabled,
+                                leadMinutes: value,
+                              );
+                        },
+                ),
+                const SizedBox(height: 16),
                 SwitchListTile(
                   value: settings?.voiceEnabled ?? true,
                   onChanged: settings == null
                       ? null
                       : (value) => ref.read(settingsControllerProvider.notifier).save(
-                            PlannerSettings(
-                              theme: settings.theme,
-                              themeMode: settings.themeMode,
-                              notificationsEnabled: settings.notificationsEnabled,
-                              voiceEnabled: value,
-                              updateChannel: settings.updateChannel,
-                            ),
+                            settings.copyWith(voiceEnabled: value),
                           ),
                   title: const Text('语音录入'),
                 ),

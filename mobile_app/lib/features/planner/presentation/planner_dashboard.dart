@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../fitness/presentation/fitness_panel.dart';
-import '../../import_export/presentation/import_export_panel.dart';
+import '../../profile/state/profile_controller.dart';
 import '../domain/planner_models.dart';
 import '../state/planner_controller.dart';
 
@@ -19,19 +19,46 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard> {
   _TodoFilter _todoFilter = _TodoFilter.open;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      final profileState = ref.read(profileControllerProvider);
+      if (profileState.profile == null && !profileState.loading) {
+        ref.read(profileControllerProvider.notifier).load();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = ref.watch(plannerControllerProvider);
+    final profileState = ref.watch(profileControllerProvider);
+    final selectedEventId = ref.watch(selectedPlannerEventIdProvider);
+    final profile = profileState.profile;
     final theme = Theme.of(context);
-    final todayEvents = state.eventsForDay(DateTime.now());
-    final upcomingEvents = state.upcomingEvents(DateTime.now());
+    final now = DateTime.now();
+    final todayEvents = state.eventsForDay(now);
+    final upcomingEvents = state.upcomingEvents(now);
     final todos = switch (_todoFilter) {
       _TodoFilter.open => state.openTodos,
       _TodoFilter.completed => state.completedTodos,
       _TodoFilter.all => state.todos,
     };
+    final workModeActive = profile?.identity == 'worker' &&
+        (profile?.isScheduleActiveAt(now) ?? false);
+
+    final highlightedEvent = selectedEventId != null
+        ? todayEvents.cast<PlannerEvent?>().firstWhere(
+              (e) => e!.id == selectedEventId,
+              orElse: () => null,
+            )
+        : null;
 
     return RefreshIndicator(
-      onRefresh: () => ref.read(plannerControllerProvider.notifier).loadDashboard(),
+      onRefresh: () async {
+        await ref.read(plannerControllerProvider.notifier).loadDashboard();
+        await ref.read(profileControllerProvider.notifier).load();
+      },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -40,16 +67,34 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard> {
               padding: EdgeInsets.only(bottom: 16),
               child: LinearProgressIndicator(),
             ),
+          if (highlightedEvent != null)
+            Card(
+              color: theme.colorScheme.primaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('从提醒返回', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Text(
+                      highlightedEvent.title,
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('今日概览', style: theme.textTheme.titleLarge),
+                  Text('今日总览', style: theme.textTheme.titleLarge),
                   const SizedBox(height: 6),
                   Text(
-                    '把今日安排、待办状态和训练入口收在同一个工作台里。',
+                    '把今天的行程、待办和阶段重点收在同一个工作台里。',
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -59,20 +104,28 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard> {
                     children: [
                       _MetricChip(label: '今日行程', value: '${todayEvents.length}'),
                       _MetricChip(label: '待办', value: '${state.openTodos.length}'),
-                      _MetricChip(
-                        label: '已完成',
-                        value: '${state.completedTodos.length}',
-                      ),
+                      _MetricChip(label: '已完成', value: '${state.completedTodos.length}'),
                     ],
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          const FitnessPanel(),
-          const SizedBox(height: 16),
-          const ImportExportPanel(),
+          if (profile != null) ...[
+            const SizedBox(height: 16),
+            _ProfileRhythmCard(profile: profile),
+          ],
+          if (workModeActive) ...[
+            const SizedBox(height: 16),
+            _WorkModeCard(todos: state.openTodos.take(3).toList()),
+          ],
+          if (profile?.wantsFitness ?? false) ...[
+            const SizedBox(height: 16),
+            FitnessPanel(
+              modeLabel: profile!.fitnessModeLabel,
+              goal: profile.fitnessGoal,
+            ),
+          ],
           const SizedBox(height: 16),
           if (state.errorMessage != null)
             Padding(
@@ -260,6 +313,73 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard> {
       return;
     }
     await notifier.updateTodoTitle(todo, result);
+  }
+}
+
+class _ProfileRhythmCard extends StatelessWidget {
+  const _ProfileRhythmCard({required this.profile});
+
+  final dynamic profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('当前节奏', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text('${profile.identityLabel} · ${profile.routineStart} - ${profile.routineEnd}'),
+            if ((profile.focusArea as String).isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text('重点：${profile.focusArea}'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkModeCard extends StatelessWidget {
+  const _WorkModeCard({required this.todos});
+
+  final List<PlannerTodo> todos;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('上班模式进行中', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            Text('当前时段优先把安排收成可执行的待办，减少频繁切换。'),
+            const SizedBox(height: 12),
+            if (todos.isEmpty)
+              const Text('你现在没有待处理任务，适合补一条最清晰的下一步。')
+            else
+              ...todos.map(
+                (todo) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.radio_button_unchecked, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(todo.title)),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
