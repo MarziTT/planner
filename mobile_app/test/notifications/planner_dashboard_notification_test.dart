@@ -45,12 +45,12 @@ class _SeededProfileController extends ProfileController {
 }
 
 void main() {
-  testWidgets('dashboard shows highlighted reminder card for selected event', (tester) async {
+  testWidgets('dashboard shows highlighted reminder card for selected future event', (tester) async {
     final event = PlannerEvent(
       id: 1,
-      title: '站会',
-      startsAt: DateTime.now().add(const Duration(minutes: 30)),
-      endsAt: DateTime.now().add(const Duration(minutes: 60)),
+      title: '明早航班',
+      startsAt: DateTime.now().add(const Duration(days: 1, hours: 2)),
+      endsAt: DateTime.now().add(const Duration(days: 1, hours: 4)),
       status: 'planned',
     );
 
@@ -91,6 +91,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('从提醒返回'), findsOneWidget);
-    expect(find.textContaining('站会'), findsWidgets);
+    expect(find.textContaining('明早航班'), findsWidgets);
   });
 }

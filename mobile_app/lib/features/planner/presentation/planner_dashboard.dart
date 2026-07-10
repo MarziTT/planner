@@ -48,7 +48,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard> {
         (profile?.isScheduleActiveAt(now) ?? false);
 
     final highlightedEvent = selectedEventId != null
-        ? todayEvents.cast<PlannerEvent?>().firstWhere(
+        ? state.events.cast<PlannerEvent?>().firstWhere(
               (e) => e!.id == selectedEventId,
               orElse: () => null,
             )
@@ -594,3 +594,4 @@ class _EmptyCard extends StatelessWidget {
     );
   }
 }
+
