@@ -19,3 +19,6 @@ data/*.db
 data/*.db-*
 backend/.env
 .DS_Store
+.workbuddy/
+mobile_app/android/build/
+*.apk.idsig
