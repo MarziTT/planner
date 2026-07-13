@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +11,8 @@ import 'package:pixel_planner_mobile/features/profile/domain/profile_model.dart'
 import 'package:pixel_planner_mobile/features/profile/state/profile_controller.dart';
 
 class _FakePlannerRepository extends PlannerRepository {
-  _FakePlannerRepository({required this.events, required this.todos}) : super(Dio());
+  _FakePlannerRepository({required this.events, required this.todos})
+      : super(Dio());
 
   final List<PlannerEvent> events;
   final List<PlannerTodo> todos;
@@ -45,7 +46,9 @@ class _SeededProfileController extends ProfileController {
 }
 
 void main() {
-  testWidgets('dashboard shows highlighted reminder card for selected future event', (tester) async {
+  testWidgets(
+      'dashboard shows highlighted reminder card for selected future event',
+      (tester) async {
     final event = PlannerEvent(
       id: 1,
       title: '明早航班',
@@ -59,7 +62,7 @@ void main() {
       PlannerState(events: [event], todos: const []),
     );
 
-    final profile = const UserProfile(
+    const profile = UserProfile(
       gender: '男',
       age: 28,
       city: '上海',
@@ -83,7 +86,7 @@ void main() {
         overrides: [
           plannerControllerProvider.overrideWith((ref) => plannerController),
           profileControllerProvider.overrideWith((ref) => profileController),
-          selectedPlannerEventIdProvider.overrideWithProvider(StateProvider<int?>((ref) => 1)),
+          selectedPlannerEventIdProvider.overrideWith((ref) => 1),
         ],
         child: const MaterialApp(home: Scaffold(body: PlannerDashboard())),
       ),

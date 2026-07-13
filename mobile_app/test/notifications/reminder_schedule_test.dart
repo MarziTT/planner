@@ -1,5 +1,8 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+﻿import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
 import 'package:pixel_planner_mobile/features/notifications/data/reminder_gateway.dart';
+import 'package:pixel_planner_mobile/features/notifications/domain/notification_tap_event.dart';
 import 'package:pixel_planner_mobile/features/planner/domain/planner_models.dart';
 import 'package:pixel_planner_mobile/features/notifications/domain/reminder_schedule.dart';
 import 'package:pixel_planner_mobile/features/settings/domain/settings_model.dart';
@@ -8,10 +11,16 @@ class _FakeReminderGateway implements ReminderGateway {
   List<ReminderSchedule> captured = const [];
 
   @override
+  Stream<NotificationTapEvent> get taps => const Stream.empty();
+
+  @override
   Future<void> initialize() async {}
 
   @override
   Future<bool> ensurePermissions() async => true;
+
+  @override
+  Future<NotificationTapEvent?> getLaunchTap() async => null;
 
   @override
   Future<void> replaceSchedules(List<ReminderSchedule> schedules) async {

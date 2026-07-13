@@ -1,4 +1,5 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/planner_repository.dart';
 import '../domain/planner_models.dart';
@@ -76,10 +77,10 @@ class PlannerController extends StateNotifier<PlannerState> {
       final events = await _repository.fetchEvents();
       final todos = await _repository.fetchTodos();
       state = PlannerState(events: events, todos: todos, loading: false);
-    } catch (_) {
+    } catch (error) {
       state = state.copyWith(
         loading: false,
-        errorMessage: '首页数据加载失败，请确认后端 /api/v1/* 已启动。',
+        errorMessage: _plannerErrorMessage(error, fallback: '首页数据加载失败'),
       );
     }
   }
@@ -98,8 +99,10 @@ class PlannerController extends StateNotifier<PlannerState> {
       final events = [...state.events, item]
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
       state = state.copyWith(events: events, clearError: true);
-    } catch (_) {
-      state = state.copyWith(errorMessage: '新增行程失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '新增行程失败'),
+      );
     }
   }
 
@@ -121,8 +124,10 @@ class PlannerController extends StateNotifier<PlannerState> {
           .toList()
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
       state = state.copyWith(events: events, clearError: true);
-    } catch (_) {
-      state = state.copyWith(errorMessage: '编辑行程失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '编辑行程失败'),
+      );
     }
   }
 
@@ -133,8 +138,10 @@ class PlannerController extends StateNotifier<PlannerState> {
         events: state.events.where((item) => item.id != id).toList(),
         clearError: true,
       );
-    } catch (_) {
-      state = state.copyWith(errorMessage: '删除行程失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '删除行程失败'),
+      );
     }
   }
 
@@ -142,8 +149,10 @@ class PlannerController extends StateNotifier<PlannerState> {
     try {
       final item = await _repository.createTodo(title: title);
       state = state.copyWith(todos: [item, ...state.todos], clearError: true);
-    } catch (_) {
-      state = state.copyWith(errorMessage: '新增待办失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '新增待办失败'),
+      );
     }
   }
 
@@ -158,8 +167,10 @@ class PlannerController extends StateNotifier<PlannerState> {
           .map((item) => item.id == updated.id ? updated : item)
           .toList();
       state = state.copyWith(todos: todos, clearError: true);
-    } catch (_) {
-      state = state.copyWith(errorMessage: '编辑待办失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '编辑待办失败'),
+      );
     }
   }
 
@@ -174,8 +185,10 @@ class PlannerController extends StateNotifier<PlannerState> {
           .map((item) => item.id == updated.id ? updated : item)
           .toList();
       state = state.copyWith(todos: todos, clearError: true);
-    } catch (_) {
-      state = state.copyWith(errorMessage: '更新待办状态失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '更新待办状态失败'),
+      );
     }
   }
 
@@ -186,14 +199,37 @@ class PlannerController extends StateNotifier<PlannerState> {
         todos: state.todos.where((item) => item.id != id).toList(),
         clearError: true,
       );
-    } catch (_) {
-      state = state.copyWith(errorMessage: '删除待办失败');
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '删除待办失败'),
+      );
     }
   }
 
   void markLoggedOut() {
     state = const PlannerState();
   }
+}
+
+String _plannerErrorMessage(Object error, {required String fallback}) {
+  if (error is DioException) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode == 401) {
+      return '登录态失效或未同步，请重新登录后再试。';
+    }
+    if (statusCode == 404) {
+      return '计划接口不存在，当前线上后端可能还没更新到最新版本。';
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return '后端服务暂时异常，请稍后再试。';
+    }
+    if (error.type == DioExceptionType.connectionError ||
+        error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.receiveTimeout) {
+      return '当前无法连接到计划服务，请检查网络或后端状态。';
+    }
+  }
+  return fallback;
 }
 
 final plannerControllerProvider =

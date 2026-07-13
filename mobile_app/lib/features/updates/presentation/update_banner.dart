@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../data/update_repository.dart';
 import '../domain/app_version.dart';
@@ -38,21 +39,25 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
     ref.listen(updateControllerProvider, (previous, next) {
       final message = next.lastActionMessage;
       if (message != null && message.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
         ref.read(updateControllerProvider.notifier).clearMessage();
       }
     });
 
     final state = ref.watch(updateControllerProvider);
     final info = state.info;
-    if (info == null) return const SizedBox.shrink();
+    if (info == null) {
+      return const SizedBox.shrink();
+    }
 
     final decision = _evaluate(info);
     if (decision.kind == UpdateDecisionKind.none) {
       return const SizedBox.shrink();
     }
 
-    final promptToken = '${decision.kind.name}:${info.version}:${info.buildNumber}:${info.resourceCount}';
+    final promptToken =
+        '${decision.kind.name}:${info.version}:${info.buildNumber}:${info.resourceCount}';
     if (!_dialogOpen && state.lastPromptToken != promptToken) {
       _dialogOpen = true;
       final token = promptToken;
@@ -66,9 +71,9 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
 
     final isForce = decision.kind == UpdateDecisionKind.forceAppUpgrade;
     final title = switch (decision.kind) {
-      UpdateDecisionKind.resourceOnly => '发现资源更新',
+      UpdateDecisionKind.resourceOnly => '资源已可热更新',
       UpdateDecisionKind.optionalAppUpgrade => '发现新版本 ${info.version}',
-      UpdateDecisionKind.forceAppUpgrade => '需要更新到 ${info.version}',
+      UpdateDecisionKind.forceAppUpgrade => '必须更新到 ${info.version}',
       UpdateDecisionKind.none => '',
     };
 
@@ -80,7 +85,9 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
         dense: true,
         title: Text(title),
         subtitle: Text(
-          info.releaseNotes.isEmpty ? decision.reason : info.releaseNotes.join(' · '),
+          info.releaseNotes.isEmpty
+              ? decision.reason
+              : info.releaseNotes.join(' · '),
         ),
         trailing: FilledButton(
           onPressed: () => _showUpdateDialog(context, info, decision),
@@ -96,8 +103,8 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
 
   UpdateDecision _evaluate(UpdateInfo info) {
     final remoteBuild = int.tryParse(info.buildNumber) ?? currentAppBuildNumber;
-    final hasLogicChange =
-        remoteBuild > currentAppBuildNumber || info.version != currentAppVersion;
+    final hasLogicChange = remoteBuild > currentAppBuildNumber ||
+        info.version != currentAppVersion;
     final hasResourceBundle = info.resourceCount > 0;
     return UpdatePolicy.evaluate(
       requiredUpgrade: info.required,
@@ -114,9 +121,11 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
     await showDialog<void>(
       context: context,
       barrierDismissible: decision.kind != UpdateDecisionKind.forceAppUpgrade,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
-          decision.kind == UpdateDecisionKind.forceAppUpgrade ? '需要更新应用' : '发现新更新',
+          decision.kind == UpdateDecisionKind.forceAppUpgrade
+              ? '需要更新后继续使用'
+              : '发现可用更新',
         ),
         content: SizedBox(
           width: 360,
@@ -124,14 +133,14 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('当前版本 $currentAppVersion ($currentAppBuildNumber)'),
+              const Text('当前版本 5.0.0 (50000)'),
               const SizedBox(height: 4),
               Text('目标版本 ${info.version} (${info.buildNumber})'),
               const SizedBox(height: 8),
               Text(decision.reason),
               if (info.releaseNotes.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                ...info.releaseNotes.map<Widget>(
+                ...info.releaseNotes.map(
                   (item) => Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Text('- $item'),
@@ -150,32 +159,47 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
         actions: [
           if (decision.kind != UpdateDecisionKind.forceAppUpgrade)
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('稍后'),
             ),
           FilledButton(
             onPressed: () async {
-              if (info.downloadUrl.isNotEmpty) {
-                await Clipboard.setData(ClipboardData(text: info.downloadUrl));
+              if (decision.kind == UpdateDecisionKind.resourceOnly) {
+                ref.read(updateControllerProvider.notifier).announce(
+                    '资源已同步，重新进入页面即可看到新效果。');
+              } else if (info.downloadUrl.isNotEmpty) {
+                final opened = await _openDownloadUrl(info.downloadUrl);
+                if (!opened) {
+                  await Clipboard.setData(ClipboardData(text: info.downloadUrl));
+                }
                 if (!mounted) return;
                 ref.read(updateControllerProvider.notifier).announce(
-                      '更新地址已复制，可直接打开下载安装。',
+                      opened ? '已打开下载页面。' : '无法直接打开，下载地址已复制。',
                     );
               } else {
-                ref.read(updateControllerProvider.notifier).announce(
-                      decision.kind == UpdateDecisionKind.resourceOnly
-                          ? '资源更新入口已预留，下一步接资源包下载。'
-                          : '下载地址暂未配置。',
-                    );
+                ref
+                    .read(updateControllerProvider.notifier)
+                    .announce('下载地址还没有配置。');
               }
-              if (mounted) Navigator.of(context).pop();
+              if (!dialogContext.mounted) {
+                return;
+              }
+              Navigator.of(dialogContext).pop();
             },
             child: Text(
-              decision.kind == UpdateDecisionKind.resourceOnly ? '复制更新入口' : '复制下载地址',
+              decision.kind == UpdateDecisionKind.resourceOnly
+                  ? '知道了'
+                  : '下载更新',
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<bool> _openDownloadUrl(String rawUrl) async {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null || !uri.hasScheme) return false;
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }

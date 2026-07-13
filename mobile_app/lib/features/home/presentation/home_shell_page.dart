@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/state/auth_controller.dart';
+import '../../fast_capture/domain/capture_enums.dart';
 import '../../fast_capture/presentation/quick_capture_bar.dart';
 import '../../notifications/data/reminder_gateway.dart';
 import '../../notifications/domain/notification_tap_event.dart';
@@ -27,6 +28,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     with WidgetsBindingObserver {
   int currentIndex = 0;
   StreamSubscription<NotificationTapEvent>? _tapSubscription;
+  bool _initialDashboardLoadRequested = false;
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       if (settingsState.settings == null && !settingsState.loading) {
         ref.read(settingsControllerProvider.notifier).load();
       }
+      _ensureDashboardLoadedForSession();
 
       final gateway = ref.read(reminderGatewayProvider);
       _tapSubscription = gateway.taps.listen(_onNotificationTap);
@@ -74,15 +77,25 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     }
   }
 
+  void _ensureDashboardLoadedForSession() {
+    if (_initialDashboardLoadRequested) return;
+    final authState = ref.read(authControllerProvider);
+    if (authState.session == null || authState.restoring) return;
+    _initialDashboardLoadRequested = true;
+    ref.read(plannerControllerProvider.notifier).loadDashboard();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(authControllerProvider, (previous, next) {
       final previousSession = previous?.session;
       final nextSession = next.session;
       if (previousSession == null && nextSession != null) {
+        _initialDashboardLoadRequested = true;
         ref.read(plannerControllerProvider.notifier).loadDashboard();
       }
       if (previousSession != null && nextSession == null) {
+        _initialDashboardLoadRequested = false;
         ref.read(plannerControllerProvider.notifier).markLoggedOut();
       }
     });
@@ -102,20 +115,49 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
             await ref.read(plannerControllerProvider.notifier).loadDashboard();
           },
           onAfternoon: () async {
-            final hour = pendingDraft.ambiguousHour ?? pendingDraft.startsAt.hour;
+            final hour =
+                pendingDraft.ambiguousHour ?? pendingDraft.startsAt.hour;
             await ref
                 .read(fastCaptureControllerProvider.notifier)
                 .confirmAmbiguousHour(hour < 12 ? hour + 12 : hour);
             await ref.read(plannerControllerProvider.notifier).loadDashboard();
           },
           onCancel: () {
-            ref.read(fastCaptureControllerProvider.notifier).cancelPendingDraft();
+            ref
+                .read(fastCaptureControllerProvider.notifier)
+                .cancelPendingDraft();
+          },
+          onMissingMorning: () async {
+            await ref
+                .read(fastCaptureControllerProvider.notifier)
+                .confirmMissingTime(TimePeriod.morning);
+            await ref.read(plannerControllerProvider.notifier).loadDashboard();
+          },
+          onMissingAfternoon: () async {
+            await ref
+                .read(fastCaptureControllerProvider.notifier)
+                .confirmMissingTime(TimePeriod.afternoon);
+            await ref.read(plannerControllerProvider.notifier).loadDashboard();
+          },
+          onMissingEvening: () async {
+            await ref
+                .read(fastCaptureControllerProvider.notifier)
+                .confirmMissingTime(TimePeriod.evening);
+            await ref.read(plannerControllerProvider.notifier).loadDashboard();
+          },
+          onMissingAllDay: () async {
+            await ref
+                .read(fastCaptureControllerProvider.notifier)
+                .confirmMissingTime(TimePeriod.allDay);
+            await ref.read(plannerControllerProvider.notifier).loadDashboard();
           },
         );
       }
 
       final errorMessage = next.errorMessage;
-      if (errorMessage != null && errorMessage != previous?.errorMessage && context.mounted) {
+      if (errorMessage != null &&
+          errorMessage != previous?.errorMessage &&
+          context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMessage)),
         );
@@ -123,11 +165,13 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     });
 
     ref.listen(plannerControllerProvider, (previous, next) {
-      _syncReminderSchedules(next, ref.read(settingsControllerProvider).settings);
+      _syncReminderSchedules(
+          next, ref.read(settingsControllerProvider).settings);
     });
 
     ref.listen(settingsControllerProvider, (previous, next) {
-      _syncReminderSchedules(ref.read(plannerControllerProvider), next.settings);
+      _syncReminderSchedules(
+          ref.read(plannerControllerProvider), next.settings);
     });
 
     const pages = [
@@ -179,7 +223,8 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     );
   }
 
-  void _syncReminderSchedules(PlannerState plannerState, PlannerSettings? settings) {
+  void _syncReminderSchedules(
+      PlannerState plannerState, PlannerSettings? settings) {
     if (settings == null) return;
     ref.read(reminderCoordinatorProvider).sync(
           events: plannerState.events,

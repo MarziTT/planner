@@ -8,6 +8,7 @@ class ParsedScheduleDraft {
     required this.endsAt,
     required this.ambiguityKind,
     this.ambiguousHour,
+    this.suggestedPeriod,
   });
 
   final String title;
@@ -16,4 +17,5 @@ class ParsedScheduleDraft {
   final DateTime endsAt;
   final TimeAmbiguityKind ambiguityKind;
   final int? ambiguousHour;
+  final TimePeriod? suggestedPeriod;
 }

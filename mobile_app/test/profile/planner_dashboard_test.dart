@@ -1,4 +1,4 @@
-﻿import 'package:dio/dio.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +11,8 @@ import 'package:pixel_planner_mobile/features/profile/domain/profile_model.dart'
 import 'package:pixel_planner_mobile/features/profile/state/profile_controller.dart';
 
 class _FakePlannerRepository extends PlannerRepository {
-  _FakePlannerRepository({required this.events, required this.todos}) : super(Dio());
+  _FakePlannerRepository({required this.events, required this.todos})
+      : super(Dio());
 
   final List<PlannerEvent> events;
   final List<PlannerTodo> todos;
@@ -45,7 +46,8 @@ class _SeededProfileController extends ProfileController {
 }
 
 void main() {
-  testWidgets('dashboard shows work mode and training module from profile', (tester) async {
+  testWidgets('dashboard keeps simplified planner sections and work actions',
+      (tester) async {
     final plannerController = _SeededPlannerController(
       _FakePlannerRepository(
         events: [
@@ -57,7 +59,7 @@ void main() {
             status: 'planned',
           ),
         ],
-        todos: [
+        todos: const [
           PlannerTodo(id: 1, title: '九点开发', completed: false),
         ],
       ),
@@ -119,7 +121,40 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('上班模式进行中'), findsOneWidget);
+    expect(find.text('今天时间线'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('站会'),
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('站会'), findsOneWidget);
+    expect(find.textContaining(' / '), findsNothing);
+
+    await tester.scrollUntilVisible(
+      find.text('接下来'),
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('接下来'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('待办动作'),
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('待办动作'), findsOneWidget);
+    expect(find.byTooltip('新增'), findsWidgets);
+    expect(find.text('工作时间记动作，生活时间记提醒，这样最容易执行。'), findsNothing);
+    expect(find.text('上班快捷动作'), findsOneWidget);
+    expect(find.text('开发'), findsOneWidget);
+    expect(find.text('开会'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.text('训练模块'),
+      280,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('训练模块'), findsOneWidget);
     expect(find.text('私教陪练'), findsOneWidget);
   });

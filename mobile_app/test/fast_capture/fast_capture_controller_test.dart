@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pixel_planner_mobile/features/fast_capture/data/schedule_text_parser.dart';
+import 'package:pixel_planner_mobile/features/fast_capture/domain/capture_enums.dart';
 import 'package:pixel_planner_mobile/features/fast_capture/state/fast_capture_controller.dart';
 import 'package:pixel_planner_mobile/features/planner/data/planner_repository.dart';
 import 'package:pixel_planner_mobile/features/planner/domain/planner_models.dart';
@@ -45,17 +46,20 @@ void main() {
     final repository = _FakePlannerRepository();
     final controller = buildController(repository);
 
-    await controller.submitText('\u4eca\u5929\u4e0b\u5348\u4e03\u70b9\u53bb\u5065\u8eab');
+    await controller
+        .submitText('\u4eca\u5929\u4e0b\u5348\u4e03\u70b9\u53bb\u5065\u8eab');
 
     expect(repository.createdEvents, hasLength(1));
-    expect(repository.createdEvents.single.title, '\u53bb\u5065\u8eab');
+    expect(repository.createdEvents.single.title, '健身');
     expect(repository.createdEvents.single.startsAt, DateTime(2026, 7, 9, 19));
-    expect(repository.createdEvents.single.endsAt, DateTime(2026, 7, 9, 20, 30));
+    expect(
+        repository.createdEvents.single.endsAt, DateTime(2026, 7, 9, 20, 30));
     expect(controller.state.pendingDraft, isNull);
     expect(controller.state.errorMessage, isNull);
   });
 
-  test('submitting ambiguous hour stores pending draft without creating', () async {
+  test('submitting ambiguous hour stores pending draft without creating',
+      () async {
     final repository = _FakePlannerRepository();
     final controller = buildController(repository);
 
@@ -68,7 +72,8 @@ void main() {
     expect(controller.state.errorMessage, isNull);
   });
 
-  test('confirming ambiguous hour creates planner event with resolved time', () async {
+  test('confirming ambiguous hour creates planner event with resolved time',
+      () async {
     final repository = _FakePlannerRepository();
     final controller = buildController(repository);
 
@@ -82,11 +87,43 @@ void main() {
     expect(controller.state.errorMessage, isNull);
   });
 
+  test('submitting missing time stores pending draft without creating',
+      () async {
+    final repository = _FakePlannerRepository();
+    final controller = buildController(repository);
+
+    await controller.submitText('明天健身');
+
+    expect(repository.createdEvents, isEmpty);
+    expect(controller.state.pendingDraft, isNotNull);
+    expect(controller.state.pendingDraft!.title, '健身');
+    expect(controller.state.pendingDraft!.ambiguityKind,
+        TimeAmbiguityKind.missingTime);
+    expect(controller.state.pendingDraft!.suggestedPeriod, TimePeriod.evening);
+  });
+
+  test('confirming missing time creates planner event with selected period',
+      () async {
+    final repository = _FakePlannerRepository();
+    final controller = buildController(repository);
+
+    await controller.submitText('明天健身');
+    await controller.confirmMissingTime(TimePeriod.evening);
+
+    expect(repository.createdEvents, hasLength(1));
+    expect(repository.createdEvents.single.title, '健身');
+    expect(repository.createdEvents.single.startsAt, DateTime(2026, 7, 10, 19));
+    expect(
+        repository.createdEvents.single.endsAt, DateTime(2026, 7, 10, 20, 30));
+    expect(controller.state.pendingDraft, isNull);
+    expect(controller.state.errorMessage, isNull);
+  });
   test('failed creation exposes small error string', () async {
     final repository = _FakePlannerRepository(shouldThrow: true);
     final controller = buildController(repository);
 
-    await controller.submitText('\u4eca\u5929\u4e0b\u5348\u4e03\u70b9\u53bb\u5065\u8eab');
+    await controller
+        .submitText('\u4eca\u5929\u4e0b\u5348\u4e03\u70b9\u53bb\u5065\u8eab');
 
     expect(repository.createdEvents, isEmpty);
     expect(controller.state.errorMessage, isNotEmpty);

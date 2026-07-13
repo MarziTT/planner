@@ -1,19 +1,48 @@
 {
-  "latestVersion": "5.0.0",
-  "buildNumber": "50000",
-  "required": false,
-  "downloadUrl": "",
-  "releaseNotes": [
-    "Flutter 客户端重构骨架已建立",
-    "后端已切换到 Flask app factory + Blueprint 架构",
-    "更新系统拆分为资源清单与应用版本提醒"
-  ],
-  "resources": [
-    {
-      "key": "themes",
-      "version": "2026.07.07",
-      "hash": "placeholder",
-      "url": "/assets/themes.bundle.json"
-    }
-  ]
+    "latestVersion":  "5.0.0",
+    "buildNumber":  "50000",
+    "required":  false,
+    "downloadUrl":  "",
+    "releaseNotes":  [
+                         "Flutter client rebuild baseline is live",
+                         "Backend update pipeline now separates app version prompts from remote resources",
+                         "ZZZ theme resources are ready for manifest-driven delivery"
+                     ],
+    "resources":  [
+                      {
+                          "id":  "zzz.transform",
+                          "version":  "2026.07.13.1",
+                          "filename":  "zzz-transform.gif",
+                          "sha256":  "9BAFE7CA637CD25BA47637DA8856895238D4D10E162157C67AB0A26BE77BBD70",
+                          "contentType":  "image/gif"
+                      },
+                      {
+                          "id":  "zzz.shield",
+                          "version":  "2026.07.13.1",
+                          "filename":  "zzz-shield.gif",
+                          "sha256":  "480171DCE0336F34DE7FDB92535FCA86FF7B176E5B2E901EA9677DF8FAB7E22E",
+                          "contentType":  "image/gif"
+                      },
+                      {
+                          "id":  "zzz.equipment",
+                          "version":  "2026.07.13.1",
+                          "filename":  "zzz-equipment.gif",
+                          "sha256":  "E3B929DBD49051694BB7022ED15565ED6FB353F9412E99C932A828C3F221FB99",
+                          "contentType":  "image/gif"
+                      },
+                      {
+                          "id":  "zzz.flight",
+                          "version":  "2026.07.13.1",
+                          "filename":  "zzz-flight.gif",
+                          "sha256":  "8A01A05ED39ED63D22E3433B86CC8093778F55E5D6B3D5623D762A711838465D",
+                          "contentType":  "image/gif"
+                      },
+                      {
+                          "id":  "zzz.rain",
+                          "version":  "2026.07.13.1",
+                          "filename":  "zzz-rain.gif",
+                          "sha256":  "3DEA6C410B245ADA5D9B8A23DFF436C5F860B17B8C91A620413AFD7D818C1CDD",
+                          "contentType":  "image/gif"
+                      }
+                  ]
 }

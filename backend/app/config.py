@@ -34,9 +34,19 @@ class BaseConfig:
         "UPDATE_MANIFEST_PATH",
         str((BASE_DIR.parent / "assets" / "update_manifest.json").resolve()),
     )
+    UPDATE_RESOURCE_DIR = os.getenv(
+        "UPDATE_RESOURCE_DIR",
+        str((BASE_DIR.parent / "assets" / "resources").resolve()),
+    )
     APP_VERSION = os.getenv("APP_VERSION", "5.0.0")
     APP_BUILD = os.getenv("APP_BUILD", "50000")
     APP_DOWNLOAD_URL = os.getenv("APP_DOWNLOAD_URL", "")
+
+    TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID") or os.getenv("TENCENTCLOUD_SECRET_ID", "")
+    TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY") or os.getenv("TENCENTCLOUD_SECRET_KEY", "")
+    TENCENT_ASR_REGION = os.getenv("TENCENT_ASR_REGION", "ap-shanghai")
+    TENCENT_ASR_ENGINE_TYPE = os.getenv("TENCENT_ASR_ENGINE_TYPE", "16k_zh")
+    TENCENT_ASR_VOICE_FORMAT = os.getenv("TENCENT_ASR_VOICE_FORMAT", "wav")
 
 
 class DevelopmentConfig(BaseConfig):

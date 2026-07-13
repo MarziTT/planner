@@ -1,32 +1,43 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../planner/data/planner_repository.dart';
 import '../data/schedule_text_parser.dart';
 import '../data/speech_capture_gateway.dart';
+import '../domain/capture_enums.dart';
 import '../domain/parsed_schedule_draft.dart';
 
 class FastCaptureState {
   const FastCaptureState({
     this.pendingDraft,
     this.errorMessage,
+    this.recognizedText,
     this.isListening = false,
+    this.isSubmitting = false,
   });
 
   final ParsedScheduleDraft? pendingDraft;
   final String? errorMessage;
+  final String? recognizedText;
   final bool isListening;
+  final bool isSubmitting;
 
   FastCaptureState copyWith({
     ParsedScheduleDraft? pendingDraft,
     String? errorMessage,
+    String? recognizedText,
     bool? isListening,
+    bool? isSubmitting,
     bool clearPendingDraft = false,
     bool clearError = false,
   }) {
     return FastCaptureState(
-      pendingDraft: clearPendingDraft ? null : pendingDraft ?? this.pendingDraft,
+      pendingDraft:
+          clearPendingDraft ? null : pendingDraft ?? this.pendingDraft,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      recognizedText: recognizedText ?? this.recognizedText,
       isListening: isListening ?? this.isListening,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
     );
   }
 }
@@ -46,11 +57,17 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   final SpeechCaptureGateway _speechGateway;
 
   Future<void> submitText(String input) async {
+    if (state.isSubmitting) {
+      return;
+    }
+
     final draft = _parser.parse(input);
-    if (draft.ambiguousHour != null) {
+    if (draft.ambiguousHour != null ||
+        draft.ambiguityKind == TimeAmbiguityKind.missingTime) {
       state = state.copyWith(
         pendingDraft: draft,
         clearError: true,
+        isSubmitting: false,
       );
       return;
     }
@@ -60,7 +77,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
 
   Future<void> confirmAmbiguousHour(int resolvedHour24) async {
     final pendingDraft = state.pendingDraft;
-    if (pendingDraft == null) {
+    if (pendingDraft == null || state.isSubmitting) {
       return;
     }
 
@@ -86,14 +103,53 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
     );
   }
 
+  Future<void> confirmMissingTime(TimePeriod period) async {
+    final pendingDraft = state.pendingDraft;
+    if (pendingDraft == null || state.isSubmitting) {
+      return;
+    }
+
+    final resolvedHour = switch (period) {
+      TimePeriod.morning => 9,
+      TimePeriod.afternoon => 15,
+      TimePeriod.evening => 19,
+      TimePeriod.allDay => 9,
+    };
+    final resolvedStartsAt = DateTime(
+      pendingDraft.startsAt.year,
+      pendingDraft.startsAt.month,
+      pendingDraft.startsAt.day,
+      resolvedHour,
+      0,
+    );
+    final resolvedEndsAt = resolvedStartsAt.add(
+      pendingDraft.endsAt.difference(pendingDraft.startsAt),
+    );
+
+    await _createEventFromDraft(
+      ParsedScheduleDraft(
+        title: pendingDraft.title,
+        eventType: pendingDraft.eventType,
+        startsAt: resolvedStartsAt,
+        endsAt: resolvedEndsAt,
+        ambiguityKind: TimeAmbiguityKind.none,
+      ),
+    );
+  }
+
   Future<void> cancelPendingDraft() async {
     state = state.copyWith(
       clearPendingDraft: true,
       clearError: true,
+      isSubmitting: false,
     );
   }
 
   Future<void> startListening() async {
+    if (state.isSubmitting) {
+      return;
+    }
+
     state = state.copyWith(isListening: true, clearError: true);
     try {
       final available = await _speechGateway.initialize();
@@ -106,8 +162,16 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
       }
       final text = await _speechGateway.startListening();
       if (text.isNotEmpty) {
+        state = state.copyWith(recognizedText: text, clearError: true);
         await submitText(text);
+      } else {
+        state = state.copyWith(errorMessage: '没有识别到内容，请再说一次。');
       }
+    } catch (error) {
+      state = state.copyWith(
+        isListening: false,
+        errorMessage: _voiceCaptureErrorMessage(error),
+      );
     } finally {
       if (state.isListening) {
         state = state.copyWith(isListening: false);
@@ -129,6 +193,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   }
 
   Future<void> _createEventFromDraft(ParsedScheduleDraft draft) async {
+    state = state.copyWith(isSubmitting: true, clearError: true);
     try {
       await _repository.createEvent(
         title: draft.title,
@@ -136,13 +201,48 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
         endsAt: draft.endsAt,
       );
       state = state.copyWith(
+        isSubmitting: false,
         clearPendingDraft: true,
         clearError: true,
       );
-    } catch (_) {
+    } catch (error) {
       state = state.copyWith(
-        errorMessage: '创建日程失败',
+        isSubmitting: false,
+        errorMessage: _fastCaptureErrorMessage(error),
       );
     }
   }
+}
+
+String _fastCaptureErrorMessage(Object error) {
+  if (error is DioException) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode == 401) {
+      return '登录态失效或未同步，请重新登录后再试。';
+    }
+    if (statusCode == 404) {
+      return '新增接口不存在，当前线上后端可能还没更新到最新版本。';
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return '后端服务暂时异常，请稍后再试。';
+    }
+  }
+  return '创建日程失败，请稍后重试。';
+}
+
+
+String _voiceCaptureErrorMessage(Object error) {
+  if (error is DioException) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode == 404) {
+      return '语音识别接口还没部署到线上，请等待后端更新完成。';
+    }
+    if (statusCode == 401) {
+      return '登录态失效，请重新登录后再试语音录入。';
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return '语音识别服务暂时异常，请稍后再试。';
+    }
+  }
+  return '语音识别失败，请检查麦克风权限或稍后重试。';
 }
