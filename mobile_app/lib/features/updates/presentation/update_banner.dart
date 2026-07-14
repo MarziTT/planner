@@ -165,12 +165,14 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
           FilledButton(
             onPressed: () async {
               if (decision.kind == UpdateDecisionKind.resourceOnly) {
-                ref.read(updateControllerProvider.notifier).announce(
-                    '资源已同步，重新进入页面即可看到新效果。');
+                await ref
+                    .read(updateControllerProvider.notifier)
+                    .applyResourceUpdateNow();
               } else if (info.downloadUrl.isNotEmpty) {
                 final opened = await _openDownloadUrl(info.downloadUrl);
                 if (!opened) {
-                  await Clipboard.setData(ClipboardData(text: info.downloadUrl));
+                  await Clipboard.setData(
+                      ClipboardData(text: info.downloadUrl));
                 }
                 if (!mounted) return;
                 ref.read(updateControllerProvider.notifier).announce(
@@ -187,9 +189,7 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
               Navigator.of(dialogContext).pop();
             },
             child: Text(
-              decision.kind == UpdateDecisionKind.resourceOnly
-                  ? '知道了'
-                  : '下载更新',
+              decision.kind == UpdateDecisionKind.resourceOnly ? '知道了' : '下载更新',
             ),
           ),
         ],

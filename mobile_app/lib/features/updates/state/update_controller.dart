@@ -64,6 +64,28 @@ class UpdateController extends StateNotifier<UpdateState> {
     }
   }
 
+  Future<void> applyResourceUpdateNow() async {
+    final info = state.info;
+    if (info == null || info.resources.isEmpty) {
+      state = state.copyWith(lastActionMessage: '当前没有可同步的热更新资源。');
+      return;
+    }
+
+    state = state.copyWith(checking: true);
+    try {
+      final normalizedInfo = await _applyResourceSync(info);
+      state = state.copyWith(
+        info: normalizedInfo,
+        checking: false,
+      );
+    } catch (_) {
+      state = state.copyWith(
+        checking: false,
+        lastActionMessage: '热更新资源同步失败，请检查网络后重试。',
+      );
+    }
+  }
+
   Future<UpdateInfo> _applyResourceSync(UpdateInfo info) async {
     if (info.resources.isEmpty) {
       return info;
@@ -74,17 +96,21 @@ class UpdateController extends StateNotifier<UpdateState> {
 
     if (result.changedCount > 0) {
       nextState = nextState.copyWith(
-        lastActionMessage: '主题资源已更新，重新进入页面即可看到新效果',
+        lastActionMessage: '主题资源已更新，页面会自动刷新显示新效果。',
         resourceRevision: nextState.resourceRevision + 1,
       );
     }
 
     if (result.failedCount == 0) {
-      nextState = nextState.copyWith();
       state = nextState;
       return info.copyWith(resources: const []);
     }
 
+    nextState = nextState.copyWith(
+      lastActionMessage: result.changedCount > 0
+          ? '部分热更新资源同步失败，已先应用成功下载的资源。'
+          : '热更新资源下载失败，请检查网络后重试。',
+    );
     state = nextState;
     return info;
   }
