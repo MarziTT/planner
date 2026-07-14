@@ -13,7 +13,7 @@ final resourceCacheProvider = Provider<ResourceCache>((ref) {
   return ResourceCache(
     fetchBytes: (url) async {
       final response = await dio.get<List<int>>(
-        url,
+        resolveResourceUrlForDownload(dio.options.baseUrl, url),
         options: Options(responseType: ResponseType.bytes),
       );
       return response.data ?? const <int>[];
@@ -21,6 +21,27 @@ final resourceCacheProvider = Provider<ResourceCache>((ref) {
     rootDirectoryProvider: getApplicationSupportDirectory,
   );
 });
+String resolveResourceUrlForDownload(String baseUrl, String resourceUrl) {
+  final parsedResource = Uri.tryParse(resourceUrl);
+  if (parsedResource == null) {
+    return resourceUrl;
+  }
+  if (parsedResource.hasScheme) {
+    return resourceUrl;
+  }
+
+  final parsedBase = Uri.tryParse(baseUrl);
+  if (parsedBase == null || !parsedBase.hasScheme) {
+    return resourceUrl;
+  }
+
+  if (resourceUrl.startsWith('/')) {
+    final origin = parsedBase.replace(path: '', query: '', fragment: '');
+    return origin.resolve(resourceUrl).toString();
+  }
+
+  return parsedBase.resolve(resourceUrl).toString();
+}
 
 class ResourceSyncResult {
   const ResourceSyncResult({

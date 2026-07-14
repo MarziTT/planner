@@ -71,4 +71,29 @@ void main() {
     expect(result.failedCount, 1);
     expect(file, isNull);
   });
+
+  test('resolveResourceUrlForDownload avoids duplicating api prefix', () {
+    final resolved = resolveResourceUrlForDownload(
+      'https://planner-production-d1ee.up.railway.app/api/v1',
+      '/api/v1/app/resources/zzz-transform.gif',
+    );
+
+    expect(
+      resolved,
+      'https://planner-production-d1ee.up.railway.app/api/v1/app/resources/zzz-transform.gif',
+    );
+  });
+
+  test('resolveResourceUrlForDownload keeps absolute resource urls unchanged',
+      () {
+    const url = 'https://cdn.example.com/zzz-transform.gif';
+
+    expect(
+      resolveResourceUrlForDownload(
+        'https://planner-production-d1ee.up.railway.app/api/v1',
+        url,
+      ),
+      url,
+    );
+  });
 }
