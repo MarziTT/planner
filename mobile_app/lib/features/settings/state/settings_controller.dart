@@ -1,5 +1,6 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/theme_controller.dart';
 import '../data/settings_repository.dart';
 import '../domain/settings_model.dart';
 
@@ -29,15 +30,20 @@ class SettingsState {
 }
 
 class SettingsController extends StateNotifier<SettingsState> {
-  SettingsController(this._repository) : super(const SettingsState());
+  SettingsController(this._repository, this._ref)
+      : super(const SettingsState());
 
   final SettingsRepository _repository;
+  final Ref _ref;
 
   Future<void> load() async {
     state = state.copyWith(loading: true, clearError: true);
     try {
       final settings = await _repository.fetchSettings();
       state = SettingsState(settings: settings, loading: false);
+      _ref
+          .read(themeControllerProvider.notifier)
+          .setAvailableThemes(settings.availableThemes);
     } catch (_) {
       state = state.copyWith(loading: false, errorMessage: '设置加载失败');
     }
@@ -48,6 +54,9 @@ class SettingsController extends StateNotifier<SettingsState> {
     try {
       final saved = await _repository.saveSettings(settings);
       state = SettingsState(settings: saved, loading: false);
+      _ref
+          .read(themeControllerProvider.notifier)
+          .setAvailableThemes(saved.availableThemes);
     } catch (_) {
       state = state.copyWith(loading: false, errorMessage: '设置保存失败');
     }
@@ -68,6 +77,8 @@ class SettingsController extends StateNotifier<SettingsState> {
   }
 }
 
-final settingsControllerProvider = StateNotifierProvider<SettingsController, SettingsState>(
-  (ref) => SettingsController(ref.watch(settingsRepositoryProvider)),
+final settingsControllerProvider =
+    StateNotifierProvider<SettingsController, SettingsState>(
+  (ref) =>
+      SettingsController(ref.watch(settingsRepositoryProvider), ref),
 );

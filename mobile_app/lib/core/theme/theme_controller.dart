@@ -1,13 +1,15 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_theme.dart';
 
 enum PlannerThemePreset {
-  premiumMinimal,
-  professionalDark,
-  warmLife,
-  forestOcean,
+  sakuraSeason,
+  ocean,
+  forest,
+  desertDusk,
+  aurora,
   kamenRiderZzz,
 }
 
@@ -17,66 +19,121 @@ class ThemeState {
     required this.mode,
     required this.lightTheme,
     required this.darkTheme,
+    required this.availablePresets,
   });
 
   final PlannerThemePreset preset;
   final ThemeMode mode;
   final ThemeData lightTheme;
   final ThemeData darkTheme;
+  final List<PlannerThemePreset> availablePresets;
 }
 
 class ThemeController extends StateNotifier<ThemeState> {
-  ThemeController()
-      : super(
-          ThemeState(
-            preset: PlannerThemePreset.premiumMinimal,
-            mode: ThemeMode.dark,
-            lightTheme: AppThemeBuilder.build(
-              brightness: Brightness.light,
-              seed: const Color(0xFF5B8CFF),
-              surfaceMuted: const Color(0xFFF3F6FB),
-            ),
-            darkTheme: AppThemeBuilder.build(
-              brightness: Brightness.dark,
-              seed: const Color(0xFF7C5CFF),
-              surfaceMuted: const Color(0xFF1D2433),
-            ),
-          ),
-        );
-
-  void switchPreset(PlannerThemePreset preset) {
-    switch (preset) {
-      case PlannerThemePreset.premiumMinimal:
-        _setThemes(preset, const Color(0xFF5B8CFF), const Color(0xFFF3F6FB), const Color(0xFF1D2433));
-        return;
-      case PlannerThemePreset.professionalDark:
-        _setThemes(preset, const Color(0xFF3E8BFF), const Color(0xFFF1F5F9), const Color(0xFF111827));
-        return;
-      case PlannerThemePreset.warmLife:
-        _setThemes(preset, const Color(0xFFD97706), const Color(0xFFFFF7ED), const Color(0xFF2D1B12));
-        return;
-      case PlannerThemePreset.forestOcean:
-        _setThemes(preset, const Color(0xFF0F9D7A), const Color(0xFFF0FDF9), const Color(0xFF0F2E2C));
-        return;
-      case PlannerThemePreset.kamenRiderZzz:
-        _setThemes(preset, const Color(0xFFE53935), const Color(0xFFFFF1F1), const Color(0xFF170F17));
-        return;
+  ThemeController(this._prefs) : super(_buildDefault()) {
+    if (_prefs != null) {
+      _restore();
     }
   }
 
-  void setThemeMode(ThemeMode mode) {
-    state = ThemeState(
-      preset: state.preset,
-      mode: mode,
-      lightTheme: state.lightTheme,
-      darkTheme: state.darkTheme,
+  final SharedPreferences? _prefs;
+
+  static ThemeState _buildDefault() {
+    return _buildState(
+      PlannerThemePreset.forest,
+      ThemeMode.dark,
+      _defaultAvailable(),
     );
   }
 
-  void _setThemes(PlannerThemePreset preset, Color seed, Color lightMuted, Color darkMuted) {
+  static List<PlannerThemePreset> _defaultAvailable() {
+    return const [
+      PlannerThemePreset.sakuraSeason,
+      PlannerThemePreset.ocean,
+      PlannerThemePreset.forest,
+      PlannerThemePreset.desertDusk,
+      PlannerThemePreset.aurora,
+    ];
+  }
+
+  void setAvailableThemes(List<String> names) {
+    final presets = names
+        .map((n) => _presetFromName(n))
+        .whereType<PlannerThemePreset>()
+        .toList();
+    if (presets.isEmpty) return;
     state = ThemeState(
-      preset: preset,
+      preset: state.preset,
       mode: state.mode,
+      lightTheme: state.lightTheme,
+      darkTheme: state.darkTheme,
+      availablePresets: presets,
+    );
+  }
+
+  void _restore() {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    final savedPreset = prefs.getString('theme_preset');
+    final savedMode = prefs.getString('theme_mode');
+    final preset = savedPreset != null
+        ? _presetFromName(savedPreset)
+        : PlannerThemePreset.forest;
+    final mode = savedMode != null
+        ? _modeFromName(savedMode)
+        : ThemeMode.dark;
+    state = _buildState(preset, mode, _defaultAvailable());
+  }
+
+  void switchPreset(PlannerThemePreset preset) {
+    state = _buildState(preset, state.mode, state.availablePresets);
+    _prefs?.setString('theme_preset', preset.name);
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    state = _buildState(state.preset, mode, state.availablePresets);
+    _prefs?.setString('theme_mode', mode.name);
+  }
+
+  static ThemeState _buildState(
+    PlannerThemePreset preset,
+    ThemeMode mode,
+    List<PlannerThemePreset> available,
+  ) {
+    Color seed;
+    Color lightMuted;
+    Color darkMuted;
+
+    switch (preset) {
+      case PlannerThemePreset.sakuraSeason:
+        seed = const Color(0xFFD98CB3);
+        lightMuted = const Color(0xFFFFF5F8);
+        darkMuted = const Color(0xFF1F1822);
+      case PlannerThemePreset.ocean:
+        seed = const Color(0xFF4A7A9E);
+        lightMuted = const Color(0xFFF2F7FB);
+        darkMuted = const Color(0xFF0F1A24);
+      case PlannerThemePreset.forest:
+        seed = const Color(0xFF5A8A6C);
+        lightMuted = const Color(0xFFF4F9F5);
+        darkMuted = const Color(0xFF101A14);
+      case PlannerThemePreset.desertDusk:
+        seed = const Color(0xFFC1764A);
+        lightMuted = const Color(0xFFFDF7F2);
+        darkMuted = const Color(0xFF1F1814);
+      case PlannerThemePreset.aurora:
+        seed = const Color(0xFF4AB8A6);
+        lightMuted = const Color(0xFFF2FAF8);
+        darkMuted = const Color(0xFF0F1A19);
+      case PlannerThemePreset.kamenRiderZzz:
+        seed = const Color(0xFFE53935);
+        lightMuted = const Color(0xFFFFF1F1);
+        darkMuted = const Color(0xFF170F17);
+    }
+
+    return ThemeState(
+      preset: preset,
+      mode: mode,
       lightTheme: AppThemeBuilder.build(
         brightness: Brightness.light,
         seed: seed,
@@ -87,10 +144,30 @@ class ThemeController extends StateNotifier<ThemeState> {
         seed: seed,
         surfaceMuted: darkMuted,
       ),
+      availablePresets: available,
     );
+  }
+
+  static PlannerThemePreset _presetFromName(String name) {
+    return PlannerThemePreset.values.firstWhere(
+      (p) => p.name == name,
+      orElse: () => PlannerThemePreset.forest,
+    );
+  }
+
+  static ThemeMode _modeFromName(String name) {
+    switch (name) {
+      case 'light':
+        return ThemeMode.light;
+      case 'system':
+        return ThemeMode.system;
+      case 'dark':
+      default:
+        return ThemeMode.dark;
+    }
   }
 }
 
 final themeControllerProvider = StateNotifierProvider<ThemeController, ThemeState>(
-  (ref) => ThemeController(),
+  (ref) => throw UnimplementedError('Must be overridden in main.dart'),
 );

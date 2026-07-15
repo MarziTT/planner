@@ -54,6 +54,7 @@ const _defaultSettings = PlannerSettings(
   notificationsLeadMinutes: 15,
   voiceEnabled: true,
   updateChannel: 'stable',
+  availableThemes: [],
 );
 
 class _FailFirstPlannerRepository extends PlannerRepository {
@@ -117,6 +118,7 @@ class _ReadyAuthController extends AuthController {
       session: AuthSession(
         user: AuthUser(
           id: 1,
+          phone: '13800000001',
           email: 'demo@pixelplanner.app',
           nickname: 'Demo',
           onboardingDone: true,

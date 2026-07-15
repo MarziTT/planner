@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/theme/theme_controller.dart';
 import '../../auth/state/auth_controller.dart';
 import '../../profile/domain/profile_model.dart';
 import '../../profile/state/profile_controller.dart';
@@ -87,6 +88,8 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileControllerProvider);
+    final themeState = ref.watch(themeControllerProvider);
+    final themeController = ref.read(themeControllerProvider.notifier);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -185,6 +188,14 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               ],
             ),
           ],
+          const SizedBox(height: 24),
+          const _SectionTitle(title: '选一个你喜欢的主题'),
+          const SizedBox(height: 10),
+          _ThemePicker(
+            presets: _publicPresets,
+            selected: themeState.preset,
+            onSelected: (preset) => themeController.switchPreset(preset),
+          ),
           const SizedBox(height: 24),
           FilledButton.icon(
             onPressed: profileState.loading ? null : _submit,
@@ -399,4 +410,118 @@ TimeOfDay _parseTime(String value) {
 
 String _formatTime(TimeOfDay value) {
   return '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+}
+
+const _publicPresets = [
+  PlannerThemePreset.sakuraSeason,
+  PlannerThemePreset.ocean,
+  PlannerThemePreset.forest,
+  PlannerThemePreset.desertDusk,
+  PlannerThemePreset.aurora,
+];
+
+class _ThemePicker extends StatelessWidget {
+  const _ThemePicker({
+    required this.presets,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<PlannerThemePreset> presets;
+  final PlannerThemePreset selected;
+  final ValueChanged<PlannerThemePreset> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: presets.map((preset) {
+        final isSelected = preset == selected;
+        final color = _colorOf(preset);
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => onSelected(preset),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 72,
+            height: 72,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? theme.colorScheme.primaryContainer
+                  : theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.outlineVariant,
+                width: isSelected ? 2 : 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _labelOf(preset),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight:
+                        isSelected ? FontWeight.w700 : FontWeight.w400,
+                    height: 1.15,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Color _colorOf(PlannerThemePreset preset) {
+    switch (preset) {
+      case PlannerThemePreset.sakuraSeason:
+        return const Color(0xFFD98CB3);
+      case PlannerThemePreset.ocean:
+        return const Color(0xFF4A7A9E);
+      case PlannerThemePreset.forest:
+        return const Color(0xFF5A8A6C);
+      case PlannerThemePreset.desertDusk:
+        return const Color(0xFFC1764A);
+      case PlannerThemePreset.aurora:
+        return const Color(0xFF4AB8A6);
+      case PlannerThemePreset.kamenRiderZzz:
+        return const Color(0xFFE53935);
+    }
+  }
+
+  String _labelOf(PlannerThemePreset preset) {
+    switch (preset) {
+      case PlannerThemePreset.sakuraSeason:
+        return '樱花季';
+      case PlannerThemePreset.ocean:
+        return '海洋';
+      case PlannerThemePreset.forest:
+        return '森林';
+      case PlannerThemePreset.desertDusk:
+        return '沙漠黄昏';
+      case PlannerThemePreset.aurora:
+        return '极光';
+      case PlannerThemePreset.kamenRiderZzz:
+        return 'ZZZ';
+    }
+  }
 }

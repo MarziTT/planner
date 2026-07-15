@@ -88,6 +88,7 @@ const _defaultSettings = PlannerSettings(
   notificationsLeadMinutes: 15,
   voiceEnabled: true,
   updateChannel: 'stable',
+  availableThemes: [],
 );
 
 void main() {

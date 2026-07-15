@@ -104,11 +104,12 @@ class AppSetting(TimestampMixin, db.Model):
     __tablename__ = "settings"
 
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
-    theme = db.Column(db.String(32), default="premiumMinimal", nullable=False)
+    theme = db.Column(db.String(32), default="forest", nullable=False)
     theme_mode = db.Column(db.String(16), default="dark", nullable=False)
     notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
     voice_enabled = db.Column(db.Boolean, default=True, nullable=False)
     update_channel = db.Column(db.String(32), default="stable", nullable=False)
+    zzz_enabled = db.Column(db.Boolean, default=False, nullable=False)
 
 
 def register_models() -> None:

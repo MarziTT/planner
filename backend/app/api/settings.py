@@ -10,13 +10,21 @@ from .common import auth_required, success
 settings_bp = Blueprint("settings", __name__)
 
 
+_BASE_THEMES = ["sakuraSeason", "ocean", "forest", "desertDusk", "aurora"]
+_ZZZ_THEME = "kamenRiderZzz"
+
+
 def _settings_to_dict(settings: AppSetting):
+    available = list(_BASE_THEMES)
+    if settings.zzz_enabled:
+        available.append(_ZZZ_THEME)
     return {
         "theme": settings.theme,
         "themeMode": settings.theme_mode,
         "notificationsEnabled": settings.notifications_enabled,
         "voiceEnabled": settings.voice_enabled,
         "updateChannel": settings.update_channel,
+        "availableThemes": available,
     }
 
 

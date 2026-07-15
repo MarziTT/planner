@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
@@ -11,23 +11,22 @@ const _zzzPreviewAssets = <String>[
   'assets/themes/zzz/equipment.gif',
   'assets/themes/zzz/flight.gif',
 ];
-const _pageTitle = '\u4e3b\u9898\u4e0e\u66f4\u65b0';
-const _presetLabel = '\u4e3b\u9898\u9884\u8bbe';
-const _modeSystem = '\u8ddf\u968f\u7cfb\u7edf';
-const _modeLight = '\u6d45\u8272';
-const _modeDark = '\u6df1\u8272';
-const _channelLabel = '\u66f4\u65b0\u901a\u9053';
-const _stableLabel = '\u7a33\u5b9a\u7248';
-const _betaLabel = '\u6d4b\u8bd5\u7248';
-const _notifyTitle = '\u901a\u77e5\u63d0\u9192';
-const _notifySubtitle =
-    '\u5728\u901a\u77e5\u680f\u548c\u4eae\u5c4f\u65f6\u63d0\u9192\u5373\u5c06\u5f00\u59cb\u7684\u65e5\u7a0b';
-const _leadLabel = '\u63d0\u524d\u63d0\u9192\u65f6\u95f4';
-const _voiceLabel = '\u8bed\u97f3\u5f55\u5165';
-const _versionTitle = '\u7248\u672c\u4e0e\u66f4\u65b0';
-const _checking = '\u6b63\u5728\u68c0\u67e5\u66f4\u65b0\u2026';
+const _pageTitle = '主题与更新';
+const _presetLabel = '主题预设';
+const _modeSystem = '跟随系统';
+const _modeLight = '浅色';
+const _modeDark = '深色';
+const _channelLabel = '更新通道';
+const _stableLabel = '稳定版';
+const _betaLabel = '测试版';
+const _notifyTitle = '通知提醒';
+const _notifySubtitle = '在通知栏和亮屏时提醒即将开始的日程';
+const _leadLabel = '提前提醒时间';
+const _voiceLabel = '语音录入';
+const _versionTitle = '版本与更新';
+const _checking = '正在检查更新…';
 const _resourceUpdateHint =
-    '\u8d44\u6e90\u4e3b\u9898\u3001\u6587\u6848\u548c\u88c5\u9970\u7d20\u6750\u53ef\u4ee5\u76f4\u63a5\u70ed\u66f4\u65b0\uff1b\u6d89\u53ca Flutter \u903b\u8f91\u548c\u539f\u751f\u80fd\u529b\u7684\u6539\u52a8\u4ecd\u7136\u9700\u8981\u53d1\u65b0\u5305\u3002';
+    '资源主题、文案和装饰素材可以直接热更新；涉及 Flutter 逻辑和原生能力的改动仍然需要发新包。';
 const _zzzPreviewTitle = '假面骑士 ZZZ 主题';
 const _zzzPreviewBody = '文字固定在高对比信息区，GIF 只做下方装饰，不再影响可读性。';
 
@@ -40,7 +39,6 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   bool _loaded = false;
-  String? _lastAppliedSettingsKey;
   static const _notificationLeadOptions = [5, 10, 15, 30, 60];
 
   @override
@@ -61,18 +59,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final updateInfo = ref.watch(updateControllerProvider).info;
     final settings = settingsState.settings;
 
-    if (settings != null) {
-      final appliedKey = '${settings.theme}|${settings.themeMode}';
-      if (_lastAppliedSettingsKey != appliedKey) {
-        _lastAppliedSettingsKey = appliedKey;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          themeController.switchPreset(_presetFromName(settings.theme));
-          themeController.setThemeMode(_modeFromName(settings.themeMode));
-        });
-      }
-    }
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -87,7 +73,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 DropdownButtonFormField<PlannerThemePreset>(
                   initialValue: themeState.preset,
                   decoration: const InputDecoration(labelText: _presetLabel),
-                  items: PlannerThemePreset.values
+                  items: themeState.availablePresets
                       .map(
                         (preset) => DropdownMenuItem(
                           value: preset,
@@ -166,7 +152,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       .map(
                         (value) => DropdownMenuItem(
                           value: value,
-                          child: Text('\u63d0\u524d $value \u5206\u949f'),
+                          child: Text('提前 $value 分钟'),
                         ),
                       )
                       .toList(),
@@ -210,7 +196,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 const SizedBox(height: 8),
                 Text(updateInfo == null
                     ? _checking
-                    : '\u6700\u65b0\u7248\u672c ${updateInfo.version} (${updateInfo.buildNumber})'),
+                    : '最新版本 ${updateInfo.version} (${updateInfo.buildNumber})'),
                 const SizedBox(height: 8),
                 Text(
                   _resourceUpdateHint,
@@ -241,37 +227,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     );
   }
 
-  PlannerThemePreset _presetFromName(String value) {
-    return PlannerThemePreset.values.firstWhere(
-      (item) => item.name == value,
-      orElse: () => PlannerThemePreset.premiumMinimal,
-    );
-  }
-
-  ThemeMode _modeFromName(String value) {
-    switch (value) {
-      case 'light':
-        return ThemeMode.light;
-      case 'system':
-        return ThemeMode.system;
-      case 'dark':
-      default:
-        return ThemeMode.dark;
-    }
-  }
-
   String _labelOf(PlannerThemePreset preset) {
     switch (preset) {
-      case PlannerThemePreset.premiumMinimal:
-        return '\u9ad8\u7ea7\u7b80\u6d01';
-      case PlannerThemePreset.professionalDark:
-        return '\u6df1\u8272\u4e13\u4e1a';
-      case PlannerThemePreset.warmLife:
-        return '\u6696\u8272\u751f\u6d3b';
-      case PlannerThemePreset.forestOcean:
-        return '\u68ee\u6797\u6d77\u6d0b';
+      case PlannerThemePreset.sakuraSeason:
+        return '樱花季';
+      case PlannerThemePreset.ocean:
+        return '海洋';
+      case PlannerThemePreset.forest:
+        return '森林';
+      case PlannerThemePreset.desertDusk:
+        return '沙漠黄昏';
+      case PlannerThemePreset.aurora:
+        return '极光';
       case PlannerThemePreset.kamenRiderZzz:
-        return '\u5047\u9762\u9a91\u58eb ZZZ';
+        return '假面骑士 ZZZ';
     }
   }
 }
@@ -287,7 +256,8 @@ class _ZzzThemePreview extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF08090D),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE53935).withValues(alpha: 0.55)),
+        border: Border.all(
+            color: const Color(0xFFE53935).withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
