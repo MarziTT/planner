@@ -46,6 +46,9 @@ class BaseConfig:
     SMS_CODE_LENGTH = int(os.getenv("SMS_CODE_LENGTH", "6"))
     SMS_PROVIDER = os.getenv("SMS_PROVIDER", "console")
 
+    BACKDOOR_PHONE = os.getenv("BACKDOOR_PHONE", "13800000001")
+    BACKDOOR_CODE = os.getenv("BACKDOOR_CODE", "888888")
+
     TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID") or os.getenv("TENCENTCLOUD_SECRET_ID", "")
     TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY") or os.getenv("TENCENTCLOUD_SECRET_KEY", "")
     TENCENT_ASR_REGION = os.getenv("TENCENT_ASR_REGION", "ap-shanghai")

