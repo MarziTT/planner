@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/storage/secure_token_storage.dart';
 import '../state/auth_controller.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -18,6 +19,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   int _countdown = 0;
   Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedPhone();
+  }
+
+  Future<void> _loadSavedPhone() async {
+    final storage = ref.read(tokenStorageProvider);
+    final phone = await storage.getPhoneNumber();
+    if (phone != null && phone.isNotEmpty) {
+      _phoneController.text = phone;
+    }
+  }
 
   @override
   void dispose() {
@@ -66,6 +81,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authControllerProvider, (prev, next) {
+      if (next.session != null && prev?.session == null) {
+        ref.read(tokenStorageProvider).savePhoneNumber(_phoneController.text.trim());
+      }
+    });
+
     final authState = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;

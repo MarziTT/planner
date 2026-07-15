@@ -1,0 +1,5 @@
+{
+  "modelVersion": "5.0.0",
+  // 后续如引入 hvigor 插件（如 ohos-router-plugin）在此声明依赖
+  "dependencies": {},
+}

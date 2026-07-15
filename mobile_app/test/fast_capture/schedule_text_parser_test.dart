@@ -37,6 +37,17 @@ void main() {
     expect(draft.suggestedPeriod, TimePeriod.evening);
   });
 
+  test(
+      'period only capture asks for time confirmation instead of guessing hour',
+      () {
+    final draft = parser.parse('明天下午健身');
+
+    expect(draft.title, '健身');
+    expect(draft.eventType, CaptureEventType.workout);
+    expect(draft.startsAt, DateTime(2026, 7, 10, 15));
+    expect(draft.ambiguityKind, TimeAmbiguityKind.missingTime);
+    expect(draft.suggestedPeriod, TimePeriod.afternoon);
+  });
   test('supports day after tomorrow and half past times', () {
     final draft = parser.parse('后天晚上七点半开会');
 

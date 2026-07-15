@@ -9,8 +9,6 @@ import 'planner_calendar_panel.dart';
 import '../domain/planner_models.dart';
 import '../state/planner_controller.dart';
 
-enum _TodoFilter { open, completed, all }
-
 const _defaultEventDuration = Duration(hours: 1);
 const _zzzGifSpecs = <_ZzzGifSpec>[
   _ZzzGifSpec(
@@ -41,10 +39,11 @@ class PlannerDashboard extends ConsumerStatefulWidget {
 
 class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
     with WidgetsBindingObserver {
-  _TodoFilter _todoFilter = _TodoFilter.open;
   late DateTime _selectedDay;
   late DateTime _visibleMonth;
   bool _followToday = true;
+  final Set<int> _deletingEventIds = <int>{};
+  final Set<int> _deletingTodoIds = <int>{};
 
   @override
   void initState() {
@@ -79,11 +78,20 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
     final isWorkModeActive = profile?.identity == 'worker' &&
         (profile?.isScheduleActiveAt(now) ?? false);
     final isZzzTheme = themeState.preset == PlannerThemePreset.kamenRiderZzz;
-    final filteredTodos = switch (_todoFilter) {
-      _TodoFilter.open => plannerState.openTodos,
-      _TodoFilter.completed => plannerState.completedTodos,
-      _TodoFilter.all => plannerState.todos,
-    };
+    final agendaItems = _buildAgendaItems(
+      selectedDay: effectiveSelectedDay,
+      today: normalizedToday,
+      events: selectedDayEvents,
+      todos: plannerState.openTodos,
+      includeTodos: _isSameDay(effectiveSelectedDay, normalizedToday),
+    );
+    final upcomingItems = _buildAgendaItems(
+      selectedDay: normalizedToday,
+      today: normalizedToday,
+      events: upcomingEvents.take(6).toList(),
+      todos: const [],
+      includeTodos: false,
+    );
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -108,16 +116,13 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
           ],
           _SectionHeader(
             title: _isSameDay(effectiveSelectedDay, normalizedToday)
-                ? '\u4eca\u5929\u65f6\u95f4\u7ebf'
-                : '\u6708\u65e5\u884c\u7a0b',
+                ? '今天安排'
+                : '${effectiveSelectedDay.month}月${effectiveSelectedDay.day}日安排',
             caption: _isSameDay(effectiveSelectedDay, normalizedToday)
-                ? '\u5148\u770b\u63a5\u4e0b\u6765\u7684\u884c\u7a0b\uff0c\u76f4\u63a5\u518d\u8865\u4e00\u6761\u3002'
-                : '\u4ece\u6708\u5386\u91cc\u70b9\u9009\u7684\u8fd9\u4e00\u5929\uff0c\u65e5\u7a0b\u4f1a\u5168\u90e8\u5217\u5728\u8fd9\u91cc\u3002',
-            actionLabel: '\u65b0\u589e\u884c\u7a0b',
-            onAction: () => _showEventEditor(
-                context: context, initialDay: effectiveSelectedDay),
+                ? '日程和待办混在一条时间线里，顶部速记就是新增入口。'
+                : '这一天的日程集中显示，避免在页面里重复分栏。',
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
           PlannerCalendarPanel(
             visibleMonth: effectiveVisibleMonth,
             selectedDay: effectiveSelectedDay,
@@ -140,59 +145,32 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               _followToday = _isSameDay(normalizedDay, normalizedToday);
             }),
           ),
-          const SizedBox(height: 10),
-          if (selectedDayEvents.isEmpty)
+          const SizedBox(height: 12),
+          if (agendaItems.isEmpty)
             _EmptyBand(
               title: _isSameDay(effectiveSelectedDay, normalizedToday)
-                  ? '\u4eca\u5929\u8fd8\u662f\u7a7a\u7684'
-                  : '\u6708\u65e5\u8fd8\u6ca1\u6709\u5b89\u6392',
+                  ? '今天还没有安排'
+                  : '这一天还没有安排',
               message: _isSameDay(effectiveSelectedDay, normalizedToday)
-                  ? '\u5148\u653e\u8fdb\u4eca\u5929\u6700\u91cd\u8981\u7684\u4e00\u4ef6\u4e8b\uff0c\u4f60\u7684\u8282\u594f\u5c31\u51fa\u6765\u4e86\u3002'
-                  : '\u8fd9\u4e00\u5929\u76ee\u524d\u8fd8\u662f\u7a7a\u767d\uff0c\u53ef\u4ee5\u5148\u628a\u8fd9\u5929\u6700\u91cd\u8981\u7684\u4e00\u6761\u8bb0\u4e0b\u6765\u3002',
+                  ? '在上方速记里说一句或打一句，比如“晚上七点健身”。'
+                  : '切回今天或在速记里说清日期，就能把事情放到这一天。',
             )
           else
-            ...selectedDayEvents.map(
-              (event) => _EventTile(
-                event: event,
-                highlighted: selectedEventId == event.id,
-                zzzBackground: isZzzTheme ? _zzzSpecForEvent(event) : null,
-                onEdit: () => _showEventEditor(context: context, event: event),
-                onDelete: () => ref
-                    .read(plannerControllerProvider.notifier)
-                    .removeEvent(event.id),
-              ),
+            _AgendaList(
+              items: agendaItems,
+              selectedEventId: selectedEventId,
+              isZzzTheme: isZzzTheme,
+              deletingEventIds: _deletingEventIds,
+              deletingTodoIds: _deletingTodoIds,
+              onEditEvent: (event) =>
+                  _showEventEditor(context: context, event: event),
+              onDeleteEvent: _deleteEvent,
+              onEditTodo: (todo) =>
+                  _showTodoEditor(context: context, todo: todo),
+              onDeleteTodo: _deleteTodo,
             ),
-          const SizedBox(height: 18),
-          _SectionHeader(
-            title: '\u63a5\u4e0b\u6765',
-            caption:
-                '\u628a\u660e\u5929\u548c\u4e4b\u540e\u7684\u5173\u952e\u8282\u70b9\u63d0\u524d\u6392\u597d\u3002',
-            actionLabel: '\u5237\u65b0',
-            onAction: () =>
-                ref.read(plannerControllerProvider.notifier).loadDashboard(),
-          ),
-          const SizedBox(height: 10),
-          if (upcomingEvents.isEmpty)
-            const _EmptyBand(
-              title: '\u8fd8\u6ca1\u6709\u540e\u7eed\u8282\u70b9',
-              message:
-                  '\u5982\u679c\u6709\u822a\u73ed\u3001\u8bad\u7ec3\u6216\u91cd\u8981\u4f1a\u8bae\uff0c\u53ef\u4ee5\u73b0\u5728\u5c31\u8bb0\u4e0b\u6765\u3002',
-            )
-          else
-            ...upcomingEvents.take(6).map(
-                  (event) => _EventTile(
-                    event: event,
-                    highlighted: selectedEventId == event.id,
-                    zzzBackground: isZzzTheme ? _zzzSpecForEvent(event) : null,
-                    onEdit: () =>
-                        _showEventEditor(context: context, event: event),
-                    onDelete: () => ref
-                        .read(plannerControllerProvider.notifier)
-                        .removeEvent(event.id),
-                  ),
-                ),
           if (isWorkModeActive) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _WorkModeQuickPanel(
               todos: plannerState.openTodos,
               onCreate: (title) => ref
@@ -200,32 +178,30 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                   .addQuickTodo(title: title),
             ),
           ],
-          const SizedBox(height: 16),
-          _TodoHeader(
-            filter: _todoFilter,
-            onFilterChanged: (value) => setState(() => _todoFilter = value),
-            onCreate: () => _showTodoEditor(context: context),
+          const SizedBox(height: 18),
+          const _SectionHeader(
+            title: '接下来',
+            caption: '只放未来关键日程，不再重复展示待办。',
           ),
           const SizedBox(height: 10),
-          if (filteredTodos.isEmpty)
-            _EmptyBand(
-              title: _todoFilter == _TodoFilter.completed
-                  ? '\u8fd8\u6ca1\u6709\u5b8c\u6210\u8bb0\u5f55'
-                  : '\u8fd9\u4e00\u680f\u8fd8\u6ca1\u6709\u5f85\u529e',
-              message: _todoFilter == _TodoFilter.completed
-                  ? '\u4e00\u6761\u4e5f\u597d\uff0c\u5148\u505a\u5b8c\u518d\u56de\u6765\u770b\u8fd9\u91cc\u3002'
-                  : '\u5de5\u4f5c\u65f6\u95f4\u53ef\u4ee5\u8bb0\u5177\u4f53\u52a8\u4f5c\uff0c\u751f\u6d3b\u65f6\u95f4\u53ef\u4ee5\u8bb0\u8981\u51fa\u95e8\u7684\u4e8b\u3002',
+          if (upcomingItems.isEmpty)
+            const _EmptyBand(
+              title: '还没有后续节点',
+              message: '如果有航班、训练或重要会议，可以在上方速记里直接记下。',
             )
           else
-            ...filteredTodos.map(
-              (todo) => _TodoTile(
-                todo: todo,
-                zzzBackground: isZzzTheme ? _zzzSpecForTodo(todo) : null,
-                onEdit: () => _showTodoEditor(context: context, todo: todo),
-                onDelete: () => ref
-                    .read(plannerControllerProvider.notifier)
-                    .removeTodo(todo.id),
-              ),
+            _AgendaList(
+              items: upcomingItems,
+              selectedEventId: selectedEventId,
+              isZzzTheme: isZzzTheme,
+              deletingEventIds: _deletingEventIds,
+              deletingTodoIds: _deletingTodoIds,
+              onEditEvent: (event) =>
+                  _showEventEditor(context: context, event: event),
+              onDeleteEvent: _deleteEvent,
+              onEditTodo: (todo) =>
+                  _showTodoEditor(context: context, todo: todo),
+              onDeleteTodo: _deleteTodo,
             ),
           if (profile?.wantsFitness ?? false) ...[
             const SizedBox(height: 18),
@@ -237,6 +213,48 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
         ],
       ),
     );
+  }
+
+  Future<void> _deleteEvent(PlannerEvent event) async {
+    if (_deletingEventIds.contains(event.id)) {
+      return;
+    }
+    setState(() => _deletingEventIds.add(event.id));
+    try {
+      await ref.read(plannerControllerProvider.notifier).removeEvent(event.id);
+      final error = ref.read(plannerControllerProvider).errorMessage;
+      if (!mounted || error != null) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已删除行程：${event.title}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingEventIds.remove(event.id));
+      }
+    }
+  }
+
+  Future<void> _deleteTodo(PlannerTodo todo) async {
+    if (_deletingTodoIds.contains(todo.id)) {
+      return;
+    }
+    setState(() => _deletingTodoIds.add(todo.id));
+    try {
+      await ref.read(plannerControllerProvider.notifier).removeTodo(todo.id);
+      final error = ref.read(plannerControllerProvider).errorMessage;
+      if (!mounted || error != null) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已删除待办：${todo.title}')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _deletingTodoIds.remove(todo.id));
+      }
+    }
   }
 
   PlannerEvent? _findSelectedEvent(
@@ -494,7 +512,7 @@ class _WorkModeQuickPanel extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '上班快捷动作',
+                  '上班模式',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -504,7 +522,7 @@ class _WorkModeQuickPanel extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '点一下生成短待办，工作时间只追下一个动作。',
+            '工作时间只保留几个高频动作，点一下就进入今天安排流。',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
               height: 1.3,
@@ -575,14 +593,10 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
     required this.caption,
-    required this.actionLabel,
-    required this.onAction,
   });
 
   final String title;
   final String caption;
-  final String actionLabel;
-  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -606,78 +620,98 @@ class _SectionHeader extends StatelessWidget {
             ],
           ),
         ),
-        TextButton.icon(
-          onPressed: onAction,
-          icon: const Icon(Icons.add, size: 18),
-          label: Text(actionLabel),
-        ),
       ],
     );
   }
 }
 
-class _TodoHeader extends StatelessWidget {
-  const _TodoHeader({
-    required this.filter,
-    required this.onFilterChanged,
-    required this.onCreate,
+enum _AgendaItemKind { event, todo }
+
+class _AgendaItem {
+  const _AgendaItem.event(this.event)
+      : todo = null,
+        kind = _AgendaItemKind.event;
+
+  const _AgendaItem.todo(this.todo)
+      : event = null,
+        kind = _AgendaItemKind.todo;
+
+  final _AgendaItemKind kind;
+  final PlannerEvent? event;
+  final PlannerTodo? todo;
+}
+
+List<_AgendaItem> _buildAgendaItems({
+  required DateTime selectedDay,
+  required DateTime today,
+  required List<PlannerEvent> events,
+  required List<PlannerTodo> todos,
+  required bool includeTodos,
+}) {
+  final items = <_AgendaItem>[
+    ...events.map(_AgendaItem.event),
+    if (includeTodos) ...todos.map(_AgendaItem.todo),
+  ];
+  items.sort((left, right) {
+    if (left.kind == right.kind) {
+      if (left.event != null && right.event != null) {
+        return left.event!.startsAt.compareTo(right.event!.startsAt);
+      }
+      return 0;
+    }
+    if (left.event != null) return -1;
+    return 1;
+  });
+  return items;
+}
+
+class _AgendaList extends StatelessWidget {
+  const _AgendaList({
+    required this.items,
+    required this.selectedEventId,
+    required this.isZzzTheme,
+    required this.deletingEventIds,
+    required this.deletingTodoIds,
+    required this.onEditEvent,
+    required this.onDeleteEvent,
+    required this.onEditTodo,
+    required this.onDeleteTodo,
   });
 
-  final _TodoFilter filter;
-  final ValueChanged<_TodoFilter> onFilterChanged;
-  final VoidCallback onCreate;
+  final List<_AgendaItem> items;
+  final int? selectedEventId;
+  final bool isZzzTheme;
+  final Set<int> deletingEventIds;
+  final Set<int> deletingTodoIds;
+  final ValueChanged<PlannerEvent> onEditEvent;
+  final Future<void> Function(PlannerEvent event) onDeleteEvent;
+  final ValueChanged<PlannerTodo> onEditTodo;
+  final Future<void> Function(PlannerTodo todo) onDeleteTodo;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '待办动作',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            IconButton.filledTonal(
-              tooltip: '新增',
-              onPressed: onCreate,
-              icon: const Icon(Icons.add_rounded),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<_TodoFilter>(
-            showSelectedIcon: false,
-            style: ButtonStyle(
-              visualDensity: VisualDensity.compact,
-              textStyle: WidgetStatePropertyAll(theme.textTheme.labelMedium),
-            ),
-            segments: const [
-              ButtonSegment(
-                value: _TodoFilter.open,
-                label: Text('待办'),
-              ),
-              ButtonSegment(
-                value: _TodoFilter.completed,
-                label: Text('完成'),
-              ),
-              ButtonSegment(
-                value: _TodoFilter.all,
-                label: Text('全部'),
-              ),
-            ],
-            selected: {filter},
-            onSelectionChanged: (value) => onFilterChanged(value.first),
-          ),
-        ),
-      ],
+      children: items.map((item) {
+        final event = item.event;
+        if (event != null) {
+          return _EventTile(
+            event: event,
+            highlighted: selectedEventId == event.id,
+            zzzBackground: isZzzTheme ? _zzzSpecForEvent(event) : null,
+            isDeleting: deletingEventIds.contains(event.id),
+            onEdit: () => onEditEvent(event),
+            onDelete: () => onDeleteEvent(event),
+          );
+        }
+        final todo = item.todo!;
+        return _TodoTile(
+          todo: todo,
+          zzzBackground: isZzzTheme ? _zzzSpecForTodo(todo) : null,
+          isDeleting: deletingTodoIds.contains(todo.id),
+          onEdit: () => onEditTodo(todo),
+          onDelete: () => onDeleteTodo(todo),
+        );
+      }).toList(),
     );
   }
 }
@@ -687,6 +721,7 @@ class _EventTile extends StatelessWidget {
     required this.event,
     required this.highlighted,
     this.zzzBackground,
+    required this.isDeleting,
     required this.onEdit,
     required this.onDelete,
   });
@@ -694,6 +729,7 @@ class _EventTile extends StatelessWidget {
   final PlannerEvent event;
   final bool highlighted;
   final _ZzzGifSpec? zzzBackground;
+  final bool isDeleting;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
 
@@ -825,14 +861,22 @@ class _EventTile extends StatelessWidget {
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               color: foreground,
-                              onPressed: onEdit,
+                              onPressed: isDeleting ? null : onEdit,
                               icon: const Icon(Icons.edit_outlined),
                             ),
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               color: foreground,
-                              onPressed: onDelete,
-                              icon: const Icon(Icons.delete_outline),
+                              onPressed: isDeleting ? null : onDelete,
+                              icon: isDeleting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.delete_outline),
                             ),
                           ],
                         ),
@@ -853,12 +897,14 @@ class _TodoTile extends ConsumerWidget {
   const _TodoTile({
     required this.todo,
     this.zzzBackground,
+    required this.isDeleting,
     required this.onEdit,
     required this.onDelete,
   });
 
   final PlannerTodo todo;
   final _ZzzGifSpec? zzzBackground;
+  final bool isDeleting;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
 
@@ -900,14 +946,16 @@ class _TodoTile extends ConsumerWidget {
                 children: [
                   Checkbox(
                     value: todo.completed,
-                    onChanged: (value) {
-                      if (value == null) {
-                        return;
-                      }
-                      ref
-                          .read(plannerControllerProvider.notifier)
-                          .toggleTodo(todo, value);
-                    },
+                    onChanged: isDeleting
+                        ? null
+                        : (value) {
+                            if (value == null) {
+                              return;
+                            }
+                            ref
+                                .read(plannerControllerProvider.notifier)
+                                .toggleTodo(todo, value);
+                          },
                   ),
                   Expanded(
                     child: Column(
@@ -937,14 +985,20 @@ class _TodoTile extends ConsumerWidget {
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     color: foreground,
-                    onPressed: onEdit,
+                    onPressed: isDeleting ? null : onEdit,
                     icon: const Icon(Icons.edit_outlined),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     color: foreground,
-                    onPressed: onDelete,
-                    icon: const Icon(Icons.delete_outline),
+                    onPressed: isDeleting ? null : onDelete,
+                    icon: isDeleting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.delete_outline),
                   ),
                 ],
               ),

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pixel_planner_mobile/app/app.dart';
 
 void main() {
-  testWidgets('Pixel Planner app boots', (WidgetTester tester) async {
+  testWidgets('FlowDay app boots', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: PixelPlannerApp()));
     await tester.pump();
 

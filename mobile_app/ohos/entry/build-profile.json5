@@ -1,0 +1,35 @@
+{
+  "apiType": "stageMode",
+  "buildOption": {
+    "arkOptions": {
+      // runtimeOnly: false 表示编译 ArkTS 源码而非仅运行时
+      "runtimeOnly": false,
+    },
+  },
+  "buildOptionSet": [
+    {
+      "name": "release",
+      "arkOptions": {
+        "obfuscation": {
+          "ruleOptions": {
+            "enable": false,
+          },
+        },
+      },
+      "nativeLib": {
+        "filter": {
+          // 排除 x86_64 模拟器架构，减小包体积
+          "excludes": ["x86_64"],
+        },
+      },
+    },
+  ],
+  "targets": [
+    {
+      "name": "default",
+    },
+    {
+      "name": "ohosTest",
+    },
+  ],
+}

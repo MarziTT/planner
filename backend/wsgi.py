@@ -9,7 +9,7 @@ def create_wsgi_app():
     return create_app(repair_tables=True)
 
 
-app = create_app()  # Flask CLI entry (no repair)
+app = create_app(repair_tables=True)  # Flask CLI & gunicorn entry
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

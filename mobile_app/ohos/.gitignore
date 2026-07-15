@@ -1,0 +1,9 @@
+/build/
+/.hvigor/
+/local.properties
+/.idea/
+*.iml
+# 签名文件 - 不可提交到版本控制
+*.p12
+*.p7b
+*.cer

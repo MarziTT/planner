@@ -1,0 +1,11 @@
+{
+  "app": {
+    // TODO: bundleName 为占位值，正式上架前需替换为华为开发者联盟注册的真实包名
+    "bundleName": "com.pixelplanner.app",
+    "vendor": "PixelPlanner",
+    "versionCode": 1000000,
+    "versionName": "1.0.0",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name",
+  },
+}

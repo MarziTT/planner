@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/planner_repository.dart';
@@ -226,13 +226,34 @@ String _plannerErrorMessage(Object error, {required String fallback}) {
     if (error.type == DioExceptionType.connectionError ||
         error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
-      return '当前无法连接到计划服务，请检查网络或后端状态。';
+      final detail = _compactDioDetail(error);
+      return '当前无法连接到计划服务。手机浏览器能打开接口时，请把这段错误发我：$detail';
     }
   }
   return fallback;
+}
+
+String _compactDioDetail(DioException error) {
+  final parts = <String>[
+    'type=${error.type.name}',
+  ];
+  final message = error.message;
+  if (message != null && message.trim().isNotEmpty) {
+    parts.add('message=${message.trim()}');
+  }
+  final inner = error.error;
+  if (inner != null) {
+    parts.add('inner=$inner');
+  }
+  return parts.join('; ');
 }
 
 final plannerControllerProvider =
     StateNotifierProvider<PlannerController, PlannerState>(
   (ref) => PlannerController(ref.watch(plannerRepositoryProvider)),
 );
+
+
+
+
+

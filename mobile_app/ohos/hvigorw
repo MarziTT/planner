@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# -------------------------------------------------------------------------------
+# Hvigor command line tool wrapper script.
+# Requires: Node.js, Hvigor installed via DevEco Studio or HarmonyOS SDK.
+# -------------------------------------------------------------------------------
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HVIGOR_DIR="$DIR/hvigor"
+
+if [ ! -d "$HVIGOR_DIR" ]; then
+  echo "ERROR: Cannot find Hvigor directory '$HVIGOR_DIR'."
+  echo "Please install DevEco Studio and ensure the HarmonyOS SDK is configured."
+  exit 1
+fi
+
+HVIGOR_WRAPPER_PATH="$HVIGOR_DIR/hvigor-wrapper.js"
+
+if [ -f "$HVIGOR_WRAPPER_PATH" ]; then
+  node "$HVIGOR_WRAPPER_PATH" "$@"
+else
+  echo "Hvigor wrapper not found at $HVIGOR_WRAPPER_PATH"
+  echo "Run 'hvigorw install' or check your DevEco Studio installation."
+  exit 1
+fi

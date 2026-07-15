@@ -13,6 +13,7 @@ class FastCaptureState {
     this.errorMessage,
     this.recognizedText,
     this.isListening = false,
+    this.isRecognizing = false,
     this.isSubmitting = false,
   });
 
@@ -20,6 +21,7 @@ class FastCaptureState {
   final String? errorMessage;
   final String? recognizedText;
   final bool isListening;
+  final bool isRecognizing;
   final bool isSubmitting;
 
   FastCaptureState copyWith({
@@ -27,16 +29,20 @@ class FastCaptureState {
     String? errorMessage,
     String? recognizedText,
     bool? isListening,
+    bool? isRecognizing,
     bool? isSubmitting,
     bool clearPendingDraft = false,
     bool clearError = false,
+    bool clearRecognizedText = false,
   }) {
     return FastCaptureState(
       pendingDraft:
           clearPendingDraft ? null : pendingDraft ?? this.pendingDraft,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
-      recognizedText: recognizedText ?? this.recognizedText,
+      recognizedText:
+          clearRecognizedText ? null : recognizedText ?? this.recognizedText,
       isListening: isListening ?? this.isListening,
+      isRecognizing: isRecognizing ?? this.isRecognizing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
     );
   }
@@ -55,6 +61,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   final PlannerRepository _repository;
   final ScheduleTextParser _parser;
   final SpeechCaptureGateway _speechGateway;
+  String? _lastHandledSpeech;
 
   Future<void> submitText(String input) async {
     if (state.isSubmitting) {
@@ -67,6 +74,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
       state = state.copyWith(
         pendingDraft: draft,
         clearError: true,
+        isRecognizing: false,
         isSubmitting: false,
       );
       return;
@@ -141,35 +149,50 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
     state = state.copyWith(
       clearPendingDraft: true,
       clearError: true,
+      isRecognizing: false,
       isSubmitting: false,
     );
   }
 
   Future<void> startListening() async {
-    if (state.isSubmitting) {
+    if (state.isSubmitting || state.isRecognizing) {
       return;
     }
 
-    state = state.copyWith(isListening: true, clearError: true);
+    _lastHandledSpeech = null;
+    state = state.copyWith(
+      isListening: true,
+      isRecognizing: false,
+      clearError: true,
+    );
     try {
       final available = await _speechGateway.initialize();
       if (!available) {
         state = state.copyWith(
           isListening: false,
+          isRecognizing: false,
           errorMessage: '语音服务不可用，请检查麦克风权限',
         );
         return;
       }
       final text = await _speechGateway.startListening();
       if (text.isNotEmpty) {
-        state = state.copyWith(recognizedText: text, clearError: true);
+        state = state.copyWith(
+          recognizedText: text,
+          isRecognizing: false,
+          clearError: true,
+        );
         await submitText(text);
       } else {
-        state = state.copyWith(errorMessage: '没有识别到内容，请再说一次。');
+        state = state.copyWith(
+          isRecognizing: false,
+          errorMessage: '没有识别到内容，请再说一次。',
+        );
       }
     } catch (error) {
       state = state.copyWith(
         isListening: false,
+        isRecognizing: false,
         errorMessage: _voiceCaptureErrorMessage(error),
       );
     } finally {
@@ -180,10 +203,46 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   }
 
   Future<void> stopListening() async {
-    await _speechGateway.stopListening();
-    if (state.isListening) {
-      state = state.copyWith(isListening: false);
+    if (!state.isListening) {
+      return;
     }
+
+    state = state.copyWith(
+      isListening: false,
+      isRecognizing: true,
+      clearError: true,
+    );
+    try {
+      final text = await _speechGateway.stopListening();
+      await _handleRecognizedSpeech(text);
+    } catch (error) {
+      state = state.copyWith(
+        isRecognizing: false,
+        errorMessage: _voiceCaptureErrorMessage(error),
+      );
+    }
+  }
+
+  Future<void> _handleRecognizedSpeech(String text) async {
+    final normalized = text.trim();
+    if (normalized.isEmpty) {
+      state = state.copyWith(
+        isRecognizing: false,
+        errorMessage: '没有识别到内容，请靠近手机说清楚一点，或稍微录久一点再停止。',
+      );
+      return;
+    }
+    if (_lastHandledSpeech == normalized) {
+      state = state.copyWith(isRecognizing: false);
+      return;
+    }
+    _lastHandledSpeech = normalized;
+    state = state.copyWith(
+      recognizedText: normalized,
+      isRecognizing: false,
+      clearError: true,
+    );
+    await submitText(normalized);
   }
 
   @override
@@ -193,7 +252,11 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   }
 
   Future<void> _createEventFromDraft(ParsedScheduleDraft draft) async {
-    state = state.copyWith(isSubmitting: true, clearError: true);
+    state = state.copyWith(
+      isSubmitting: true,
+      isRecognizing: false,
+      clearError: true,
+    );
     try {
       await _repository.createEvent(
         title: draft.title,
@@ -202,12 +265,15 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
       );
       state = state.copyWith(
         isSubmitting: false,
+        isRecognizing: false,
         clearPendingDraft: true,
         clearError: true,
+        clearRecognizedText: true,
       );
     } catch (error) {
       state = state.copyWith(
         isSubmitting: false,
+        isRecognizing: false,
         errorMessage: _fastCaptureErrorMessage(error),
       );
     }
@@ -229,7 +295,6 @@ String _fastCaptureErrorMessage(Object error) {
   }
   return '创建日程失败，请稍后重试。';
 }
-
 
 String _voiceCaptureErrorMessage(Object error) {
   if (error is DioException) {

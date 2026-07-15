@@ -26,8 +26,8 @@ const _hintText =
 const _stopRecording = '\u505c\u6b62\u5f55\u97f3';
 const _startRecording = '\u8bed\u97f3\u5f55\u5165';
 const _confirmLabel = '\u786e\u8ba4';
-const _listeningHint =
-    '\u6b63\u5728\u542c\u4f60\u8bf4\u8bdd\uff0c\u505c\u4e0b\u540e\u4f1a\u81ea\u52a8\u8bc6\u522b\u3002';
+const _listeningHint = '正在录音，说完点一下停止，系统会自动识别并写入速记。';
+const _recognizingHint = '正在识别语音并整理行程...';
 const _ambiguousHint =
     '\u68c0\u6d4b\u5230\u65f6\u95f4\u6709\u6b67\u4e49\uff0c\u5148\u786e\u8ba4\u65e9\u4e0a\u8fd8\u662f\u4e0b\u5348\u3002';
 const _defaultHint =
@@ -198,7 +198,9 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
   Future<void> _toggleMic() async {
     final state = ref.read(fastCaptureControllerProvider);
     final controller = ref.read(fastCaptureControllerProvider.notifier);
-    if (state.pendingDraft != null || state.isSubmitting) {
+    if (state.pendingDraft != null ||
+        state.isSubmitting ||
+        state.isRecognizing) {
       return;
     }
     if (state.isListening) {
@@ -221,8 +223,14 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
           next.errorMessage == null;
 
       if (resolvedPending || completedDirectSubmit) {
+        final message = completedDirectSubmit ? '已添加到日程' : '已保存行程';
         _controller.clear();
         _focusNode.unfocus();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message)),
+          );
+        }
         Future.microtask(
           () => ref.read(plannerControllerProvider.notifier).loadDashboard(),
         );
@@ -231,7 +239,9 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
 
     final state = ref.watch(fastCaptureControllerProvider);
     final theme = Theme.of(context);
-    final canInteract = !state.isSubmitting && state.pendingDraft == null;
+    final canInteract = !state.isSubmitting &&
+        !state.isRecognizing &&
+        state.pendingDraft == null;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -300,12 +310,40 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
                 ),
               ),
               const SizedBox(width: 8),
-              IconButton.filledTonal(
-                tooltip: state.isListening ? _stopRecording : _startRecording,
-                onPressed: canInteract || state.isListening ? _toggleMic : null,
-                icon: Icon(
-                  state.isListening ? Icons.mic : Icons.mic_none_rounded,
+              IconButton.filled(
+                tooltip: state.isRecognizing
+                    ? _recognizingHint
+                    : state.isListening
+                        ? _stopRecording
+                        : _startRecording,
+                style: IconButton.styleFrom(
+                  backgroundColor: state.isListening
+                      ? theme.colorScheme.error
+                      : state.isRecognizing
+                          ? theme.colorScheme.primaryContainer
+                          : theme.colorScheme.secondaryContainer,
+                  foregroundColor: state.isListening
+                      ? theme.colorScheme.onError
+                      : state.isRecognizing
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.onSecondaryContainer,
                 ),
+                onPressed: state.isRecognizing
+                    ? null
+                    : canInteract || state.isListening
+                        ? _toggleMic
+                        : null,
+                icon: state.isRecognizing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        state.isListening
+                            ? Icons.stop_rounded
+                            : Icons.mic_none_rounded,
+                      ),
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
@@ -323,18 +361,27 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
           ),
           const SizedBox(height: 10),
           Text(
-            state.isListening
-                ? _listeningHint
-                : state.pendingDraft != null
-                    ? state.pendingDraft!.ambiguityKind ==
-                            TimeAmbiguityKind.missingTime
-                        ? '还没听到具体时间，选一个大概时段就能保存。'
-                        : _ambiguousHint
-                    : _defaultHint,
+            state.isRecognizing
+                ? _recognizingHint
+                : state.isListening
+                    ? _listeningHint
+                    : state.pendingDraft != null
+                        ? state.pendingDraft!.ambiguityKind ==
+                                TimeAmbiguityKind.missingTime
+                            ? '还没听到具体时间，选一个大概时段就能保存。'
+                            : _ambiguousHint
+                        : _defaultHint,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
+          if (state.isRecognizing) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: const LinearProgressIndicator(minHeight: 3),
+            ),
+          ],
           if (state.recognizedText != null &&
               state.recognizedText!.trim().isNotEmpty) ...[
             const SizedBox(height: 8),

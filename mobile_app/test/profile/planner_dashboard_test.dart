@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+﻿import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,68 +46,39 @@ class _SeededProfileController extends ProfileController {
 }
 
 void main() {
-  testWidgets('dashboard keeps simplified planner sections and work actions',
+  testWidgets('dashboard keeps unified agenda and work actions',
       (tester) async {
+    final now = DateTime.now();
+    final event = PlannerEvent(
+      id: 1,
+      title: '站会',
+      startsAt: now.add(const Duration(minutes: 30)),
+      endsAt: now.add(const Duration(minutes: 60)),
+      status: 'planned',
+    );
+    const todo = PlannerTodo(id: 1, title: '九点开发', completed: false);
+    const profile = UserProfile(
+      gender: '男',
+      age: 28,
+      city: '上海',
+      bio: '',
+      fitnessGoal: '减脂',
+      identity: 'worker',
+      routineStart: '00:00',
+      routineEnd: '23:59',
+      focusArea: '深度工作',
+      wantsFitness: true,
+      fitnessMode: 'coach',
+    );
+
     final plannerController = _SeededPlannerController(
-      _FakePlannerRepository(
-        events: [
-          PlannerEvent(
-            id: 1,
-            title: '站会',
-            startsAt: DateTime.now().add(const Duration(minutes: 30)),
-            endsAt: DateTime.now().add(const Duration(minutes: 60)),
-            status: 'planned',
-          ),
-        ],
-        todos: const [
-          PlannerTodo(id: 1, title: '九点开发', completed: false),
-        ],
-      ),
-      PlannerState(
-        events: [
-          PlannerEvent(
-            id: 1,
-            title: '站会',
-            startsAt: DateTime.now().add(const Duration(minutes: 30)),
-            endsAt: DateTime.now().add(const Duration(minutes: 60)),
-            status: 'planned',
-          ),
-        ],
-        todos: const [
-          PlannerTodo(id: 1, title: '九点开发', completed: false),
-        ],
-      ),
+      _FakePlannerRepository(events: [event], todos: const [todo]),
+      PlannerState(events: [event], todos: const [todo]),
     );
 
     final profileController = _SeededProfileController(
-      _FakeProfileRepository(
-        const UserProfile(
-          gender: '男',
-          age: 28,
-          city: '上海',
-          bio: '',
-          fitnessGoal: '减脂',
-          identity: 'worker',
-          routineStart: '00:00',
-          routineEnd: '23:59',
-          focusArea: '深度工作',
-          wantsFitness: true,
-          fitnessMode: 'coach',
-        ),
-      ),
-      const UserProfile(
-        gender: '男',
-        age: 28,
-        city: '上海',
-        bio: '',
-        fitnessGoal: '减脂',
-        identity: 'worker',
-        routineStart: '00:00',
-        routineEnd: '23:59',
-        focusArea: '深度工作',
-        wantsFitness: true,
-        fitnessMode: 'coach',
-      ),
+      _FakeProfileRepository(profile),
+      profile,
     );
 
     await tester.pumpWidget(
@@ -121,7 +92,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('今天时间线'), findsOneWidget);
+    expect(find.text('今天安排'), findsOneWidget);
+    expect(find.text('待办动作'), findsNothing);
 
     await tester.scrollUntilVisible(
       find.text('站会'),
@@ -129,6 +101,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.text('站会'), findsOneWidget);
+    expect(find.text('九点开发'), findsOneWidget);
     expect(find.textContaining(' / '), findsNothing);
 
     await tester.scrollUntilVisible(
@@ -139,14 +112,11 @@ void main() {
     expect(find.text('接下来'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.text('待办动作'),
+      find.text('上班模式'),
       280,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(find.text('待办动作'), findsOneWidget);
-    expect(find.byTooltip('新增'), findsWidgets);
-    expect(find.text('工作时间记动作，生活时间记提醒，这样最容易执行。'), findsNothing);
-    expect(find.text('上班快捷动作'), findsOneWidget);
+    expect(find.text('上班模式'), findsOneWidget);
     expect(find.text('开发'), findsOneWidget);
     expect(find.text('开会'), findsOneWidget);
 

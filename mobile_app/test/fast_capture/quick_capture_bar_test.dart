@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,8 +24,8 @@ const _eveningPeriodChoice = '晚上 7:00';
 const _allDayChoice = '全天提醒';
 const _morningChoice = '\u65e9\u4e0a 5:00';
 const _afternoonChoice = '\u4e0b\u5348 5:00';
-const _listeningHint =
-    '\u6b63\u5728\u542c\u4f60\u8bf4\u8bdd\uff0c\u505c\u4e0b\u540e\u4f1a\u81ea\u52a8\u8bc6\u522b\u3002';
+const _listeningHint = '正在录音，说完点一下停止，系统会自动识别并写入速记。';
+const _recognizingHint = '正在识别语音并整理行程...';
 const _voiceInputTooltip = '\u8bed\u97f3\u5f55\u5165';
 const _stopRecordingTooltip = '\u505c\u6b62\u5f55\u97f3';
 const _meetingText = '\u4eca\u5929\u4e0b\u5348\u4e09\u70b9\u5f00\u4f1a';
@@ -63,10 +65,12 @@ class _FakeSpeechCaptureGateway extends SpeechCaptureGateway {
   _FakeSpeechCaptureGateway({
     this.resultText = '',
     this.initializeReturns = true,
+    this.stopCompleter,
   });
 
   final String resultText;
   final bool initializeReturns;
+  final Completer<String>? stopCompleter;
   bool listeningStarted = false;
   bool listeningStopped = false;
 
@@ -85,7 +89,10 @@ class _FakeSpeechCaptureGateway extends SpeechCaptureGateway {
   @override
   Future<String> stopListening() async {
     listeningStopped = true;
-    return '';
+    if (stopCompleter != null) {
+      return stopCompleter!.future;
+    }
+    return resultText;
   }
 }
 
@@ -352,17 +359,18 @@ void main() {
     expect(gateway.listeningStarted, isTrue);
     expect(container.read(fastCaptureControllerProvider).isListening, isFalse);
     expect(container.read(fastCaptureControllerProvider).errorMessage, isNull);
-    expect(container.read(fastCaptureControllerProvider).recognizedText,
-        _meetingText);
-    expect(find.text('识别到：$_meetingText'), findsOneWidget);
+    expect(
+        container.read(fastCaptureControllerProvider).recognizedText, isNull);
+    expect(find.text('识别到：' + _meetingText), findsNothing);
     expect(repository.createdEvents, hasLength(1));
     expect(repository.createdEvents.single.title, _meetingTitle);
     expect(repository.createdEvents.single.startsAt, DateTime(2026, 7, 9, 15));
   });
 
-  testWidgets('tapping mic while listening shows stop tooltip and stops',
+  testWidgets('tapping mic while listening shows recognizing state and stops',
       (tester) async {
-    final gateway = _FakeSpeechCaptureGateway();
+    final stopCompleter = Completer<String>();
+    final gateway = _FakeSpeechCaptureGateway(stopCompleter: stopCompleter);
     final controller = FastCaptureController(
       repository: _FakePlannerRepository(),
       speechGateway: gateway,
@@ -393,9 +401,18 @@ void main() {
     expect(find.text(_listeningHint), findsOneWidget);
 
     await tester.tap(find.byTooltip(_stopRecordingTooltip));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
+    expect(container.read(fastCaptureControllerProvider).isListening, isFalse);
+    expect(container.read(fastCaptureControllerProvider).isRecognizing, isTrue);
+    expect(find.text(_recognizingHint), findsOneWidget);
     expect(gateway.listeningStopped, isTrue);
+
+    stopCompleter.complete('');
+    await tester.pumpAndSettle();
+    expect(
+        container.read(fastCaptureControllerProvider).isRecognizing, isFalse);
+    expect(find.byTooltip(_voiceInputTooltip), findsOneWidget);
   });
 
   testWidgets('shows error when voice is unavailable', (tester) async {

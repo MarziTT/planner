@@ -1,0 +1,28 @@
+{
+  "string": [
+    {
+      "name": "app_name",
+      "value": "PixelPlanner"
+    },
+    {
+      "name": "module_desc",
+      "value": "PixelPlanner - Smart pixel planning assistant"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "PixelPlanner main entry ability"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "PixelPlanner"
+    },
+    {
+      "name": "microphone_permission_reason",
+      "value": "用于语音录制与语音转文字功能"
+    },
+    {
+      "name": "notification_permission_reason",
+      "value": "用于任务提醒与日程通知"
+    }
+  ]
+}

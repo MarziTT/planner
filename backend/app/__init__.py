@@ -1,5 +1,4 @@
 from flask import Flask
-from sqlalchemy import inspect, text
 
 from .api.auth import auth_bp
 from .api.planner import planner_bp
@@ -40,29 +39,9 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
 
 
 def _ensure_tables(app: Flask) -> None:
-    """Create tables and repair broken ones from prior partial deploys."""
+    """Safe idempotent table creation – only creates tables that don't exist yet."""
     with app.app_context():
         try:
-            inspector = inspect(db.engine)
-            tables = inspector.get_table_names()
-            if not tables:
-                db.create_all()
-                return
-
-            if "users" in tables:
-                cols = {c["name"] for c in inspector.get_columns("users")}
-                if "email" not in cols:
-                    # Drop all user tables with CASCADE, then recreate
-                    db.session.execute(text("""
-                        DO $$ DECLARE
-                            r RECORD;
-                        BEGIN
-                            FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public') LOOP
-                                EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
-                            END LOOP;
-                        END $$;
-                    """))
-                    db.session.commit()
-                    db.create_all()
+            db.create_all()
         except Exception:
-            pass  # Table repair is best-effort; app starts regardless
+            pass  # Best-effort; app starts regardless

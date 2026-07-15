@@ -15,6 +15,7 @@ class TokenStorage {
   static const _accessTokenKey = 'access_token';
   static const _refreshTokenKey = 'refresh_token';
   static const _sessionUserKey = 'session_user';
+  static const _loginPhoneKey = 'login_phone';
 
   static String? _cachedAccessToken;
   static String? _cachedRefreshToken;
@@ -89,5 +90,13 @@ class TokenStorage {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _sessionUserKey);
+  }
+
+  Future<void> savePhoneNumber(String phone) async {
+    await _storage.write(key: _loginPhoneKey, value: phone);
+  }
+
+  Future<String?> getPhoneNumber() async {
+    return await _storage.read(key: _loginPhoneKey);
   }
 }

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -71,9 +71,16 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
   }
 
   void _onNotificationTap(NotificationTapEvent event) {
-    ref.read(selectedPlannerEventIdProvider.notifier).state = event.eventId;
+    if (event.eventId != null) {
+      ref.read(selectedPlannerEventIdProvider.notifier).state = event.eventId;
+    }
     if (mounted) {
       setState(() => currentIndex = 0);
+      if (event.openQuickCapture) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已打开速记，可以直接新增行程')),
+        );
+      }
     }
   }
 
@@ -183,7 +190,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pixel Planner'),
+        title: const Text('FlowDay 日程'),
         actions: [
           IconButton(
             onPressed: () => ref.read(authControllerProvider.notifier).logout(),
@@ -232,3 +239,4 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         );
   }
 }
+

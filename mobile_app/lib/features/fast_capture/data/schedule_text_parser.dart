@@ -12,7 +12,7 @@ class ScheduleTextParser {
     final relative = _relativeTime(normalized);
     final period = _period(normalized);
     final clock = _clock(normalized);
-    final hasExplicitTime = relative != null || clock != null || period != null;
+    final hasExplicitTime = relative != null || clock != null;
 
     final startsAt = relative ??
         _buildDateTime(
@@ -41,7 +41,8 @@ class ScheduleTextParser {
               ? TimeAmbiguityKind.missingTime
               : TimeAmbiguityKind.none,
       ambiguousHour: ambiguousHour,
-      suggestedPeriod: missingTime ? _suggestedPeriod(eventType) : null,
+      suggestedPeriod:
+          missingTime ? _suggestedPeriodFor(period, eventType) : null,
     );
   }
 
@@ -246,7 +247,20 @@ class ScheduleTextParser {
     }
   }
 
-  TimePeriod _suggestedPeriod(CaptureEventType eventType) {
+  TimePeriod _suggestedPeriodFor(String? period, CaptureEventType eventType) {
+    if (period == '明早' || period == '早上' || period == '上午') {
+      return TimePeriod.morning;
+    }
+    if (period == '下午' || period == '傍晚') {
+      return TimePeriod.afternoon;
+    }
+    if (period == '晚上' || period == '今晚') {
+      return TimePeriod.evening;
+    }
+    if (period == '中午') {
+      return TimePeriod.afternoon;
+    }
+
     switch (eventType) {
       case CaptureEventType.workout:
         return TimePeriod.evening;

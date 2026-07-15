@@ -1,0 +1,43 @@
+{
+  "app": {
+    // TODO: 替换为真实签名配置（注册华为开发者联盟后获取证书）
+    "signingConfigs": [
+      // 示例签名配置（占位，待替换）
+      // {
+      //   "name": "default",
+      //   "type": "HarmonyOS",
+      //   "material": {
+      //     "certpath": ".ohos/config/PixelPlanner.cer",
+      //     "storePassword": "0000001A2B3C4D5E6F7A8B9C0D1E2F3A",
+      //     "keyAlias": "debugKey",
+      //     "keyPassword": "0000001A2B3C4D5E6F7A8B9C0D1E2F3A",
+      //     "profile": ".ohos/config/PixelPlanner.p7b",
+      //     "signAlg": "SHA256withECDSA",
+      //     "storeFile": ".ohos/config/PixelPlanner.p12"
+      //   }
+      // }
+    ],
+    "products": [
+      {
+        "name": "default",
+        // 签名配置名，与 signingConfigs[].name 对应，暂时留空（未配置签名）
+        "signingConfig": "default",
+        "compatibleSdkVersion": "5.0.0(12)",
+        "compileSdkVersion": "5.0.0(12)",
+        "runtimeOS": "HarmonyOS",
+      },
+    ],
+  },
+  "modules": [
+    {
+      "name": "entry",
+      "srcPath": "./entry",
+      "targets": [
+        {
+          "name": "default",
+          "applyToProducts": ["default"],
+        },
+      ],
+    },
+  ],
+}
