@@ -1,4 +1,5 @@
 from flask import Flask
+from sqlalchemy import inspect, text
 
 from .api.auth import auth_bp
 from .api.planner import planner_bp
@@ -39,9 +40,41 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
 
 
 def _ensure_tables(app: Flask) -> None:
-    """Safe idempotent table creation – only creates tables that don't exist yet."""
+    """Create missing tables and migrate existing ones to match current models."""
     with app.app_context():
         try:
             db.create_all()
         except Exception:
+            pass
+
+        # PostgreSQL-specific: add phone column if users table exists without it
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            if "users" in tables:
+                cols = {c["name"] for c in inspector.get_columns("users")}
+                if "phone" not in cols:
+                    dialect = db.engine.dialect.name
+                    if dialect == "postgresql":
+                        db.session.execute(text(
+                            "ALTER TABLE users ADD COLUMN phone VARCHAR(20)"
+                        ))
+                        db.session.execute(text(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone ON users (phone)"
+                        ))
+                        db.session.execute(text(
+                            "UPDATE users SET phone = 'migrated_' || id WHERE phone IS NULL"
+                        ))
+                        db.session.execute(text(
+                            "ALTER TABLE users ALTER COLUMN phone SET NOT NULL"
+                        ))
+                        db.session.execute(text(
+                            "ALTER TABLE users ALTER COLUMN email DROP NOT NULL"
+                        ))
+                        db.session.execute(text(
+                            "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL"
+                        ))
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
             pass  # Best-effort; app starts regardless
