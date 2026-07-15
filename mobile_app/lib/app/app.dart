@@ -13,7 +13,7 @@ class PixelPlannerApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: 'Pixel Planner',
+      title: 'FlowDay 日程',
       debugShowCheckedModeBanner: false,
       theme: themeState.lightTheme,
       darkTheme: themeState.darkTheme,

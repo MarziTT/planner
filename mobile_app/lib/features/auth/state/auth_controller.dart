@@ -49,18 +49,13 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> login({
-    required String email,
-    required String password,
-  }) async {
-    state = state.copyWith(loading: true, restoring: false, clearError: true);
+  Future<void> sendCode({required String phone}) async {
+    state = state.copyWith(loading: true, clearError: true);
     try {
-      final session = await _repository.login(email: email, password: password);
-      state = AuthState(session: session, loading: false, restoring: false);
+      await _repository.sendCode(phone: phone);
+      state = state.copyWith(loading: false, restoring: false);
     } catch (e) {
-      final msg = e is DioException
-          ? '登录失败：${_dioErrorMsg(e)}'
-          : '登录失败：$e';
+      final msg = e is DioException ? '发送失败：${_dioErrorMsg(e)}' : '发送失败：$e';
       state = state.copyWith(
         loading: false,
         restoring: false,
@@ -69,23 +64,19 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> register({
-    required String email,
-    required String password,
-    required String nickname,
+  Future<void> loginWithPhone({
+    required String phone,
+    required String code,
   }) async {
     state = state.copyWith(loading: true, restoring: false, clearError: true);
     try {
-      final session = await _repository.register(
-        email: email,
-        password: password,
-        nickname: nickname,
+      final session = await _repository.loginWithPhone(
+        phone: phone,
+        code: code,
       );
       state = AuthState(session: session, loading: false, restoring: false);
     } catch (e) {
-      final msg = e is DioException
-          ? '注册失败：${_dioErrorMsg(e)}'
-          : '注册失败：$e';
+      final msg = e is DioException ? '登录失败：${_dioErrorMsg(e)}' : '登录失败：$e';
       state = state.copyWith(
         loading: false,
         restoring: false,
@@ -120,16 +111,27 @@ class AuthController extends StateNotifier<AuthState> {
       case DioExceptionType.sendTimeout:
         return '发送超时';
       case DioExceptionType.connectionError:
-        return '无法连接服务器（DNS或网络不通）';
+        return '无法连接服务器（DNS 或网络不通）';
       case DioExceptionType.badResponse:
         final msg = e.response?.data?['error']?['message'] ?? e.message;
-        return '服务器错误：$msg';
+        return '服务器错误：${_cleanServerMessage(msg)}';
       case DioExceptionType.cancel:
         return '请求已取消';
       default:
         final detail = e.error?.toString() ?? e.message ?? '';
         return '网络异常：$detail';
     }
+  }
+
+  static String _cleanServerMessage(Object? value) {
+    final message = value?.toString().trim() ?? '';
+    if (message.isEmpty) {
+      return '请检查手机号或稍后重试';
+    }
+    if (message.contains('code') || message.contains('expired')) {
+      return '验证码错误或已过期';
+    }
+    return message;
   }
 
   Future<void> logout() async {

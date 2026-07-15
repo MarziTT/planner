@@ -42,6 +42,10 @@ class BaseConfig:
     APP_BUILD = os.getenv("APP_BUILD", "50000")
     APP_DOWNLOAD_URL = os.getenv("APP_DOWNLOAD_URL", "")
 
+    SMS_CODE_EXPIRE_SECONDS = int(os.getenv("SMS_CODE_EXPIRE_SECONDS", "300"))
+    SMS_CODE_LENGTH = int(os.getenv("SMS_CODE_LENGTH", "6"))
+    SMS_PROVIDER = os.getenv("SMS_PROVIDER", "console")
+
     TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID") or os.getenv("TENCENTCLOUD_SECRET_ID", "")
     TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY") or os.getenv("TENCENTCLOUD_SECRET_KEY", "")
     TENCENT_ASR_REGION = os.getenv("TENCENT_ASR_REGION", "ap-shanghai")

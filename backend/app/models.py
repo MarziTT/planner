@@ -23,12 +23,24 @@ class User(TimestampMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    phone = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(255), nullable=True)
+    password_hash = db.Column(db.String(255), nullable=True)
     nickname = db.Column(db.String(80), nullable=False)
     avatar_url = db.Column(db.String(255))
     timezone = db.Column(db.String(64), default="Asia/Shanghai", nullable=False)
     onboarding_done = db.Column(db.Boolean, default=False, nullable=False)
+
+
+class SmsCode(db.Model):
+    __tablename__ = "sms_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(20), nullable=False, index=True)
+    code = db.Column(db.String(10), nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=utc_now, nullable=False)
 
 
 class RefreshToken(TimestampMixin, db.Model):

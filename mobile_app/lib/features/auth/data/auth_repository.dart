@@ -44,28 +44,19 @@ class AuthRepository {
     }
   }
 
-  Future<AuthSession> login({
-    required String email,
-    required String password,
-  }) async {
-    final response = await _dio.post('/auth/login', data: {
-      'email': email,
-      'password': password,
+  Future<void> sendCode({required String phone}) async {
+    await _dio.post('/auth/send-code', data: {
+      'phone': phone,
     });
-    return _persistAuthResponse(response.data['data'] as Map<String, dynamic>);
   }
 
-  Future<AuthSession> register({
-    required String email,
-    required String password,
-    required String nickname,
-    String timezone = 'Asia/Shanghai',
+  Future<AuthSession> loginWithPhone({
+    required String phone,
+    required String code,
   }) async {
-    final response = await _dio.post('/auth/register', data: {
-      'email': email,
-      'password': password,
-      'nickname': nickname,
-      'timezone': timezone,
+    final response = await _dio.post('/auth/phone-login', data: {
+      'phone': phone,
+      'code': code,
     });
     return _persistAuthResponse(response.data['data'] as Map<String, dynamic>);
   }

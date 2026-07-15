@@ -1,4 +1,5 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/profile_repository.dart';
 import '../domain/profile_model.dart';
@@ -38,8 +39,12 @@ class ProfileController extends StateNotifier<ProfileState> {
     try {
       final profile = await _repository.fetchProfile();
       state = ProfileState(profile: profile, loading: false);
-    } catch (_) {
-      state = state.copyWith(loading: false, errorMessage: '资料加载失败');
+    } catch (error) {
+      if (error is DioException && error.response?.statusCode == 404) {
+        state = const ProfileState(loading: false);
+        return;
+      }
+      state = state.copyWith(loading: false, errorMessage: '资料加载失败，请稍后重试');
     }
   }
 
@@ -49,11 +54,12 @@ class ProfileController extends StateNotifier<ProfileState> {
       final saved = await _repository.saveProfile(profile);
       state = ProfileState(profile: saved, loading: false);
     } catch (_) {
-      state = state.copyWith(loading: false, errorMessage: '资料保存失败');
+      state = state.copyWith(loading: false, errorMessage: '资料保存失败，请稍后重试');
     }
   }
 }
 
-final profileControllerProvider = StateNotifierProvider<ProfileController, ProfileState>(
+final profileControllerProvider =
+    StateNotifierProvider<ProfileController, ProfileState>(
   (ref) => ProfileController(ref.watch(profileRepositoryProvider)),
 );
