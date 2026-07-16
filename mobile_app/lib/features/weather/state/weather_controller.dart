@@ -71,11 +71,17 @@ class WeatherController extends StateNotifier<WeatherState> {
       if (permission == LocationPermission.denied) {
         finalPermission = await Geolocator.requestPermission();
       }
-      if (finalPermission == LocationPermission.denied ||
-          finalPermission == LocationPermission.deniedForever) {
+      if (finalPermission == LocationPermission.denied) {
         state = state.copyWith(
           loading: false,
           error: '需要位置权限才能获取天气信息',
+        );
+        return;
+      }
+      if (finalPermission == LocationPermission.deniedForever) {
+        state = state.copyWith(
+          loading: false,
+          error: '位置权限已被禁止，请在系统设置中开启',
         );
         return;
       }
