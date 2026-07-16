@@ -3,6 +3,10 @@ enum CaptureEventType {
   workout,
   transit,
   meal,
+  entertainment,
+  study,
+  life,
+  social,
   generic,
 }
 

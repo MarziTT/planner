@@ -1,5 +1,7 @@
-﻿import 'dart:convert';
+﻿import 'dart:async';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -20,6 +22,9 @@ class TokenStorage {
   static String? _cachedAccessToken;
   static String? _cachedRefreshToken;
   static Map<String, dynamic>? _cachedSessionUser;
+
+  /// Fires `true` whenever tokens are cleared (session invalidated).
+  final ValueNotifier<int> invalidateNotifier = ValueNotifier<int>(0);
 
   Future<void> saveSession({
     required String accessToken,
@@ -90,6 +95,7 @@ class TokenStorage {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _sessionUserKey);
+    invalidateNotifier.value++;
   }
 
   Future<void> savePhoneNumber(String phone) async {

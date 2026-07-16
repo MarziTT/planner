@@ -7,6 +7,7 @@ from .api.profile import profile_bp
 from .api.settings import settings_bp
 from .api.updates import updates_bp
 from .api.voice import voice_bp
+from .api.weather import weather_bp
 from .config import get_config
 from .extensions import cors, db, migrate
 from .models import register_models
@@ -31,6 +32,7 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
     app.register_blueprint(settings_bp, url_prefix="/api/v1")
     app.register_blueprint(voice_bp, url_prefix="/api/v1/voice")
     app.register_blueprint(updates_bp, url_prefix="/api/v1/app")
+    app.register_blueprint(weather_bp, url_prefix="/api/v1/weather")
 
     @app.get("/healthz")
     def healthcheck():

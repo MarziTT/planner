@@ -18,7 +18,7 @@ const _missingMorningChoice = '上午 9:00';
 const _missingAfternoonChoice = '下午 3:00';
 const _missingEveningChoice = '晚上 7:00';
 const _missingAllDayChoice = '全天提醒';
-const _pendingLabel = '\u8bf7\u5148\u786e\u8ba4\u65f6\u95f4';
+const _pendingLabel = '\u8bf7\u5148\u786e\u8ba4\u4fe1\u606f';
 const _composerTitle = '\u5feb\u901f\u8bb0\u4e00\u6761\u884c\u7a0b';
 const _clearTooltip = '\u6e05\u7a7a';
 const _hintText =
@@ -30,6 +30,8 @@ const _listeningHint = '正在录音，说完点一下停止，系统会自动�
 const _recognizingHint = '正在识别语音并整理行程...';
 const _ambiguousHint =
     '\u68c0\u6d4b\u5230\u65f6\u95f4\u6709\u6b67\u4e49\uff0c\u5148\u786e\u8ba4\u65e9\u4e0a\u8fd8\u662f\u4e0b\u5348\u3002';
+const _lowConfidenceHint =
+    '\u89e3\u6790\u7f6e\u4fe1\u5ea6\u8f83\u4f4e\uff0c\u8bf7\u786e\u8ba4\u4ee5\u4e0b\u4fe1\u606f\u540e\u63d0\u4ea4\u3002';
 const _defaultHint =
     '\u4e00\u53e5\u8bdd\u5c31\u80fd\u8bb0\u4e0b\u6765\uff0c\u7cfb\u7edf\u4f1a\u5c3d\u91cf\u5e2e\u4f60\u8865\u9f50\u65f6\u95f4\u3002';
 
@@ -130,7 +132,235 @@ Future<void> showCaptureAmbiguitySheet(
   );
 }
 
-class _PeriodChoiceTile extends StatelessWidget {
+Future<void> showLowConfidenceSheet(
+  BuildContext context, {
+  required ParsedScheduleDraft draft,
+  required ValueChanged<ParsedScheduleDraft> onConfirm,
+  required VoidCallback onCancel,
+}) {
+  final titleController = TextEditingController(text: draft.title);
+  CaptureEventType selectedEventType = draft.eventType;
+
+  final dateStr =
+      '${draft.startsAt.year}-${draft.startsAt.month.toString().padLeft(2, '0')}-${draft.startsAt.day.toString().padLeft(2, '0')}';
+  final timeStr =
+      '${draft.startsAt.hour.toString().padLeft(2, '0')}:${draft.startsAt.minute.toString().padLeft(2, '0')}';
+
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '确认行程信息',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _lowConfidenceHint,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Title field
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                        labelText: '标题',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Event type dropdown
+                    DropdownButtonFormField<CaptureEventType>(
+                      value: selectedEventType,
+                      decoration: const InputDecoration(
+                        labelText: '类型',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: CaptureEventType.generic,
+                          child: Text('通用'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.meeting,
+                          child: Text('会议'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.workout,
+                          child: Text('运动'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.transit,
+                          child: Text('出行'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.meal,
+                          child: Text('餐饮'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.entertainment,
+                          child: Text('娱乐'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.study,
+                          child: Text('学习'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.life,
+                          child: Text('生活'),
+                        ),
+                        DropdownMenuItem(
+                          value: CaptureEventType.social,
+                          child: Text('社交'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setSheetState(() {
+                            selectedEventType = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Time display (read-only for now)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _InfoChip(
+                            label: '日期',
+                            value: dateStr,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _InfoChip(
+                            label: '时间',
+                            value: timeStr,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Confidence indicator
+                    Row(
+                      children: [
+                        Text(
+                          '解析置信度',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${(draft.confidence * 100).toInt()}%',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: draft.confidence < 0.3
+                                    ? Theme.of(context).colorScheme.error
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.of(sheetContext).pop();
+                              onCancel();
+                            },
+                            child: const Text(_cancelLabel),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () {
+                              final updated = ParsedScheduleDraft(
+                                title: titleController.text.trim().isEmpty
+                                    ? '未命名行程'
+                                    : titleController.text.trim(),
+                                eventType: selectedEventType,
+                                startsAt: draft.startsAt,
+                                endsAt: draft.endsAt,
+                                ambiguityKind: draft.ambiguityKind,
+                                confidence: 1.0,
+                              );
+                              Navigator.of(sheetContext).pop();
+                              onConfirm(updated);
+                            },
+                            child: const Text(_confirmLabel),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
   const _PeriodChoiceTile({
     required this.label,
     required this.recommended,
@@ -235,6 +465,31 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
           () => ref.read(plannerControllerProvider.notifier).loadDashboard(),
         );
       }
+
+      final newPending = previous?.pendingDraft == null &&
+          next.pendingDraft != null &&
+          next.errorMessage == null;
+      if (newPending && context.mounted) {
+        final draft = next.pendingDraft!;
+        final isLowConfidence = draft.confidence < 0.5 &&
+            draft.ambiguityKind == TimeAmbiguityKind.none;
+        if (isLowConfidence) {
+          showLowConfidenceSheet(
+            context,
+            draft: draft,
+            onConfirm: (updated) {
+              ref
+                  .read(fastCaptureControllerProvider.notifier)
+                  .confirmLowConfidence(updated);
+            },
+            onCancel: () {
+              ref
+                  .read(fastCaptureControllerProvider.notifier)
+                  .cancelPendingDraft();
+            },
+          );
+        }
+      }
     });
 
     final state = ref.watch(fastCaptureControllerProvider);
@@ -289,76 +544,82 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: canInteract,
-                  minLines: 1,
-                  maxLines: 2,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _submit(),
-                  decoration: const InputDecoration(
-                    hintText: _hintText,
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
+          if (state.isListening)
+            _ListeningIndicator(
+              partialText: state.partialText,
+              onStop: _toggleMic,
+            )
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    enabled: canInteract,
+                    minLines: 1,
+                    maxLines: 2,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _submit(),
+                    decoration: const InputDecoration(
+                      hintText: _hintText,
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              IconButton.filled(
-                tooltip: state.isRecognizing
-                    ? _recognizingHint
-                    : state.isListening
-                        ? _stopRecording
-                        : _startRecording,
-                style: IconButton.styleFrom(
-                  backgroundColor: state.isListening
-                      ? theme.colorScheme.error
-                      : state.isRecognizing
-                          ? theme.colorScheme.primaryContainer
-                          : theme.colorScheme.secondaryContainer,
-                  foregroundColor: state.isListening
-                      ? theme.colorScheme.onError
-                      : state.isRecognizing
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSecondaryContainer,
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  tooltip: state.isRecognizing
+                      ? _recognizingHint
+                      : state.isListening
+                          ? _stopRecording
+                          : _startRecording,
+                  style: IconButton.styleFrom(
+                    backgroundColor: state.isListening
+                        ? theme.colorScheme.error
+                        : state.isRecognizing
+                            ? theme.colorScheme.primaryContainer
+                            : theme.colorScheme.secondaryContainer,
+                    foregroundColor: state.isListening
+                        ? theme.colorScheme.onError
+                        : state.isRecognizing
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSecondaryContainer,
+                  ),
+                  onPressed: state.isRecognizing
+                      ? null
+                      : canInteract || state.isListening
+                          ? _toggleMic
+                          : null,
+                  icon: state.isRecognizing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          state.isListening
+                              ? Icons.stop_rounded
+                              : Icons.mic_none_rounded,
+                        ),
                 ),
-                onPressed: state.isRecognizing
-                    ? null
-                    : canInteract || state.isListening
-                        ? _toggleMic
-                        : null,
-                icon: state.isRecognizing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        state.isListening
-                            ? Icons.stop_rounded
-                            : Icons.mic_none_rounded,
-                      ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                onPressed: canInteract ? _submit : null,
-                icon: state.isSubmitting
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.arrow_upward_rounded, size: 18),
-                label: const Text(_confirmLabel),
-              ),
-            ],
-          ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: canInteract ? _submit : null,
+                  icon: state.isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.arrow_upward_rounded, size: 18),
+                  label: const Text(_confirmLabel),
+                ),
+              ],
+            ),
           const SizedBox(height: 10),
           Text(
             state.isRecognizing
@@ -369,7 +630,10 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
                         ? state.pendingDraft!.ambiguityKind ==
                                 TimeAmbiguityKind.missingTime
                             ? '还没听到具体时间，选一个大概时段就能保存。'
-                            : _ambiguousHint
+                            : state.pendingDraft!.ambiguityKind ==
+                                    TimeAmbiguityKind.none
+                                ? _lowConfidenceHint
+                                : _ambiguousHint
                         : _defaultHint,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
@@ -404,6 +668,114 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _ListeningIndicator extends StatelessWidget {
+  const _ListeningIndicator({
+    required this.partialText,
+    required this.onStop,
+  });
+
+  final String? partialText;
+  final VoidCallback onStop;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                partialText != null && partialText!.trim().isNotEmpty
+                    ? partialText!
+                    : _listeningHint,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: partialText != null && partialText!.trim().isNotEmpty
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.onSurfaceVariant,
+                  fontStyle: partialText != null && partialText!.trim().isNotEmpty
+                      ? FontStyle.normal
+                      : FontStyle.italic,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              const _AudioWaveform(),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton.filled(
+          tooltip: _stopRecording,
+          style: IconButton.styleFrom(
+            backgroundColor: theme.colorScheme.error,
+            foregroundColor: theme.colorScheme.onError,
+          ),
+          onPressed: onStop,
+          icon: const Icon(Icons.stop_rounded),
+        ),
+      ],
+    );
+  }
+}
+
+class _AudioWaveform extends StatefulWidget {
+  const _AudioWaveform();
+
+  @override
+  State<_AudioWaveform> createState() => _AudioWaveformState();
+}
+
+class _AudioWaveformState extends State<_AudioWaveform>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _animController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AnimatedBuilder(
+      animation: _animController,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: List.generate(5, (i) {
+            final t = (_animController.value + i * 0.2) % 1.0;
+            final height = 6.0 + (t < 0.5 ? t * 2 : (1 - t) * 2) * 14;
+            return Container(
+              width: 3,
+              height: height,
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

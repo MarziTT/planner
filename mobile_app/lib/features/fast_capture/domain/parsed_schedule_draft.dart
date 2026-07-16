@@ -9,6 +9,7 @@ class ParsedScheduleDraft {
     required this.ambiguityKind,
     this.ambiguousHour,
     this.suggestedPeriod,
+    this.confidence = 0.0,
   });
 
   final String title;
@@ -18,4 +19,5 @@ class ParsedScheduleDraft {
   final TimeAmbiguityKind ambiguityKind;
   final int? ambiguousHour;
   final TimePeriod? suggestedPeriod;
+  final double confidence;
 }

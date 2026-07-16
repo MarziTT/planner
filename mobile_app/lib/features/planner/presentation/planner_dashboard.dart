@@ -5,6 +5,8 @@ import '../../../core/theme/theme_controller.dart';
 import '../../fitness/presentation/fitness_panel.dart';
 import '../../profile/state/profile_controller.dart';
 import '../../updates/presentation/hot_update_image.dart';
+import '../../weather/presentation/weather_card.dart';
+import '../../weather/state/weather_controller.dart';
 import 'planner_calendar_panel.dart';
 import '../domain/planner_models.dart';
 import '../state/planner_controller.dart';
@@ -57,6 +59,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
       if (profileState.profile == null && !profileState.loading) {
         ref.read(profileControllerProvider.notifier).load();
       }
+      ref.read(weatherControllerProvider.notifier).loadWeather();
     });
   }
 
@@ -114,6 +117,8 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             const SizedBox(height: 12),
             _InlineError(message: plannerState.errorMessage!),
           ],
+          const WeatherCard(),
+          const SizedBox(height: 14),
           _SectionHeader(
             title: _isSameDay(effectiveSelectedDay, normalizedToday)
                 ? '今天安排'

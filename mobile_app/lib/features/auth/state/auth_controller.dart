@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pixel_planner_mobile/core/storage/secure_token_storage.dart';
 
 import '../data/auth_repository.dart';
 import '../domain/auth_models.dart';
@@ -34,11 +35,26 @@ class AuthState {
 }
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._repository) : super(const AuthState()) {
+  AuthController(this._repository, this._tokenStorage)
+      : super(const AuthState()) {
     restore();
+    _tokenStorage.invalidateNotifier.addListener(_onTokensCleared);
   }
 
   final AuthRepository _repository;
+  final TokenStorage _tokenStorage;
+
+  void _onTokensCleared() {
+    if (state.session != null) {
+      state = const AuthState(restoring: false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _tokenStorage.invalidateNotifier.removeListener(_onTokensCleared);
+    super.dispose();
+  }
 
   Future<void> restore() async {
     try {
@@ -142,5 +158,8 @@ class AuthController extends StateNotifier<AuthState> {
 }
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
-  (ref) => AuthController(ref.watch(authRepositoryProvider)),
+  (ref) => AuthController(
+    ref.watch(authRepositoryProvider),
+    ref.watch(tokenStorageProvider),
+  ),
 );

@@ -29,19 +29,14 @@ class AuthRepository {
     }
 
     final user = AuthUser.fromJson(userJson);
-    try {
-      return await refreshSession(refreshToken: refreshToken, user: user);
-    } on DioException catch (error) {
-      if (_isAuthRejection(error)) {
-        await _storage.clear();
-        return null;
-      }
-      return AuthSession(
-        user: user,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-      );
-    }
+    // Do NOT eagerly refresh on startup — let the interceptor handle
+    // the first 401 silently. This avoids flushing the session on transient
+    // network errors or server hiccups.
+    return AuthSession(
+      user: user,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+    );
   }
 
   Future<void> sendCode({required String phone}) async {

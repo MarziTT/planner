@@ -12,6 +12,7 @@ class FastCaptureState {
     this.pendingDraft,
     this.errorMessage,
     this.recognizedText,
+    this.partialText,
     this.isListening = false,
     this.isRecognizing = false,
     this.isSubmitting = false,
@@ -20,6 +21,7 @@ class FastCaptureState {
   final ParsedScheduleDraft? pendingDraft;
   final String? errorMessage;
   final String? recognizedText;
+  final String? partialText;
   final bool isListening;
   final bool isRecognizing;
   final bool isSubmitting;
@@ -28,12 +30,14 @@ class FastCaptureState {
     ParsedScheduleDraft? pendingDraft,
     String? errorMessage,
     String? recognizedText,
+    String? partialText,
     bool? isListening,
     bool? isRecognizing,
     bool? isSubmitting,
     bool clearPendingDraft = false,
     bool clearError = false,
     bool clearRecognizedText = false,
+    bool clearPartialText = false,
   }) {
     return FastCaptureState(
       pendingDraft:
@@ -41,6 +45,8 @@ class FastCaptureState {
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       recognizedText:
           clearRecognizedText ? null : recognizedText ?? this.recognizedText,
+      partialText:
+          clearPartialText ? null : partialText ?? this.partialText,
       isListening: isListening ?? this.isListening,
       isRecognizing: isRecognizing ?? this.isRecognizing,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -61,7 +67,6 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   final PlannerRepository _repository;
   final ScheduleTextParser _parser;
   final SpeechCaptureGateway _speechGateway;
-  String? _lastHandledSpeech;
 
   Future<void> submitText(String input) async {
     if (state.isSubmitting) {
@@ -71,6 +76,16 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
     final draft = _parser.parse(input);
     if (draft.ambiguousHour != null ||
         draft.ambiguityKind == TimeAmbiguityKind.missingTime) {
+      state = state.copyWith(
+        pendingDraft: draft,
+        clearError: true,
+        isRecognizing: false,
+        isSubmitting: false,
+      );
+      return;
+    }
+
+    if (draft.confidence < 0.5) {
       state = state.copyWith(
         pendingDraft: draft,
         clearError: true,
@@ -107,6 +122,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
         startsAt: resolvedStartsAt,
         endsAt: resolvedEndsAt,
         ambiguityKind: pendingDraft.ambiguityKind,
+        confidence: pendingDraft.confidence,
       ),
     );
   }
@@ -141,8 +157,18 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
         startsAt: resolvedStartsAt,
         endsAt: resolvedEndsAt,
         ambiguityKind: TimeAmbiguityKind.none,
+        confidence: pendingDraft.confidence,
       ),
     );
+  }
+
+  Future<void> confirmLowConfidence(ParsedScheduleDraft updatedDraft) async {
+    final pendingDraft = state.pendingDraft;
+    if (pendingDraft == null || state.isSubmitting) {
+      return;
+    }
+
+    await _createEventFromDraft(updatedDraft);
   }
 
   Future<void> cancelPendingDraft() async {
@@ -159,30 +185,47 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
       return;
     }
 
-    _lastHandledSpeech = null;
     state = state.copyWith(
       isListening: true,
       isRecognizing: false,
       clearError: true,
+      clearPartialText: true,
     );
+
+    String lastPartial = '';
+
     try {
-      final available = await _speechGateway.initialize();
-      if (!available) {
+      final stream = _speechGateway.startListeningStream();
+
+      await for (final partial in stream) {
+        lastPartial = partial;
         state = state.copyWith(
-          isListening: false,
-          isRecognizing: false,
-          errorMessage: '语音服务不可用，请检查麦克风权限',
+          partialText: partial.isNotEmpty ? partial : null,
         );
-        return;
       }
-      final text = await _speechGateway.startListening();
-      if (text.isNotEmpty) {
+    } catch (_) {
+      // Stream error: fall through to handle gracefully
+    }
+
+    // Stream closed — recording was stopped by user or auto-finalized
+    state = state.copyWith(
+      isListening: false,
+      isRecognizing: true,
+      clearPartialText: true,
+    );
+
+    try {
+      // Retrieve backend ASR correction for higher accuracy
+      final corrected = await _speechGateway.finalizeStreamCapture();
+      final finalText = corrected.isNotEmpty ? corrected : lastPartial.trim();
+
+      if (finalText.isNotEmpty) {
         state = state.copyWith(
-          recognizedText: text,
+          recognizedText: finalText,
           isRecognizing: false,
           clearError: true,
         );
-        await submitText(text);
+        await submitText(finalText);
       } else {
         state = state.copyWith(
           isRecognizing: false,
@@ -195,10 +238,6 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
         isRecognizing: false,
         errorMessage: _voiceCaptureErrorMessage(error),
       );
-    } finally {
-      if (state.isListening) {
-        state = state.copyWith(isListening: false);
-      }
     }
   }
 
@@ -207,42 +246,13 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
       return;
     }
 
-    state = state.copyWith(
-      isListening: false,
-      isRecognizing: true,
-      clearError: true,
-    );
+    // Signal the gateway to stop; the running startListening() will
+    // pick up stream completion and continue with backend correction.
     try {
-      final text = await _speechGateway.stopListening();
-      await _handleRecognizedSpeech(text);
-    } catch (error) {
-      state = state.copyWith(
-        isRecognizing: false,
-        errorMessage: _voiceCaptureErrorMessage(error),
-      );
+      await _speechGateway.stopListening();
+    } catch (_) {
+      // Gateway may have already stopped; ignore
     }
-  }
-
-  Future<void> _handleRecognizedSpeech(String text) async {
-    final normalized = text.trim();
-    if (normalized.isEmpty) {
-      state = state.copyWith(
-        isRecognizing: false,
-        errorMessage: '没有识别到内容，请靠近手机说清楚一点，或稍微录久一点再停止。',
-      );
-      return;
-    }
-    if (_lastHandledSpeech == normalized) {
-      state = state.copyWith(isRecognizing: false);
-      return;
-    }
-    _lastHandledSpeech = normalized;
-    state = state.copyWith(
-      recognizedText: normalized,
-      isRecognizing: false,
-      clearError: true,
-    );
-    await submitText(normalized);
   }
 
   @override

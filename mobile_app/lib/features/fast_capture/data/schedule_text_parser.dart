@@ -29,6 +29,14 @@ class ScheduleTextParser {
     final ambiguousHour =
         _isAmbiguousHour(period, clock?.hour) ? clock!.hour : null;
     final missingTime = !hasExplicitTime;
+    final hasLocationOrPerson = _hasLocationOrPerson(normalized);
+
+    final confidence = _calculateConfidence(
+      hasExplicitTime: hasExplicitTime,
+      hasTitle: title.isNotEmpty,
+      eventType: eventType,
+      hasLocationOrPerson: hasLocationOrPerson,
+    );
 
     return ParsedScheduleDraft(
       title: title.isEmpty ? '未命名行程' : title,
@@ -43,7 +51,30 @@ class ScheduleTextParser {
       ambiguousHour: ambiguousHour,
       suggestedPeriod:
           missingTime ? _suggestedPeriodFor(period, eventType) : null,
+      confidence: confidence,
     );
+  }
+
+  double _calculateConfidence({
+    required bool hasExplicitTime,
+    required bool hasTitle,
+    required CaptureEventType eventType,
+    required bool hasLocationOrPerson,
+  }) {
+    double score = 0.2;
+    if (hasExplicitTime) score += 0.3;
+    if (hasTitle) score += 0.2;
+    if (eventType != CaptureEventType.generic) score += 0.15;
+    if (hasLocationOrPerson) score += 0.2;
+    return score.clamp(0.0, 1.0);
+  }
+
+  bool _hasLocationOrPerson(String input) {
+    return RegExp(r'(在|去|到|跟|和|与|约)(.+?)(?:[，,。\s]|$)').hasMatch(input) ||
+        RegExp(r'(?:餐厅|咖啡|图书馆|健身房|商场|公园|电影院|KTV|学校|公司|家|广场|中心|大厦)')
+            .hasMatch(input) ||
+        RegExp(r'[和跟与约][\u4e00-\u9fa5]{1,3}(?:一起|吃饭|玩|去|见|聚|聊)')
+            .hasMatch(input);
   }
 
   String _normalize(String input) {
@@ -239,9 +270,16 @@ class ScheduleTextParser {
       case CaptureEventType.transit:
         return 9;
       case CaptureEventType.meeting:
+      case CaptureEventType.study:
         return 10;
       case CaptureEventType.meal:
         return 12;
+      case CaptureEventType.entertainment:
+        return 20;
+      case CaptureEventType.life:
+        return 10;
+      case CaptureEventType.social:
+        return 18;
       case CaptureEventType.generic:
         return 9;
     }
@@ -267,9 +305,14 @@ class ScheduleTextParser {
       case CaptureEventType.meal:
         return TimePeriod.afternoon;
       case CaptureEventType.meeting:
+      case CaptureEventType.study:
       case CaptureEventType.transit:
+      case CaptureEventType.life:
       case CaptureEventType.generic:
         return TimePeriod.morning;
+      case CaptureEventType.entertainment:
+      case CaptureEventType.social:
+        return TimePeriod.evening;
     }
   }
 
@@ -288,7 +331,9 @@ class ScheduleTextParser {
         input.contains('训练') ||
         input.contains('跑步') ||
         input.contains('游泳') ||
-        input.contains('力量')) {
+        input.contains('力量') ||
+        input.contains('锻炼') ||
+        input.contains('瑜伽')) {
       return CaptureEventType.workout;
     }
     if (input.contains('飞机') ||
@@ -307,11 +352,34 @@ class ScheduleTextParser {
       return CaptureEventType.meeting;
     }
     if (input.contains('吃饭') ||
-        input.contains('约饭') ||
         input.contains('午休') ||
         input.contains('晚饭') ||
         input.contains('早餐')) {
       return CaptureEventType.meal;
+    }
+    if (input.contains('追剧') ||
+        input.contains('看片') ||
+        input.contains('打游戏') ||
+        input.contains('刷番')) {
+      return CaptureEventType.entertainment;
+    }
+    if (input.contains('看书') ||
+        input.contains('复习') ||
+        input.contains('备考') ||
+        input.contains('听课')) {
+      return CaptureEventType.study;
+    }
+    if (input.contains('买菜') ||
+        input.contains('做饭') ||
+        input.contains('打扫') ||
+        input.contains('洗衣')) {
+      return CaptureEventType.life;
+    }
+    if (input.contains('聚会') ||
+        input.contains('约饭') ||
+        input.contains('逛街') ||
+        input.contains('桌游')) {
+      return CaptureEventType.social;
     }
     return CaptureEventType.generic;
   }
@@ -326,6 +394,14 @@ class ScheduleTextParser {
         return const Duration(hours: 1);
       case CaptureEventType.meal:
         return const Duration(minutes: 75);
+      case CaptureEventType.entertainment:
+        return const Duration(hours: 2);
+      case CaptureEventType.study:
+        return const Duration(hours: 1);
+      case CaptureEventType.life:
+        return const Duration(minutes: 60);
+      case CaptureEventType.social:
+        return const Duration(hours: 2);
       case CaptureEventType.generic:
         return const Duration(hours: 1);
     }

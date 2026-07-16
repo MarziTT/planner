@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../main.dart';
 import '../../../core/storage/secure_token_storage.dart';
 import '../state/auth_controller.dart';
+
+const _savedPhoneKey = 'login_phone';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -27,11 +30,20 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _loadSavedPhone() async {
-    final storage = ref.read(tokenStorageProvider);
-    final phone = await storage.getPhoneNumber();
+    final prefs = ref.read(sharedPreferencesProvider);
+    var phone = prefs.getString(_savedPhoneKey);
+    if (phone == null || phone.isEmpty) {
+      final storage = ref.read(tokenStorageProvider);
+      phone = await storage.getPhoneNumber();
+    }
     if (phone != null && phone.isNotEmpty) {
       _phoneController.text = phone;
     }
+  }
+
+  Future<void> _savePhone(String phone) async {
+    ref.read(sharedPreferencesProvider).setString(_savedPhoneKey, phone);
+    await ref.read(tokenStorageProvider).savePhoneNumber(phone);
   }
 
   @override
@@ -65,6 +77,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) return;
 
+    _savePhone(phone);
+
     final notifier = ref.read(authControllerProvider.notifier);
     notifier.sendCode(phone: phone);
     _startCountdown();
@@ -83,7 +97,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     ref.listen(authControllerProvider, (prev, next) {
       if (next.session != null && prev?.session == null) {
-        ref.read(tokenStorageProvider).savePhoneNumber(_phoneController.text.trim());
+        _savePhone(_phoneController.text.trim());
       }
     });
 
