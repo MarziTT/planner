@@ -49,8 +49,14 @@ def weather_now():
     except RuntimeError:
         # 城市查询失败 → 降级为空数据，但不报 500
         result = {
-            "current": {"temp": -999, "condition": "--", "icon_code": "--"},
-            "daily": {"high": -999, "low": -999},
+            "current": {
+                "temp": -999,
+                "feels_like": -999,
+                "condition": {"code": -999, "text": "--"},
+                "humidity": -999,
+                "wind_speed": -999,
+            },
+            "daily": [],
             "hourly": [],
         }
 

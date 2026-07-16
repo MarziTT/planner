@@ -115,19 +115,22 @@ async def get_weather(lat: float, lon: float) -> dict:
     """
     根据经纬度获取天气信息。
 
-    Args:
-        lat: 纬度（-90 ~ 90）
-        lon: 经度（-180 ~ 180）
-
     Returns:
         {
-            "current":  {"temp": int, "condition": str, "icon_code": str},
-            "daily":    {"high": int, "low": int},
-            "hourly":   [{"time_offset": int, "condition": str, "temp": float}],
+            "current":  {
+                "temp": float, "feels_like": float,
+                "condition": {"code": int, "text": str},
+                "humidity": int, "wind_speed": float
+            },
+            "daily": [{
+                "date": str, "temp_max": float, "temp_min": float,
+                "condition": {"code": int, "text": str}
+            }],
+            "hourly": [{
+                "time": str, "temp": float,
+                "condition": {"code": int, "text": str}
+            }],
         }
-
-        - time_offset: 相对当前整点的小时偏移（1, 2, 3）
-        - 任意字段获取失败时使用兜底值（"--" 或 -999），不会抛出异常
     """
 
     # ---- 1. 获取城市 ID ---------------------------------------------------
@@ -163,26 +166,58 @@ async def get_weather(lat: float, lon: float) -> dict:
     # ---- 3. 组装 current --------------------------------------------------
     now = _safe_get(now_data, "now", default={}) or {}
 
+    icon_str = _safe_get(now, "icon", default=FALLBACK_STR) or FALLBACK_STR
+    try:
+        icon_code = int(icon_str)
+    except (ValueError, TypeError):
+        icon_code = FALLBACK_INT
+
     current = {
-        "temp": int(_safe_get(now, "temp", default=FALLBACK_STR) or FALLBACK_INT),
-        "condition": _safe_get(now, "text", default=FALLBACK_STR) or FALLBACK_STR,
-        "icon_code": _safe_get(now, "icon", default=FALLBACK_STR) or FALLBACK_STR,
+        "temp": float(_safe_get(now, "temp", default=FALLBACK_INT) or FALLBACK_INT),
+        "feels_like": float(_safe_get(now, "feelsLike", default=FALLBACK_INT) or FALLBACK_INT),
+        "condition": {
+            "code": icon_code,
+            "text": _safe_get(now, "text", default=FALLBACK_STR) or FALLBACK_STR,
+        },
+        "humidity": int(_safe_get(now, "humidity", default=FALLBACK_INT) or FALLBACK_INT),
+        "wind_speed": float(_safe_get(now, "windSpeed", default=FALLBACK_INT) or FALLBACK_INT),
     }
 
-    # ---- 4. 组装 daily（取今天） -------------------------------------------
-    daily = {"high": FALLBACK_INT, "low": FALLBACK_INT}
-    if day_data:
-        today = day_data[0]
-        daily["high"] = int(_safe_get(today, "tempMax", default=FALLBACK_STR) or FALLBACK_INT)
-        daily["low"] = int(_safe_get(today, "tempMin", default=FALLBACK_STR) or FALLBACK_INT)
+    # ---- 4. 组装 daily（今天 + 未来 6 天） ---------------------------------
+    daily: list[dict] = []
+    for item in day_data[:7]:
+        d_icon_str = _safe_get(item, "iconDay", default=FALLBACK_STR) or FALLBACK_STR
+        try:
+            d_icon_code = int(d_icon_str)
+        except (ValueError, TypeError):
+            d_icon_code = FALLBACK_INT
+
+        daily.append({
+            "date": _safe_get(item, "fxDate", default="") or "",
+            "temp_max": float(_safe_get(item, "tempMax", default=FALLBACK_INT) or FALLBACK_INT),
+            "temp_min": float(_safe_get(item, "tempMin", default=FALLBACK_INT) or FALLBACK_INT),
+            "condition": {
+                "code": d_icon_code,
+                "text": _safe_get(item, "textDay", default=FALLBACK_STR) or FALLBACK_STR,
+            },
+        })
 
     # ---- 5. 组装 hourly（未来 3 小时） -------------------------------------
     hourly: list[dict] = []
-    for offset, item in enumerate(hour_data[:3], start=1):
+    for item in hour_data[:3]:
+        h_icon_str = _safe_get(item, "icon", default=FALLBACK_STR) or FALLBACK_STR
+        try:
+            h_icon_code = int(h_icon_str)
+        except (ValueError, TypeError):
+            h_icon_code = FALLBACK_INT
+
         hourly.append({
-            "time_offset": offset,
-            "condition": _safe_get(item, "text", default=FALLBACK_STR) or FALLBACK_STR,
-            "temp": float(_safe_get(item, "temp", default=str(FALLBACK_INT)) or FALLBACK_INT),
+            "time": _safe_get(item, "fxTime", default="") or "",
+            "temp": float(_safe_get(item, "temp", default=FALLBACK_INT) or FALLBACK_INT),
+            "condition": {
+                "code": h_icon_code,
+                "text": _safe_get(item, "text", default=FALLBACK_STR) or FALLBACK_STR,
+            },
         })
 
     return {
