@@ -46,8 +46,9 @@ def weather_now():
 
     try:
         result = asyncio.run(get_weather(lat, lon))
-    except RuntimeError:
-        # 城市查询失败 → 降级为空数据，但不报 500
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Weather fetch failed (lat=%s, lon=%s): %s", lat, lon, exc)
         result = {
             "current": {
                 "temp": -999,

@@ -1,6 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../core/network/api_client.dart';
 import '../data/weather_repository.dart';
 
 // ============================================================
@@ -38,11 +40,8 @@ class WeatherState {
 // ============================================================
 
 final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
-  // 与 planner_repository 保持一致：通过 api_client 获取 dio 实例
-  // 若项目中 api_client 暴露了 getDio() / ApiClient.instance.dio，请在此处替换。
-  throw UnimplementedError(
-    'weatherRepositoryProvider 需要注入 dio 实例，请参考 api_client.dart 的实现进行替换。',
-  );
+  final dio = ref.watch(apiClientProvider);
+  return WeatherRepository(dio);
 });
 
 final weatherControllerProvider =
@@ -94,10 +93,25 @@ class WeatherController extends StateNotifier<WeatherState> {
 
       state = state.copyWith(data: data, loading: false);
     } catch (e) {
-      state = state.copyWith(
-        loading: false,
-        error: '获取天气失败，请稍后重试',
-      );
+      final msg = _formatError(e);
+      state = state.copyWith(loading: false, error: msg);
     }
   }
+}
+
+String _formatError(Object e) {
+  if (e is DioException) {
+    final statusCode = e.response?.statusCode;
+    if (statusCode == 401) return '登录态失效，请重新登录';
+    if (statusCode != null && statusCode >= 500) return '天气服务暂不可用 (${statusCode})';
+    if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return '网络连接失败，请检查网络';
+    }
+    return '请求失败 (${statusCode ?? e.type.name})';
+  }
+  if (e is LocationServiceDisabledException) return '请开启手机定位服务';
+  if (e.toString().contains('permission')) return '需要位置权限';
+  return '获取天气失败: ${e.toString().split('\n').first}';
 }

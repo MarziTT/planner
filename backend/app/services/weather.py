@@ -134,7 +134,15 @@ async def get_weather(lat: float, lon: float) -> dict:
     """
 
     # ---- 1. 获取城市 ID ---------------------------------------------------
-    location_id = await _get_location_id(lat, lon)
+    try:
+        location_id = await _get_location_id(lat, lon)
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Location lookup failed (lat=%s, lon=%s), using coordinate fallback", lat, lon
+        )
+        # 降级：直接用经纬度作为 location 参数（QWeather 支持）
+        location_id = f"{lon:.2f},{lat:.2f}"
 
     # ---- 2. 并行拉取三类天气数据 -------------------------------------------
     auth_hdrs = _auth_headers()
