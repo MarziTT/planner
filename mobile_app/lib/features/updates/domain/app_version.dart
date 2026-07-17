@@ -1,2 +1,2 @@
-const currentAppVersion = '5.0.2';
-const currentAppBuildNumber = 50002;
+const currentAppVersion = '5.0.3';
+const currentAppBuildNumber = 50003;
