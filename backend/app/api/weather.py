@@ -90,18 +90,22 @@ def weather_debug():
         result["jwt_traceback"] = tb_module.format_exc()
 
     try:
-        from ..services.weather import WEATHER_API_BASE, _auth_headers
+        from ..services.weather import _auth_headers
         headers = _auth_headers()
-        resp = asyncio.run(_request(
-            f"{WEATHER_API_BASE}/now",
-            {"location": "116.41,39.91"},
-            headers or None,
-            timeout=10.0,
-        ))
-        result["api_ok"] = True
-        result["api_code"] = resp.get("code", "N/A")
+        import httpx
+        import os
+        async def _test():
+            async with httpx.AsyncClient(timeout=10.0) as c:
+                r = await c.get("https://mp5u9xx3e3.re.qweatherapi.com/v7/weather/now", params={"location": "116.41,39.91"}, headers=headers or None)
+                return r
+        resp = asyncio.run(_test())
+        result["api_status"] = resp.status_code
+        result["api_body"] = resp.text[:500]
+        result["api_ok"] = resp.status_code < 400
+        result["api_code"] = resp.json().get("code", "N/A") if resp.text else "empty"
     except Exception as e:
         result["api_ok"] = False
         result["api_error"] = str(e)
+        result["api_error_type"] = type(e).__name__
 
     return success(result)

@@ -41,7 +41,7 @@ JWT_EXPIRE_SECONDS = 900
 JWT_IAT_OFFSET = 30
 
 GEO_API_BASE = "https://geoapi.qweather.com/v2/city/lookup"
-WEATHER_API_BASE = "https://devapi.qweather.com/v7/weather"
+WEATHER_API_BASE = "https://mp5u9xx3e3.re.qweatherapi.com/v7/weather"
 
 # 默认超时（秒）
 DEFAULT_TIMEOUT = 10.0
