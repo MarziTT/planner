@@ -2,7 +2,7 @@
     "latestVersion":  "5.0.1",
     "buildNumber":  "50001",
     "required":  false,
-    "downloadUrl":  "http://10.0.2.2:8888/app-debug.apk",
+    "downloadUrl":  "http://192.168.1.126:8888/app-debug.apk",
     "releaseNotes":  [
                          "修复天气获取失败与位置权限弹窗",
                          "修复登录态意外清除问题"
