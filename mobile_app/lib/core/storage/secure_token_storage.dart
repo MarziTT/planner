@@ -9,10 +9,6 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return TokenStorage(const FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
-      // 确保数据在 backup/restore 后仍可用
-    ),
-    iOptions: IOSOptions(
-      accessibility: KeychainAccessibility.first_unlock_this_device_only,
     ),
   ));
 });
