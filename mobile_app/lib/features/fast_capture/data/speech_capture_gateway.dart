@@ -181,20 +181,11 @@ class SpeechCaptureGateway {
     String localeId,
     StreamController<String> controller,
   ) async {
+    bool localSpeechOk = true;
+
     // Ensure local speech_to_text is ready
     if (!_speech.isAvailable) {
-      final ok = await _speech.initialize();
-      if (!ok) {
-        if (!controller.isClosed) {
-          controller.add('');
-          controller.close();
-        }
-        return;
-      }
-    }
-
-    if (_speech.isListening) {
-      await _speech.stop();
+      localSpeechOk = await _speech.initialize();
     }
 
     // Start remote recording in parallel if backend ASR is available
@@ -220,17 +211,35 @@ class SpeechCaptureGateway {
       }
     }
 
-    _speech.listen(
-      onResult: (result) {
-        if (!controller.isClosed) {
-          controller.add(result.recognizedWords);
-          if (result.finalResult) {
-            controller.close();
+    // If local speech failed and no remote ASR fallback → fail
+    if (!localSpeechOk && _remoteAsrClient == null) {
+      if (!controller.isClosed) {
+        controller.add('');
+        controller.close();
+      }
+      return;
+    }
+
+    if (_speech.isListening) {
+      await _speech.stop();
+    }
+
+    if (localSpeechOk) {
+      _speech.listen(
+        onResult: (result) {
+          if (!controller.isClosed) {
+            controller.add(result.recognizedWords);
+            if (result.finalResult) {
+              controller.close();
+            }
           }
-        }
-      },
-      listenOptions: stt.SpeechListenOptions(localeId: localeId),
-    );
+        },
+        listenOptions: stt.SpeechListenOptions(localeId: localeId),
+      );
+    }
+    // When local speech is unavailable but remote recording is active,
+    // the stream will be closed externally by stopListening() —
+    // finalizeStreamCapture() will then send audio to backend ASR.
   }
 
   Future<String> _startRemoteRecording() async {
