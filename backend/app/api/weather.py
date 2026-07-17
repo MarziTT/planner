@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import time
 
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request
 
-from ..services.weather import get_weather
+from ..services.weather import get_weather, QWEATHER_PRIVATE_KEY, QWEATHER_KID, QWEATHER_PROJECT_ID
 from .common import auth_required, failure, success
 
 weather_bp = Blueprint("weather", __name__)
@@ -66,4 +66,42 @@ def weather_now():
         }
 
     _cache[key] = (now, result)
+    return success(result)
+
+
+@weather_bp.get("/debug")
+def weather_debug():
+    """诊断和风天气连接状态，不要求登录。"""
+    import traceback as tb_module
+    result = {
+        "kid": QWEATHER_KID,
+        "project_id": QWEATHER_PROJECT_ID,
+        "private_key_len": len(QWEATHER_PRIVATE_KEY),
+        "private_key_starts": QWEATHER_PRIVATE_KEY[:30] if QWEATHER_PRIVATE_KEY else "(empty)",
+    }
+    try:
+        from ..services.weather import _generate_jwt, _request, _get_location_id
+        jwt_token = _generate_jwt()
+        result["jwt_ok"] = True
+        result["jwt_preview"] = jwt_token[:20] + "..."
+    except Exception as e:
+        result["jwt_ok"] = False
+        result["jwt_error"] = str(e)
+        result["jwt_traceback"] = tb_module.format_exc()
+
+    try:
+        from ..services.weather import WEATHER_API_BASE, _auth_headers
+        headers = _auth_headers()
+        resp = asyncio.run(_request(
+            f"{WEATHER_API_BASE}/now",
+            {"location": "116.41,39.91"},
+            headers or None,
+            timeout=10.0,
+        ))
+        result["api_ok"] = True
+        result["api_code"] = resp.get("code", "N/A")
+    except Exception as e:
+        result["api_ok"] = False
+        result["api_error"] = str(e)
+
     return success(result)
