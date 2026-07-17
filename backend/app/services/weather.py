@@ -26,7 +26,11 @@ import jwt
 #   QWEATHER_PROJECT_ID   - 项目 ID（同上）
 #
 # 备用：如果上面三个变量都未配置，回退到旧的 API Key 方式（QWEATHER_KEY）
-QWEATHER_PRIVATE_KEY = os.getenv("QWEATHER_PRIVATE_KEY", "").strip()
+_raw_private_key = os.getenv("QWEATHER_PRIVATE_KEY", "").strip()
+# 兼容 Railway 环境变量中可能的引号包裹和转义换行符
+if _raw_private_key.startswith('"') and _raw_private_key.endswith('"'):
+    _raw_private_key = _raw_private_key[1:-1]
+QWEATHER_PRIVATE_KEY = _raw_private_key.replace("\\n", "\n")
 QWEATHER_KID = os.getenv("QWEATHER_KID", "").strip()
 QWEATHER_PROJECT_ID = os.getenv("QWEATHER_PROJECT_ID", "").strip()
 QWEATHER_KEY = os.getenv("QWEATHER_KEY", "").strip()

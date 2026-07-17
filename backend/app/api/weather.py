@@ -48,7 +48,11 @@ def weather_now():
         result = asyncio.run(get_weather(lat, lon))
     except Exception as exc:
         import logging
-        logging.getLogger(__name__).warning("Weather fetch failed (lat=%s, lon=%s): %s", lat, lon, exc)
+        import traceback
+        logging.getLogger(__name__).error(
+            "Weather fetch failed (lat=%s, lon=%s): %s\n%s",
+            lat, lon, exc, traceback.format_exc(),
+        )
         result = {
             "current": {
                 "temp": -999,
