@@ -1,9 +1,12 @@
 {
-    "latestVersion":  "5.0.5",
-    "buildNumber":  "50005",
+    "latestVersion":  "5.0.6",
+    "buildNumber":  "50006",
     "required":  false,
     "downloadUrl":  "http://192.168.1.126:8888/app-debug.apk",
     "releaseNotes":  [
+                         "修复语音录入失效问题（恢复 _initStreamAndListen 执行顺序）",
+                         "修复账号资料页加载失败（后端 Profile API 空记录处理）",
+                         "速记自动标签匹配：根据事件类型自动添加对应标签",
                          "天气卡片全新设计：氛围渐变背景 + 大温度数字 + 全信息布局",
                          "天气数据缓存机制：1 小时自动刷新 + 手动刷新按钮",
                          "修复 profile_setup_page 中文编码损坏导致编译失败",
