@@ -1,12 +1,11 @@
 {
-    "latestVersion":  "5.0.0",
-    "buildNumber":  "50000",
+    "latestVersion":  "5.0.1",
+    "buildNumber":  "50001",
     "required":  false,
-    "downloadUrl":  "",
+    "downloadUrl":  "http://10.0.2.2:8888/app-debug.apk",
     "releaseNotes":  [
-                         "Flutter client rebuild baseline is live",
-                         "Backend update pipeline now separates app version prompts from remote resources",
-                         "ZZZ theme resources are ready for manifest-driven delivery"
+                         "修复天气获取失败与位置权限弹窗",
+                         "修复登录态意外清除问题"
                      ],
     "resources":  [
                       {
