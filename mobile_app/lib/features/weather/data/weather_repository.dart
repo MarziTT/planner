@@ -128,7 +128,7 @@ class WeatherRepository {
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/weather',
+        '/weather/',
         queryParameters: {
           'lat': lat.toString(),
           'lon': lon.toString(),

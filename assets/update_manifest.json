@@ -1,13 +1,14 @@
 {
-    "latestVersion":  "5.0.3",
-    "buildNumber":  "50003",
+    "latestVersion":  "5.0.4",
+    "buildNumber":  "50004",
     "required":  false,
     "downloadUrl":  "http://192.168.1.126:8888/app-debug.apk",
     "releaseNotes":  [
                          "修复 Android 位置权限弹窗缺失",
                          "修复退出登录后手机号未保存",
                          "修复天气模块重试按钮及登录后自动刷新",
-                         "修复版本号同步导致反复提示更新"
+                         "修复版本号同步导致反复提示更新",
+                         "修复天气 308 重定向丢失认证头导致 401"
                      ],
     "resources":  [
                       {
