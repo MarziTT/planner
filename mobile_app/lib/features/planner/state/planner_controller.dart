@@ -206,6 +206,37 @@ class PlannerController extends StateNotifier<PlannerState> {
     }
   }
 
+  Future<void> toggleEvent(PlannerEvent event) async {
+    try {
+      final updated = await _repository.toggleEvent(event);
+      final events = state.events
+          .map((item) => item.id == updated.id ? updated : item)
+          .toList()
+        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+      state = state.copyWith(events: events, clearError: true);
+    } catch (error) {
+      state = state.copyWith(
+        errorMessage: _plannerErrorMessage(error, fallback: '更新行程状态失败'),
+      );
+    }
+  }
+
+  Future<void> clearCompletedTodos() async {
+    final completedIds = state.todos
+        .where((t) => t.completed)
+        .map((t) => t.id)
+        .toList();
+    for (final id in completedIds) {
+      try {
+        await _repository.deleteTodo(id);
+      } catch (_) {}
+    }
+    state = state.copyWith(
+      todos: state.todos.where((t) => !t.completed).toList(),
+      clearError: true,
+    );
+  }
+
   void markLoggedOut() {
     state = const PlannerState();
   }

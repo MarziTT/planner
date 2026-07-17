@@ -206,13 +206,15 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           Expanded(child: pages[currentIndex]),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showQuickCaptureSheet(context),
+      floatingActionButton: GestureDetector(
         onLongPress: () => _onFabLongPress(),
-        tooltip: '快速速记',
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        child: const Icon(Icons.bolt),
+        child: FloatingActionButton(
+          onPressed: () => _showQuickCaptureSheet(context),
+          tooltip: '快速速记',
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          child: const Icon(Icons.bolt),
+        ),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,

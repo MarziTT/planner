@@ -69,7 +69,9 @@ final apiClientProvider = Provider<Dio>((ref) {
 Future<String?> _refreshAccessToken(TokenStorage storage, Dio dio) async {
   final refreshToken = await storage.readRefreshToken();
   if (refreshToken == null || refreshToken.isEmpty) {
-    await storage.clear();
+    // 不要 clear(), 让上层显式登出时才清。
+    // refreshToken 为空可能是模拟器 secure_storage 延迟导致的瞬态,
+    // 清除 session 会导致用户被无故踢出。
     return null;
   }
 
@@ -85,7 +87,6 @@ Future<String?> _refreshAccessToken(TokenStorage storage, Dio dio) async {
     final nextRefreshToken = tokens['refreshToken'] as String? ?? '';
 
     if (nextAccessToken.isEmpty || nextRefreshToken.isEmpty) {
-      await storage.clear();
       return null;
     }
 
@@ -95,7 +96,6 @@ Future<String?> _refreshAccessToken(TokenStorage storage, Dio dio) async {
     );
     return nextAccessToken;
   } on DioException {
-    await storage.clear();
     return null;
   }
 }

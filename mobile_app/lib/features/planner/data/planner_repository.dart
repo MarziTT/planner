@@ -93,4 +93,17 @@ class PlannerRepository {
   Future<void> deleteTodo(int id) async {
     await _dio.delete('/todos/$id');
   }
+
+  Future<PlannerEvent> toggleEvent(PlannerEvent event) async {
+    final newStatus = event.status == 'done' ? 'planned' : 'done';
+    final response = await _dio.put('/events/${event.id}', data: {
+      'title': event.title,
+      'startsAt': event.startsAt.toIso8601String(),
+      'endsAt': event.endsAt.toIso8601String(),
+      'status': newStatus,
+    });
+    return PlannerEvent.fromJson(
+      Map<String, dynamic>.from(response.data['data']['item'] as Map),
+    );
+  }
 }

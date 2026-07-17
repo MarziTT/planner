@@ -128,7 +128,7 @@ class WeatherRepository {
   }) async {
     try {
       final response = await _dio.get<Map<String, dynamic>>(
-        '/api/v1/weather/',
+        '/weather',
         queryParameters: {
           'lat': lat.toString(),
           'lon': lon.toString(),
@@ -139,7 +139,12 @@ class WeatherRepository {
         throw Exception('Weather API returned null data');
       }
 
-      return WeatherData.fromJson(response.data!);
+      final wrapper = response.data!;
+      if (wrapper['data'] == null) {
+        throw Exception('Weather API returned null data field');
+      }
+
+      return WeatherData.fromJson(wrapper['data'] as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('WeatherRepository.fetchWeather DioException: ${e.message}');
       rethrow;

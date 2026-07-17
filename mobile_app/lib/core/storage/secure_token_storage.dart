@@ -6,11 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
-  return const TokenStorage(FlutterSecureStorage());
+  return TokenStorage(const FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      // 确保数据在 backup/restore 后仍可用
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock_this_device_only,
+    ),
+  ));
 });
 
 class TokenStorage {
-  const TokenStorage(this._storage);
+  TokenStorage(this._storage);
 
   final FlutterSecureStorage _storage;
 
@@ -23,7 +31,6 @@ class TokenStorage {
   static String? _cachedRefreshToken;
   static Map<String, dynamic>? _cachedSessionUser;
 
-  /// Fires `true` whenever tokens are cleared (session invalidated).
   final ValueNotifier<int> invalidateNotifier = ValueNotifier<int>(0);
 
   Future<void> saveSession({

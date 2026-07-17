@@ -361,7 +361,10 @@ class _InfoChip extends StatelessWidget {
     );
   }
 }
+
+class _PeriodChoiceTile extends StatelessWidget {
   const _PeriodChoiceTile({
+    super.key,
     required this.label,
     required this.recommended,
     required this.onTap,

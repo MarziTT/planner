@@ -54,7 +54,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
     final now = DateTime.now();
     _selectedDay = _normalizedDate(now);
     _visibleMonth = DateTime(now.year, now.month);
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final profileState = ref.read(profileControllerProvider);
       if (profileState.profile == null && !profileState.loading) {
         ref.read(profileControllerProvider.notifier).load();
@@ -85,7 +85,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
       selectedDay: effectiveSelectedDay,
       today: normalizedToday,
       events: selectedDayEvents,
-      todos: plannerState.openTodos,
+      todos: plannerState.todos,
       includeTodos: _isSameDay(effectiveSelectedDay, normalizedToday),
     );
     final upcomingItems = _buildAgendaItems(
@@ -151,6 +151,18 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             }),
           ),
           const SizedBox(height: 12),
+          if (_hasCompletedTodos(plannerState.todos))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _clearCompletedTodos,
+                  icon: const Icon(Icons.auto_delete_outlined, size: 18),
+                  label: const Text('清除已完成待办'),
+                ),
+              ),
+            ),
           if (agendaItems.isEmpty)
             _EmptyBand(
               title: _isSameDay(effectiveSelectedDay, normalizedToday)
@@ -170,6 +182,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               onEditEvent: (event) =>
                   _showEventEditor(context: context, event: event),
               onDeleteEvent: _deleteEvent,
+              onToggleEvent: _toggleEvent,
               onEditTodo: (todo) =>
                   _showTodoEditor(context: context, todo: todo),
               onDeleteTodo: _deleteTodo,
@@ -204,6 +217,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               onEditEvent: (event) =>
                   _showEventEditor(context: context, event: event),
               onDeleteEvent: _deleteEvent,
+              onToggleEvent: _toggleEvent,
               onEditTodo: (todo) =>
                   _showTodoEditor(context: context, todo: todo),
               onDeleteTodo: _deleteTodo,
@@ -273,6 +287,19 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
       }
     }
     return null;
+  }
+
+  Future<void> _toggleEvent(PlannerEvent event) async {
+    await ref.read(plannerControllerProvider.notifier).toggleEvent(event);
+  }
+
+  Future<void> _clearCompletedTodos() async {
+    final controller = ref.read(plannerControllerProvider.notifier);
+    await controller.clearCompletedTodos();
+  }
+
+  bool _hasCompletedTodos(List<PlannerTodo> todos) {
+    return todos.any((t) => t.completed);
   }
 
   @override
@@ -658,14 +685,19 @@ List<_AgendaItem> _buildAgendaItems({
     if (includeTodos) ...todos.map(_AgendaItem.todo),
   ];
   items.sort((left, right) {
-    if (left.kind == right.kind) {
-      if (left.event != null && right.event != null) {
-        return left.event!.startsAt.compareTo(right.event!.startsAt);
-      }
-      return 0;
+    // completed items always at the bottom
+    final leftDone = left.kind == _AgendaItemKind.event
+        ? left.event!.status == 'done'
+        : left.todo!.completed;
+    final rightDone = right.kind == _AgendaItemKind.event
+        ? right.event!.status == 'done'
+        : right.todo!.completed;
+    if (leftDone != rightDone) return leftDone ? 1 : -1;
+    // within same completion state, sort by time
+    if (left.event != null && right.event != null) {
+      return left.event!.startsAt.compareTo(right.event!.startsAt);
     }
-    if (left.event != null) return -1;
-    return 1;
+    return 0;
   });
   return items;
 }
@@ -679,6 +711,7 @@ class _AgendaList extends StatelessWidget {
     required this.deletingTodoIds,
     required this.onEditEvent,
     required this.onDeleteEvent,
+    required this.onToggleEvent,
     required this.onEditTodo,
     required this.onDeleteTodo,
   });
@@ -690,6 +723,7 @@ class _AgendaList extends StatelessWidget {
   final Set<int> deletingTodoIds;
   final ValueChanged<PlannerEvent> onEditEvent;
   final Future<void> Function(PlannerEvent event) onDeleteEvent;
+  final Future<void> Function(PlannerEvent event) onToggleEvent;
   final ValueChanged<PlannerTodo> onEditTodo;
   final Future<void> Function(PlannerTodo todo) onDeleteTodo;
 
@@ -706,6 +740,7 @@ class _AgendaList extends StatelessWidget {
             isDeleting: deletingEventIds.contains(event.id),
             onEdit: () => onEditEvent(event),
             onDelete: () => onDeleteEvent(event),
+            onToggle: () => onToggleEvent(event),
           );
         }
         final todo = item.todo!;
@@ -721,7 +756,7 @@ class _AgendaList extends StatelessWidget {
   }
 }
 
-class _EventTile extends StatelessWidget {
+class _EventTile extends ConsumerWidget {
   const _EventTile({
     required this.event,
     required this.highlighted,
@@ -729,6 +764,7 @@ class _EventTile extends StatelessWidget {
     required this.isDeleting,
     required this.onEdit,
     required this.onDelete,
+    required this.onToggle,
   });
 
   final PlannerEvent event;
@@ -737,15 +773,24 @@ class _EventTile extends StatelessWidget {
   final bool isDeleting;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
+  final Future<void> Function() onToggle;
+
+  bool get _isDone => event.status == 'done';
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isZzz = zzzBackground != null;
-    final foreground = isZzz ? Colors.white : theme.colorScheme.onSurface;
+    final foreground = isZzz
+        ? Colors.white
+        : _isDone
+            ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
+            : theme.colorScheme.onSurface;
     final muted = isZzz
         ? Colors.white.withValues(alpha: 0.76)
-        : theme.colorScheme.onSurfaceVariant;
+        : _isDone
+            ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.40)
+            : theme.colorScheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -756,14 +801,18 @@ class _EventTile extends StatelessWidget {
               ? const Color(0xFF0A0B10)
               : highlighted
                   ? theme.colorScheme.primaryContainer.withValues(alpha: 0.72)
-                  : theme.colorScheme.surfaceContainerLow,
+                  : _isDone
+                      ? theme.colorScheme.surfaceContainerLowest
+                      : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: highlighted
                 ? theme.colorScheme.primary.withValues(alpha: 0.42)
                 : isZzz
                     ? Colors.white.withValues(alpha: 0.18)
-                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+                    : _isDone
+                        ? theme.colorScheme.outlineVariant.withValues(alpha: 0.20)
+                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
           ),
         ),
         child: Stack(
@@ -803,6 +852,8 @@ class _EventTile extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             color: foreground,
                             fontWeight: FontWeight.w800,
+                            decoration:
+                                _isDone ? TextDecoration.lineThrough : null,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -828,6 +879,9 @@ class _EventTile extends StatelessWidget {
                                 style: theme.textTheme.titleSmall?.copyWith(
                                   color: foreground,
                                   fontWeight: FontWeight.w800,
+                                  decoration: _isDone
+                                      ? TextDecoration.lineThrough
+                                      : null,
                                 ),
                               ),
                             ),
@@ -843,11 +897,29 @@ class _EventTile extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
-                                  '\u5f53\u524d\u63d0\u9192',
+                                  '当前提醒',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: isZzz
                                         ? Colors.white
                                         : theme.colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                            if (_isDone && !highlighted)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.tertiary
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '已完成',
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.tertiary,
                                   ),
                                 ),
                               ),
@@ -863,6 +935,15 @@ class _EventTile extends StatelessWidget {
                         const SizedBox(height: 10),
                         Row(
                           children: [
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              color: foreground,
+                              onPressed: isDeleting ? null : onToggle,
+                              icon: Icon(_isDone
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked),
+                              tooltip: _isDone ? '标记未完成' : '标记完成',
+                            ),
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               color: foreground,
@@ -897,7 +978,6 @@ class _EventTile extends StatelessWidget {
     );
   }
 }
-
 class _TodoTile extends ConsumerWidget {
   const _TodoTile({
     required this.todo,
@@ -978,7 +1058,7 @@ class _TodoTile extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           todo.completed
-                              ? '\u5df2\u5b8c\u6210'
+                              ? '已完成'
                               : '\u5f85\u5904\u7406',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: muted,
