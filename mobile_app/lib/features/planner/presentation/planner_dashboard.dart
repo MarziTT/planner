@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
+import '../../auth/state/auth_controller.dart';
 import '../../fitness/presentation/fitness_panel.dart';
 import '../../profile/state/profile_controller.dart';
 import '../../updates/presentation/hot_update_image.dart';
@@ -65,6 +66,12 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authControllerProvider, (prev, next) {
+      if (prev?.session == null && next.session != null) {
+        ref.read(weatherControllerProvider.notifier).loadWeather();
+      }
+    });
+
     final plannerState = ref.watch(plannerControllerProvider);
     final profileState = ref.watch(profileControllerProvider);
     final themeState = ref.watch(themeControllerProvider);

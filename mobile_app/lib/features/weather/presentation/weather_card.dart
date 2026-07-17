@@ -35,7 +35,7 @@ class WeatherCard extends ConsumerWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: _buildBody(context, state, colorScheme),
+        child: _buildBody(context, state, colorScheme, ref),
       ),
     );
   }
@@ -44,6 +44,7 @@ class WeatherCard extends ConsumerWidget {
     BuildContext context,
     WeatherState state,
     ColorScheme colorScheme,
+    WidgetRef ref,
   ) {
     if (state.loading) {
       return const _WeatherSkeleton();
@@ -52,10 +53,7 @@ class WeatherCard extends ConsumerWidget {
     if (state.error != null) {
       return _WeatherError(
         message: state.error!,
-        onRetry: () {
-          // 通过 Provider 触发重试
-          // 注意：此处需在父级持有 controller 引用，或改用 ref.read
-        },
+        onRetry: () => ref.read(weatherControllerProvider.notifier).loadWeather(),
       );
     }
 

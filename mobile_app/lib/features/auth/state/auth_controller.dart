@@ -90,6 +90,7 @@ class AuthController extends StateNotifier<AuthState> {
         phone: phone,
         code: code,
       );
+      await _tokenStorage.savePhoneNumber(phone);
       state = AuthState(session: session, loading: false, restoring: false);
     } catch (e) {
       final msg = e is DioException ? '登录失败：${_dioErrorMsg(e)}' : '登录失败：$e';

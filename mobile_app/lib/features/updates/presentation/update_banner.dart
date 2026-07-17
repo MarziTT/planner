@@ -133,7 +133,7 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('当前版本 5.0.0 (50000)'),
+              Text('当前版本 $currentAppVersion ($currentAppBuildNumber)'),
               const SizedBox(height: 4),
               Text('目标版本 ${info.version} (${info.buildNumber})'),
               const SizedBox(height: 8),
