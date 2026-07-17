@@ -1,9 +1,12 @@
 {
-    "latestVersion":  "5.0.4",
-    "buildNumber":  "50004",
+    "latestVersion":  "5.0.5",
+    "buildNumber":  "50005",
     "required":  false,
     "downloadUrl":  "http://192.168.1.126:8888/app-debug.apk",
     "releaseNotes":  [
+                         "天气卡片全新设计：氛围渐变背景 + 大温度数字 + 全信息布局",
+                         "天气数据缓存机制：1 小时自动刷新 + 手动刷新按钮",
+                         "修复 profile_setup_page 中文编码损坏导致编译失败",
                          "修复 Android 位置权限弹窗缺失",
                          "修复退出登录后手机号未保存",
                          "修复天气模块重试按钮及登录后自动刷新",

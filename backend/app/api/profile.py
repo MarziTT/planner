@@ -17,6 +17,12 @@ def _profile_to_dict(profile: Profile):
         "city": profile.city,
         "bio": profile.bio,
         "fitnessGoal": profile.fitness_goal,
+        "identity": profile.identity,
+        "routineStart": profile.routine_start,
+        "routineEnd": profile.routine_end,
+        "focusArea": profile.focus_area,
+        "wantsFitness": profile.wants_fitness,
+        "fitnessMode": profile.fitness_mode,
     }
 
 
@@ -37,6 +43,12 @@ def update_profile():
     profile.city = payload.get("city", profile.city) or ""
     profile.bio = payload.get("bio", profile.bio) or ""
     profile.fitness_goal = payload.get("fitnessGoal", profile.fitness_goal) or ""
+    profile.identity = payload.get("identity", profile.identity) or "worker"
+    profile.routine_start = payload.get("routineStart", profile.routine_start) or "09:00"
+    profile.routine_end = payload.get("routineEnd", profile.routine_end) or "18:00"
+    profile.focus_area = payload.get("focusArea", profile.focus_area) or ""
+    profile.wants_fitness = bool(payload.get("wantsFitness", profile.wants_fitness))
+    profile.fitness_mode = payload.get("fitnessMode", profile.fitness_mode) or "self"
     g.current_user.onboarding_done = True
     db.session.commit()
     return success({"item": _profile_to_dict(profile), "onboardingDone": True})

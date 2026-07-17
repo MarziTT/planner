@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/profile_model.dart';
@@ -12,8 +12,6 @@ class ProfilePage extends ConsumerStatefulWidget {
 }
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
-  final _cityController = TextEditingController();
-  final _bioController = TextEditingController();
   final _goalController = TextEditingController();
   final _focusController = TextEditingController();
   String _identity = 'worker';
@@ -31,8 +29,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   void dispose() {
-    _cityController.dispose();
-    _bioController.dispose();
     _goalController.dispose();
     _focusController.dispose();
     super.dispose();
@@ -44,8 +40,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       return;
     }
     _seedKey = seedKey;
-    _cityController.text = profile.city;
-    _bioController.text = profile.bio;
     _goalController.text = profile.fitnessGoal;
     _focusController.text = profile.focusArea;
     _identity = profile.identity;
@@ -65,10 +59,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     final effectiveProfile = profile ??
         UserProfile(
-          gender: '',
-          age: null,
-          city: _cityController.text.trim(),
-          bio: _bioController.text.trim(),
           fitnessGoal: _goalController.text.trim(),
           identity: _identity,
           routineStart: _routineStart,
@@ -81,7 +71,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Text('身份与节奏', style: Theme.of(context).textTheme.titleLarge),
+        Text('个人设置', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
         Text(
           '先告诉我你现在的生活形态，首页会按你的节奏切出更贴近的提醒和工作模式。',
@@ -129,12 +119,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ),
         const SizedBox(height: 24),
-        Text('账号与资料', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        TextField(controller: _cityController, decoration: const InputDecoration(labelText: '城市')),
-        const SizedBox(height: 12),
-        TextField(controller: _bioController, decoration: const InputDecoration(labelText: '简介')),
-        const SizedBox(height: 24),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('开启健身模块'),
@@ -169,8 +153,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               ? null
               : () => ref.read(profileControllerProvider.notifier).save(
                     effectiveProfile.copyWith(
-                      city: _cityController.text.trim(),
-                      bio: _bioController.text.trim(),
                       fitnessGoal: _goalController.text.trim(),
                       identity: _identity,
                       routineStart: _routineStart,

@@ -1,9 +1,5 @@
-﻿class UserProfile {
+class UserProfile {
   const UserProfile({
-    required this.gender,
-    required this.age,
-    required this.city,
-    required this.bio,
     required this.fitnessGoal,
     this.identity = 'worker',
     this.routineStart = '09:00',
@@ -13,10 +9,6 @@
     this.fitnessMode = 'self',
   });
 
-  final String gender;
-  final int? age;
-  final String city;
-  final String bio;
   final String fitnessGoal;
   final String identity;
   final String routineStart;
@@ -83,10 +75,6 @@
   }
 
   UserProfile copyWith({
-    String? gender,
-    int? age,
-    String? city,
-    String? bio,
     String? fitnessGoal,
     String? identity,
     String? routineStart,
@@ -96,10 +84,6 @@
     String? fitnessMode,
   }) {
     return UserProfile(
-      gender: gender ?? this.gender,
-      age: age ?? this.age,
-      city: city ?? this.city,
-      bio: bio ?? this.bio,
       fitnessGoal: fitnessGoal ?? this.fitnessGoal,
       identity: identity ?? this.identity,
       routineStart: routineStart ?? this.routineStart,
@@ -112,10 +96,6 @@
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-      gender: json['gender'] as String? ?? '',
-      age: (json['age'] as num?)?.toInt(),
-      city: json['city'] as String? ?? '',
-      bio: json['bio'] as String? ?? '',
       fitnessGoal: json['fitnessGoal'] as String? ?? '',
       identity: json['identity'] as String? ?? 'worker',
       routineStart: json['routineStart'] as String? ?? '09:00',
@@ -128,10 +108,6 @@
 
   Map<String, dynamic> toJson() {
     return {
-      'gender': gender,
-      'age': age,
-      'city': city,
-      'bio': bio,
       'fitnessGoal': fitnessGoal,
       'identity': identity,
       'routineStart': routineStart,

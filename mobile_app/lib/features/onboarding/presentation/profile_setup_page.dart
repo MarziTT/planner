@@ -21,12 +21,10 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   bool _wantsFitness = false;
   String _fitnessMode = 'self';
   final _focusController = TextEditingController();
-  final _cityController = TextEditingController();
 
   @override
   void dispose() {
     _focusController.dispose();
-    _cityController.dispose();
     super.dispose();
   }
 
@@ -48,10 +46,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 
   UserProfile _buildProfile() {
     return UserProfile(
-      gender: '',
-      age: null,
-      city: _cityController.text.trim(),
-      bio: '',
       fitnessGoal: _wantsFitness ? _focusController.text.trim() : '',
       identity: _identity,
       routineStart: _routineStart,
@@ -152,14 +146,6 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             ],
           ),
           const SizedBox(height: 18),
-          TextField(
-            controller: _cityController,
-            decoration: const InputDecoration(
-              labelText: '常驻城市（可选）',
-              prefixIcon: Icon(Icons.location_on_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
           TextField(
             controller: _focusController,
             decoration: InputDecoration(

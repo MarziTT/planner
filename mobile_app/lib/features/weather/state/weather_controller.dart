@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,11 +15,13 @@ class WeatherState {
   final WeatherData? data;
   final bool loading;
   final String? error;
+  final DateTime? lastFetchedAt;
 
   const WeatherState({
     this.data,
     this.loading = false,
     this.error,
+    this.lastFetchedAt,
   });
 
   WeatherState copyWith({
@@ -26,12 +30,24 @@ class WeatherState {
     String? error,
     bool clearError = false,
     bool clearData = false,
+    DateTime? lastFetchedAt,
+    bool clearLastFetchedAt = false,
   }) {
     return WeatherState(
       data: clearData ? null : (data ?? this.data),
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
+      lastFetchedAt: clearLastFetchedAt
+          ? null
+          : (lastFetchedAt ?? this.lastFetchedAt),
     );
+  }
+
+  /// 距今 >= 1 小时视为过期
+  bool get isStale {
+    if (lastFetchedAt == null) return true;
+    return DateTime.now().difference(lastFetchedAt!) >=
+        const Duration(hours: 1);
   }
 }
 
@@ -56,10 +72,40 @@ final weatherControllerProvider =
 
 class WeatherController extends StateNotifier<WeatherState> {
   final WeatherRepository _repository;
+  Timer? _refreshTimer;
 
-  WeatherController(this._repository) : super(const WeatherState());
+  WeatherController(this._repository) : super(const WeatherState()) {
+    // 1 小时自动刷新
+    _refreshTimer = Timer.periodic(
+      const Duration(hours: 1),
+      (_) => loadWeather(),
+    );
+  }
 
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    super.dispose();
+  }
+
+  /// 入口：带缓存判断。若数据未过期（< 1 小时）则直接跳过请求。
   Future<void> loadWeather() async {
+    if (state.loading) return;
+    if (state.lastFetchedAt != null && !state.isStale) return;
+
+    await _doLoad();
+  }
+
+  /// 手动刷新：绕过缓存判断，强制重新拉取。
+  Future<void> manualRefresh() async {
+    if (state.loading) return;
+    state = state.copyWith(loading: true, clearError: true);
+    await _doLoad();
+  }
+
+  /// 核心加载逻辑（缓存判断之外的真实请求流程）。
+  Future<void> _doLoad() async {
     if (state.loading) return;
 
     state = state.copyWith(loading: true, clearError: true);
@@ -97,7 +143,11 @@ class WeatherController extends StateNotifier<WeatherState> {
         lon: position.longitude,
       );
 
-      state = state.copyWith(data: data, loading: false);
+      state = state.copyWith(
+        data: data,
+        loading: false,
+        lastFetchedAt: DateTime.now(),
+      );
     } catch (e) {
       final msg = _formatError(e);
       state = state.copyWith(loading: false, error: msg);
@@ -109,7 +159,7 @@ String _formatError(Object e) {
   if (e is DioException) {
     final statusCode = e.response?.statusCode;
     if (statusCode == 401) return '登录态失效，请重新登录';
-    if (statusCode != null && statusCode >= 500) return '天气服务暂不可用 (${statusCode})';
+    if (statusCode != null && statusCode >= 500) return '天气服务暂不可用 ($statusCode)';
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

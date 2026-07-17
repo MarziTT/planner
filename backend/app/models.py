@@ -98,6 +98,12 @@ class Profile(TimestampMixin, db.Model):
     city = db.Column(db.String(80), default="", nullable=False)
     bio = db.Column(db.String(255), default="", nullable=False)
     fitness_goal = db.Column(db.String(120), default="", nullable=False)
+    identity = db.Column(db.String(32), default="worker", nullable=False)
+    routine_start = db.Column(db.String(8), default="09:00", nullable=False)
+    routine_end = db.Column(db.String(8), default="18:00", nullable=False)
+    focus_area = db.Column(db.String(120), default="", nullable=False)
+    wants_fitness = db.Column(db.Boolean, default=False, nullable=False)
+    fitness_mode = db.Column(db.String(32), default="self", nullable=False)
 
 
 class AppSetting(TimestampMixin, db.Model):

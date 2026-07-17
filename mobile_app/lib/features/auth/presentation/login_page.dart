@@ -42,7 +42,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _savePhone(String phone) async {
-    ref.read(sharedPreferencesProvider).setString(_savedPhoneKey, phone);
+    await ref.read(sharedPreferencesProvider).setString(_savedPhoneKey, phone);
     await ref.read(tokenStorageProvider).savePhoneNumber(phone);
   }
 
