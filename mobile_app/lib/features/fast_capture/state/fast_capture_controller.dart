@@ -194,14 +194,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
 
     // If we already know the mic is denied, show a clear message immediately
     // instead of starting a doomed capture session.
-    if (_speechGateway.micPermissionDenied) {
-      state = state.copyWith(
-        isListening: false,
-        isRecognizing: false,
-        errorMessage: '请授予麦克风权限后重试',
-      );
-      return;
-    }
+    // (micPermissionDenied getter removed after revert to c0396a8 state)
 
     state = state.copyWith(
       isListening: true,
@@ -259,19 +252,11 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
         );
       }
     } catch (error) {
-      if (_speechGateway.micPermissionDenied) {
-        state = state.copyWith(
-          isListening: false,
-          isRecognizing: false,
-          errorMessage: '请授予麦克风权限后重试',
-        );
-      } else {
-        state = state.copyWith(
-          isListening: false,
-          isRecognizing: false,
-          errorMessage: _voiceCaptureErrorMessage(error),
-        );
-      }
+      state = state.copyWith(
+        isListening: false,
+        isRecognizing: false,
+        errorMessage: _voiceCaptureErrorMessage(error),
+      );
     }
   }
 
