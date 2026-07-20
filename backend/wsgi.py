@@ -1,3 +1,12 @@
+import sys
+from pathlib import Path
+
+# Python 3.14+ no longer auto-adds CWD to sys.path;
+# ensure the backend directory itself is importable.
+_backend_dir = Path(__file__).resolve().parent
+if str(_backend_dir) not in sys.path:
+    sys.path.insert(0, str(_backend_dir))
+
 try:
     from .app import create_app
 except ImportError:
