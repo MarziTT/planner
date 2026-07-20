@@ -33,13 +33,18 @@ class PlannerRepository {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    List<int>? tagIds,
   }) async {
-    final response = await _dio.post('/events', data: {
+    final data = <String, dynamic>{
       'title': title,
       'startsAt': startsAt.toIso8601String(),
       'endsAt': endsAt.toIso8601String(),
       'status': 'planned',
-    });
+    };
+    if (tagIds != null && tagIds.isNotEmpty) {
+      data['tagIds'] = tagIds;
+    }
+    final response = await _dio.post('/events', data: data);
     return PlannerEvent.fromJson(
       Map<String, dynamic>.from(response.data['data']['item'] as Map),
     );

@@ -2,6 +2,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../planner/data/planner_repository.dart';
+import '../../planner/domain/planner_models.dart';
+import '../../tags/domain/tag_model.dart';
 import '../data/schedule_text_parser.dart';
 import '../data/speech_capture_gateway.dart';
 import '../domain/capture_enums.dart';
@@ -59,6 +61,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
     required PlannerRepository repository,
     ScheduleTextParser? parser,
     SpeechCaptureGateway? speechGateway,
+    this.tagsResolver,
   })  : _repository = repository,
         _parser = parser ?? ScheduleTextParser(),
         _speechGateway = speechGateway ?? SpeechCaptureGateway(),
@@ -67,6 +70,10 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
   final PlannerRepository _repository;
   final ScheduleTextParser _parser;
   final SpeechCaptureGateway _speechGateway;
+
+  /// Resolves the currently available tags so the controller can auto-match
+  /// a tag for a parsed event. When `null`, auto-tagging is skipped.
+  final List<PlannerTag> Function()? tagsResolver;
 
   Future<void> submitText(String input) async {
     if (state.isSubmitting) {
@@ -268,10 +275,12 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
       clearError: true,
     );
     try {
+      final tagId = _matchTagForEventType(draft.eventType);
       await _repository.createEvent(
         title: draft.title,
         startsAt: draft.startsAt,
         endsAt: draft.endsAt,
+        tagIds: tagId != null ? [tagId] : null,
       );
       state = state.copyWith(
         isSubmitting: false,
@@ -287,6 +296,23 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
         errorMessage: _fastCaptureErrorMessage(error),
       );
     }
+  }
+
+  /// Matches a parsed [CaptureEventType] to an existing tag id.
+  /// Returns `null` when no matching tag is available (e.g. generic event
+  /// or the user has not created the corresponding tag yet).
+  int? _matchTagForEventType(CaptureEventType eventType) {
+    final tagName = ScheduleTextParser.eventTypeToTagName[eventType];
+    if (tagName == null || tagName.isEmpty) {
+      return null;
+    }
+    final tags = tagsResolver?.call() ?? const [];
+    for (final tag in tags) {
+      if (tag.name == tagName) {
+        return tag.id;
+      }
+    }
+    return null;
   }
 }
 

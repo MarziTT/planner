@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
 import '../../planner/data/planner_repository.dart';
 import '../../planner/state/planner_controller.dart';
+import '../../tags/state/tags_controller.dart';
 import '../data/speech_capture_gateway.dart';
 import '../domain/capture_enums.dart';
 import '../domain/parsed_schedule_draft.dart';
@@ -42,6 +43,7 @@ final fastCaptureControllerProvider =
     speechGateway: SpeechCaptureGateway(
       remoteAsrClient: RemoteAsrClient(ref.watch(apiClientProvider)),
     ),
+    tagsResolver: () => ref.read(tagsControllerProvider).tags,
   ),
 );
 

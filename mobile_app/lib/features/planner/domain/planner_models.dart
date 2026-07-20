@@ -5,6 +5,7 @@
     required this.startsAt,
     required this.endsAt,
     required this.status,
+    this.tagIds = const [],
   });
 
   final int id;
@@ -12,6 +13,7 @@
   final DateTime startsAt;
   final DateTime endsAt;
   final String status;
+  final List<int> tagIds;
 
   factory PlannerEvent.fromJson(Map<String, dynamic> json) {
     return PlannerEvent(
@@ -20,6 +22,10 @@
       startsAt: DateTime.parse(json['startsAt'] as String),
       endsAt: DateTime.parse(json['endsAt'] as String),
       status: json['status'] as String? ?? 'planned',
+      tagIds: (json['tagIds'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          const [],
     );
   }
 }

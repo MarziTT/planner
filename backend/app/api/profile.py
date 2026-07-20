@@ -30,6 +30,8 @@ def _profile_to_dict(profile: Profile):
 @auth_required
 def get_profile():
     profile = Profile.query.filter_by(user_id=g.current_user.id).first()
+    if profile is None:
+        return success({"item": None})
     return success({"item": _profile_to_dict(profile)})
 
 
@@ -37,6 +39,9 @@ def get_profile():
 @auth_required
 def update_profile():
     profile = Profile.query.filter_by(user_id=g.current_user.id).first()
+    if profile is None:
+        profile = Profile(user_id=g.current_user.id)
+        db.session.add(profile)
     payload = request.get_json(silent=True) or {}
     profile.gender = payload.get("gender", profile.gender) or ""
     profile.age = payload.get("age", profile.age)

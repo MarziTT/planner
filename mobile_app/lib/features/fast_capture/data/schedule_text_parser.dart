@@ -6,6 +6,20 @@ class ScheduleTextParser {
 
   final DateTime _now;
 
+  /// Maps a parsed [CaptureEventType] to a human-readable tag name.
+  /// Returns `null` for [CaptureEventType.generic] (no auto-tag).
+  static const Map<CaptureEventType, String?> eventTypeToTagName = {
+    CaptureEventType.workout: '健身',
+    CaptureEventType.transit: '出行',
+    CaptureEventType.meeting: '会议',
+    CaptureEventType.meal: '饮食',
+    CaptureEventType.entertainment: '休闲',
+    CaptureEventType.study: '学习',
+    CaptureEventType.life: '生活',
+    CaptureEventType.social: '社交',
+    CaptureEventType.generic: null,
+  };
+
   ParsedScheduleDraft parse(String input) {
     final normalized = _normalize(input);
     final eventType = _eventType(normalized);
