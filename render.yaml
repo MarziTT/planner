@@ -33,3 +33,16 @@ services:
         sync: false
       - key: BACKDOOR_CODE
         sync: false
+      - key: TENCENT_SECRET_ID
+        sync: false
+      - key: TENCENT_SECRET_KEY
+        sync: false
+      - key: TENCENT_ASR_REGION
+        value: ap-shanghai
+        sync: false
+      - key: TENCENT_ASR_ENGINE_TYPE
+        value: 16k_zh
+        sync: false
+      - key: TENCENT_ASR_VOICE_FORMAT
+        value: wav
+        sync: false
