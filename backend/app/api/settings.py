@@ -25,6 +25,7 @@ def _settings_to_dict(settings: AppSetting):
         "voiceEnabled": settings.voice_enabled,
         "updateChannel": settings.update_channel,
         "availableThemes": available,
+        "zzzEnabled": settings.zzz_enabled,
     }
 
 
@@ -50,5 +51,7 @@ def update_settings():
         settings.voice_enabled = bool(payload["voiceEnabled"])
     if "updateChannel" in payload:
         settings.update_channel = payload["updateChannel"] or settings.update_channel
+    if "zzzEnabled" in payload:
+        settings.zzz_enabled = bool(payload["zzzEnabled"])
     db.session.commit()
     return success({"item": _settings_to_dict(settings)})
