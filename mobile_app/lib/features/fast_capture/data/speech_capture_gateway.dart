@@ -139,9 +139,8 @@ class SpeechCaptureGateway {
     try {
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty) return '';
-      final text = await _remoteAsrClient.recognizeWav(
-        Uint8List.fromList(bytes),
-      );
+      final wav = _pcmToWav(Uint8List.fromList(bytes));
+      final text = await _remoteAsrClient.recognizeWav(wav);
       await file.delete().catchError((_) => file);
       return text;
     } catch (_) {
@@ -171,6 +170,53 @@ class SpeechCaptureGateway {
   }
 
   // --------------- private ---------------
+
+  /// Wraps raw 16-bit linear PCM data (16 kHz, mono) in a RIFF/WAV header
+  /// so Tencent ASR (expecting WAV) can consume it.
+  static Uint8List _pcmToWav(Uint8List pcmData) {
+    const sampleRate = 16000;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const byteRate = sampleRate * numChannels * bitsPerSample ~/ 8;
+    const blockAlign = numChannels * bitsPerSample ~/ 8;
+    final dataSize = pcmData.length;
+    final fileSize = 44 + dataSize;
+
+    final header = ByteData(44);
+    // RIFF
+    header.setUint8(0, 0x52);
+    header.setUint8(1, 0x49);
+    header.setUint8(2, 0x46);
+    header.setUint8(3, 0x46);
+    header.setUint32(4, fileSize - 8, Endian.little);
+    // WAVE
+    header.setUint8(8, 0x57);
+    header.setUint8(9, 0x41);
+    header.setUint8(10, 0x56);
+    header.setUint8(11, 0x45);
+    // fmt
+    header.setUint8(12, 0x66);
+    header.setUint8(13, 0x6D);
+    header.setUint8(14, 0x74);
+    header.setUint8(15, 0x20);
+    header.setUint32(16, 16, Endian.little); // subchunk size
+    header.setUint16(20, 1, Endian.little);  // PCM
+    header.setUint16(22, numChannels, Endian.little);
+    header.setUint32(24, sampleRate, Endian.little);
+    header.setUint32(28, byteRate, Endian.little);
+    header.setUint16(32, blockAlign, Endian.little);
+    header.setUint16(34, bitsPerSample, Endian.little);
+    // data
+    header.setUint8(36, 0x64);
+    header.setUint8(37, 0x61);
+    header.setUint8(38, 0x74);
+    header.setUint8(39, 0x61);
+    header.setUint32(40, dataSize, Endian.little);
+
+    return Uint8List(44 + dataSize)
+      ..setAll(0, header.buffer.asUint8List())
+      ..setAll(44, pcmData);
+  }
 
   void _closeStreamIfActive() {
     if (_streamController != null && !_streamController!.isClosed) {
@@ -215,10 +261,10 @@ class SpeechCaptureGateway {
         try {
           final tempDirectory = await getTemporaryDirectory();
           _streamCaptureAudioPath =
-              '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
+              '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_stream_${DateTime.now().millisecondsSinceEpoch}.pcm';
           await _recorder!.start(
             const RecordConfig(
-              encoder: AudioEncoder.wav,
+              encoder: AudioEncoder.pcm16Bits,
               sampleRate: 16000,
               numChannels: 1,
             ),
@@ -273,11 +319,11 @@ class SpeechCaptureGateway {
 
     final tempDirectory = await getTemporaryDirectory();
     _recordingPath =
-        '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+        '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_voice_${DateTime.now().millisecondsSinceEpoch}.pcm';
     _completer = Completer<String>();
     await _recorder!.start(
       const RecordConfig(
-        encoder: AudioEncoder.wav,
+        encoder: AudioEncoder.pcm16Bits,
         sampleRate: 16000,
         numChannels: 1,
       ),
@@ -312,7 +358,7 @@ class SpeechCaptureGateway {
             final text = bytes.isEmpty
                 ? ''
                 : await _remoteAsrClient!.recognizeWav(
-                    Uint8List.fromList(bytes),
+                    _pcmToWav(Uint8List.fromList(bytes)),
                   );
             completer.complete(text);
             await file.delete().catchError((_) => file);
