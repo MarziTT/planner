@@ -197,7 +197,9 @@ class SpeechCaptureGateway {
       await _speech.stop();
     }
 
-    // Start remote recording in parallel if backend ASR is available
+    // Start recorder FIRST — before calling _speech.listen() — so we know
+    // early whether the recorder path is viable.
+    bool recorderFailed = false;
     if (_remoteAsrClient != null && _recorder != null) {
       if (!_initialized) {
         await initialize();
@@ -217,20 +219,38 @@ class SpeechCaptureGateway {
         _streamRecordingActive = true;
       } catch (_) {
         _streamCaptureAudioPath = null;
+        recorderFailed = true;
       }
     }
 
-    _speech.listen(
-      onResult: (result) {
-        if (!controller.isClosed) {
-          controller.add(result.recognizedWords);
-          if (result.finalResult) {
-            controller.close();
+    try {
+      _speech.listen(
+        onResult: (result) {
+          if (!controller.isClosed) {
+            controller.add(result.recognizedWords);
+            if (result.finalResult) {
+              controller.close();
+            }
           }
+        },
+        listenOptions: stt.SpeechListenOptions(localeId: localeId),
+      );
+    } catch (_) {
+      // _speech.listen() threw — local speech is unavailable.
+      // If the recorder also failed, there is no recovery path.
+      if (_remoteAsrClient != null && recorderFailed) {
+        if (!controller.isClosed) {
+          controller.addError(
+            Exception('Both local speech and recorder failed'),
+          );
+          controller.close();
         }
-      },
-      listenOptions: stt.SpeechListenOptions(localeId: localeId),
-    );
+        return;
+      }
+      // Otherwise the stream stays alive so stopListening() ->
+      // _closeStreamIfActive() can close it, allowing finalizeStreamCapture
+      // to use the recorder audio for backend ASR.
+    }
   }
 
   Future<String> _startRemoteRecording() async {

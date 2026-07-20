@@ -202,7 +202,15 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
     String lastPartial = '';
 
     try {
-      final stream = _speechGateway.startListeningStream();
+      final stream = _speechGateway.startListeningStream().timeout(
+        const Duration(seconds: 60),
+        onTimeout: (sink) {
+          sink.close();
+          // Fire-and-forget: stop the underlying recorder so
+          // finalizeStreamCapture can still process the audio.
+          _speechGateway.stopListening();
+        },
+      );
 
       await for (final partial in stream) {
         lastPartial = partial;
