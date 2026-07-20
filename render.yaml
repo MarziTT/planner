@@ -3,7 +3,7 @@ services:
     name: pixel-planner-api
     runtime: python
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn wsgi:app --chdir backend -b 0.0.0.0:$PORT
+    startCommand: gunicorn app:app -b 0.0.0.0:$PORT
     envVars:
       - key: FLASK_ENV
         value: production
