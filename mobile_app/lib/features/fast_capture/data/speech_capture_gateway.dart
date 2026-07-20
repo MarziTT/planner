@@ -184,7 +184,7 @@ class SpeechCaptureGateway {
     // Ensure local speech_to_text is ready
     if (!_speech.isAvailable) {
       final ok = await _speech.initialize();
-      if (!ok) {
+      if (!ok && _remoteAsrClient == null) {
         if (!controller.isClosed) {
           controller.add('');
           controller.close();
