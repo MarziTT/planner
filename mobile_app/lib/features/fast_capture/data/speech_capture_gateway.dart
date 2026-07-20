@@ -43,18 +43,22 @@ class SpeechCaptureGateway {
   final stt.SpeechToText _speech;
   final AudioRecorder? _recorder;
   final RemoteAsrClient? _remoteAsrClient;
-  Completer<String>? _completer;
-  StreamController<String>? _streamController;
+
   bool _initialized = false;
-  bool _isRecording = false;
+  bool _recording = false;
   String? _recordingPath;
-  String? _streamCaptureAudioPath;
-  bool _streamRecordingActive = false;
+  StreamController<String>? _streamController;
+  Completer<String>? _completer;
 
   bool get isListening =>
-      _remoteAsrClient == null ? _speech.isListening : _isRecording;
+      _remoteAsrClient != null
+          ? _recording
+          : _speech.isListening;
+
   bool get isAvailable =>
-      _remoteAsrClient == null ? _speech.isAvailable : _initialized;
+      _remoteAsrClient != null
+          ? _initialized
+          : _speech.isAvailable;
 
   Future<bool> initialize() async {
     if (_initialized) return true;
@@ -66,16 +70,18 @@ class SpeechCaptureGateway {
     return _initialized;
   }
 
+  // ── simple (Completer-based, for legacy callers) ──
+
   Future<String> startListening({String localeId = 'zh_CN'}) async {
     if (_remoteAsrClient != null) {
-      return _startRemoteRecording();
+      return _startRecording();
     }
     if (!_initialized) {
       final ok = await initialize();
       if (!ok) return '';
     }
     if (_speech.isListening) {
-      await stopListening();
+      await _speech.stop();
     }
     _completer = Completer<String>();
     await _speech.listen(
@@ -91,53 +97,43 @@ class SpeechCaptureGateway {
     return _completer!.future;
   }
 
-  /// Returns a stream of partial recognition results from on-device speech
-  /// recognition. Each emission contains the cumulative recognized text so far.
-  /// The stream closes when speech recognition finalizes or is stopped.
-  ///
-  /// When [RemoteAsrClient] is configured, audio is also recorded in parallel
-  /// so [finalizeStreamCapture] can retrieve a backend-ASR-corrected result.
+  // ── streaming (used by FastCaptureController) ──
+
   Stream<String> startListeningStream({String localeId = 'zh_CN'}) {
     _closeStreamIfActive();
 
     final controller = StreamController<String>();
     _streamController = controller;
 
-    _initStreamAndListen(localeId, controller);
+    if (_remoteAsrClient != null) {
+      _startRecordingStream(controller);
+    } else {
+      _startLocalSpeechStream(localeId, controller);
+    }
 
     return controller.stream;
   }
 
-  /// Retrieves the backend ASR result for a streaming capture session.
-  /// Must be called after [startListeningStream]'s stream has closed.
-  /// Returns empty string if no remote ASR client is configured or
-  /// if the recording could not be processed.
   Future<String> finalizeStreamCapture() async {
-    if (_remoteAsrClient == null ||
-        _streamCaptureAudioPath == null ||
-        !_streamRecordingActive) {
+    if (_remoteAsrClient == null || _recordingPath == null) {
       return '';
     }
 
-    String? path;
+    final path = _recordingPath;
+    _recordingPath = null;
+    _recording = false;
+
     try {
-      path = await _recorder?.stop();
-    } catch (_) {
-      path = null;
-    }
-    path ??= _streamCaptureAudioPath;
-    _streamRecordingActive = false;
-    _streamCaptureAudioPath = null;
+      await _recorder?.stop();
+    } catch (_) {}
 
-    if (path == null) return '';
-
-    final file = File(path);
+    final file = File(path!);
     if (!await file.exists()) return '';
 
     try {
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty) return '';
-      final text = await _remoteAsrClient.recognizeWav(
+      final text = await _remoteAsrClient!.recognizeWav(
         Uint8List.fromList(bytes),
       );
       await file.delete().catchError((_) => file);
@@ -149,8 +145,8 @@ class SpeechCaptureGateway {
   }
 
   Future<String> stopListening() async {
-    if (_remoteAsrClient != null && _isRecording) {
-      return _stopRemoteRecording();
+    if (_remoteAsrClient != null && _recording) {
+      return _stopRecording();
     }
     if (_speech.isListening) {
       await _speech.stop();
@@ -168,23 +164,130 @@ class SpeechCaptureGateway {
     _recorder?.dispose();
   }
 
-  // --------------- private ---------------
+  // ── private: remote recording ──
 
-  void _closeStreamIfActive() {
-    if (_streamController != null && !_streamController!.isClosed) {
-      _streamController!.close();
-      _streamController = null;
+  Future<void> _startRecordingStream(
+    StreamController<String> controller,
+  ) async {
+    if (!_initialized) {
+      final ok = await initialize();
+      if (!ok) {
+        if (!controller.isClosed) {
+          controller.addError(Exception('麦克风权限未授予'));
+          controller.close();
+        }
+        return;
+      }
+    }
+
+    try {
+      final tempDir = await getTemporaryDirectory();
+      _recordingPath =
+          '${tempDir.path}${Platform.pathSeparator}voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+
+      await _recorder!.start(
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: _recordingPath!,
+      );
+      _recording = true;
+    } catch (e) {
+      _recordingPath = null;
+      if (!controller.isClosed) {
+        controller.addError(e);
+        controller.close();
+      }
     }
   }
 
-  Future<void> _initStreamAndListen(
+  Future<String> _startRecording() async {
+    if (!_initialized) {
+      final ok = await initialize();
+      if (!ok) return '';
+    }
+    if (_recording) {
+      await _stopRecording();
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    _recordingPath =
+        '${tempDir.path}${Platform.pathSeparator}voice_${DateTime.now().millisecondsSinceEpoch}.wav';
+    _completer = Completer<String>();
+
+    await _recorder!.start(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 16000,
+        numChannels: 1,
+      ),
+      path: _recordingPath!,
+    );
+    _recording = true;
+    return _completer!.future;
+  }
+
+  Future<String> _stopRecording() async {
+    // Streaming path: close the stream but leave _recordingPath intact
+    // so finalizeStreamCapture() can read and process the audio.
+    if (_completer == null) {
+      _recording = false;
+      _closeStreamIfActive();
+      try {
+        await _recorder?.stop();
+      } catch (_) {}
+      return '';
+    }
+
+    // Non-streaming path: stop, process, and complete.
+    String? path = _recordingPath;
+    _recordingPath = null;
+    _recording = false;
+
+    try {
+      path = await _recorder?.stop() ?? path;
+    } catch (_) {}
+
+    final completer = _completer;
+    if (completer == null || completer.isCompleted) {
+      return completer?.future ?? Future.value('');
+    }
+
+    try {
+      if (path == null) {
+        completer.complete('');
+      } else {
+        final file = File(path);
+        if (!await file.exists()) {
+          completer.complete('');
+        } else {
+          final bytes = await file.readAsBytes();
+          final text = bytes.isEmpty
+              ? ''
+              : await _remoteAsrClient!.recognizeWav(
+                  Uint8List.fromList(bytes),
+                );
+          completer.complete(text);
+          await file.delete().catchError((_) => file);
+        }
+      }
+    } catch (error, stackTrace) {
+      completer.completeError(error, stackTrace);
+    }
+    return completer.future;
+  }
+
+  // ── private: local speech ──
+
+  Future<void> _startLocalSpeechStream(
     String localeId,
     StreamController<String> controller,
   ) async {
-    // Ensure local speech_to_text is ready
     if (!_speech.isAvailable) {
       final ok = await _speech.initialize();
-      if (!ok && _remoteAsrClient == null) {
+      if (!ok) {
         if (!controller.isClosed) {
           controller.add('');
           controller.close();
@@ -195,29 +298,6 @@ class SpeechCaptureGateway {
 
     if (_speech.isListening) {
       await _speech.stop();
-    }
-
-    // Start remote recording in parallel if backend ASR is available
-    if (_remoteAsrClient != null && _recorder != null) {
-      if (!_initialized) {
-        await initialize();
-      }
-      try {
-        final tempDirectory = await getTemporaryDirectory();
-        _streamCaptureAudioPath =
-            '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
-        await _recorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: 16000,
-            numChannels: 1,
-          ),
-          path: _streamCaptureAudioPath!,
-        );
-        _streamRecordingActive = true;
-      } catch (_) {
-        _streamCaptureAudioPath = null;
-      }
     }
 
     _speech.listen(
@@ -233,66 +313,10 @@ class SpeechCaptureGateway {
     );
   }
 
-  Future<String> _startRemoteRecording() async {
-    if (!_initialized) {
-      final ok = await initialize();
-      if (!ok) return '';
+  void _closeStreamIfActive() {
+    if (_streamController != null && !_streamController!.isClosed) {
+      _streamController!.close();
+      _streamController = null;
     }
-    if (_isRecording) {
-      await _stopRemoteRecording();
-    }
-
-    final tempDirectory = await getTemporaryDirectory();
-    _recordingPath =
-        '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_voice_${DateTime.now().millisecondsSinceEpoch}.wav';
-    _completer = Completer<String>();
-    await _recorder!.start(
-      const RecordConfig(
-        encoder: AudioEncoder.wav,
-        sampleRate: 16000,
-        numChannels: 1,
-      ),
-      path: _recordingPath!,
-    );
-    _isRecording = true;
-    return _completer!.future;
-  }
-
-  Future<String> _stopRemoteRecording() async {
-    String? path = _recordingPath;
-    if (_isRecording) {
-      path = await _recorder!.stop() ?? path;
-    }
-    _isRecording = false;
-    _recordingPath = null;
-
-    final completer = _completer;
-    if (completer == null) {
-      return '';
-    }
-    if (!completer.isCompleted) {
-      try {
-        if (path == null) {
-          completer.complete('');
-        } else {
-          final file = File(path);
-          if (!await file.exists()) {
-            completer.complete('');
-          } else {
-            final bytes = await file.readAsBytes();
-            final text = bytes.isEmpty
-                ? ''
-                : await _remoteAsrClient!.recognizeWav(
-                    Uint8List.fromList(bytes),
-                  );
-            completer.complete(text);
-            await file.delete().catchError((_) => file);
-          }
-        }
-      } catch (error, stackTrace) {
-        completer.completeError(error, stackTrace);
-      }
-    }
-    return completer.future;
   }
 }
