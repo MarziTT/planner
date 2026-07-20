@@ -50,11 +50,13 @@ class SpeechCaptureGateway {
   String? _recordingPath;
   String? _streamCaptureAudioPath;
   bool _streamRecordingActive = false;
+  bool _micPermissionDenied = false;
 
   bool get isListening =>
       _remoteAsrClient == null ? _speech.isListening : _isRecording;
   bool get isAvailable =>
       _remoteAsrClient == null ? _speech.isAvailable : _initialized;
+  bool get micPermissionDenied => _micPermissionDenied;
 
   Future<bool> initialize() async {
     if (_initialized) return true;
@@ -201,25 +203,32 @@ class SpeechCaptureGateway {
     // early whether the recorder path is viable.
     bool recorderFailed = false;
     if (_remoteAsrClient != null && _recorder != null) {
-      if (!_initialized) {
-        await initialize();
-      }
-      try {
-        final tempDirectory = await getTemporaryDirectory();
-        _streamCaptureAudioPath =
-            '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
-        await _recorder!.start(
-          const RecordConfig(
-            encoder: AudioEncoder.wav,
-            sampleRate: 16000,
-            numChannels: 1,
-          ),
-          path: _streamCaptureAudioPath!,
-        );
-        _streamRecordingActive = true;
-      } catch (_) {
-        _streamCaptureAudioPath = null;
+      // Explicitly check microphone permission before attempting to record.
+      final hasPermission = await _recorder!.hasPermission();
+      if (!hasPermission) {
+        _micPermissionDenied = true;
         recorderFailed = true;
+      } else {
+        if (!_initialized) {
+          await initialize();
+        }
+        try {
+          final tempDirectory = await getTemporaryDirectory();
+          _streamCaptureAudioPath =
+              '${tempDirectory.path}${Platform.pathSeparator}pixel_planner_stream_${DateTime.now().millisecondsSinceEpoch}.wav';
+          await _recorder!.start(
+            const RecordConfig(
+              encoder: AudioEncoder.wav,
+              sampleRate: 16000,
+              numChannels: 1,
+            ),
+            path: _streamCaptureAudioPath!,
+          );
+          _streamRecordingActive = true;
+        } catch (_) {
+          _streamCaptureAudioPath = null;
+          recorderFailed = true;
+        }
       }
     }
 
