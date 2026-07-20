@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import time
 
 from flask import Blueprint, current_app, request
@@ -45,7 +44,7 @@ def weather_now():
             return success(cached_result)
 
     try:
-        result = asyncio.run(get_weather(lat, lon))
+        result = get_weather(lat, lon)
     except Exception as exc:
         import logging
         import traceback
@@ -94,11 +93,11 @@ def weather_debug():
         headers = _auth_headers()
         import httpx
         import os
-        async def _test():
-            async with httpx.AsyncClient(timeout=10.0) as c:
-                r = await c.get("https://mp5u9xx3e3.re.qweatherapi.com/v7/weather/now", params={"location": "116.41,39.91"}, headers=headers or None)
+        def _test():
+            with httpx.Client(timeout=10.0) as c:
+                r = c.get("https://mp5u9xx3e3.re.qweatherapi.com/v7/weather/now", params={"location": "116.41,39.91"}, headers=headers or None)
                 return r
-        resp = asyncio.run(_test())
+        resp = _test()
         result["api_status"] = resp.status_code
         result["api_body"] = resp.text[:500]
         result["api_ok"] = resp.status_code < 400

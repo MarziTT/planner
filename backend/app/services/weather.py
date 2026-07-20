@@ -64,15 +64,15 @@ def _safe_get(obj: dict, *keys: str, default: Any = None) -> Any:
     return obj
 
 
-async def _request(
+def _request(
     url: str,
     params: dict,
     headers: dict | None = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> dict:
     """统一 HTTP GET 请求封装，带超时与基础错误处理。"""
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.get(url, params=params, headers=headers)
+    with httpx.Client(timeout=timeout) as client:
+        resp = client.get(url, params=params, headers=headers)
         resp.raise_for_status()
         data: dict = resp.json()
     return data
@@ -115,7 +115,7 @@ def _auth_headers() -> dict[str, str]:
 # 公开 API
 # ---------------------------------------------------------------------------
 
-async def get_weather(lat: float, lon: float) -> dict:
+def get_weather(lat: float, lon: float) -> dict:
     """
     根据经纬度获取天气信息。
 
@@ -139,7 +139,7 @@ async def get_weather(lat: float, lon: float) -> dict:
 
     # ---- 1. 获取城市 ID ---------------------------------------------------
     try:
-        location_id = await _get_location_id(lat, lon)
+        location_id = _get_location_id(lat, lon)
     except Exception:
         import logging
         logging.getLogger(__name__).warning(
@@ -159,18 +159,18 @@ async def get_weather(lat: float, lon: float) -> dict:
     hour_data: list[dict] = []
 
     try:
-        now_data = await _request(f"{WEATHER_API_BASE}/now", base_params, auth_hdrs or None)
+        now_data = _request(f"{WEATHER_API_BASE}/now", base_params, auth_hdrs or None)
     except Exception:
         pass
 
     try:
-        day_resp = await _request(f"{WEATHER_API_BASE}/7d", base_params, auth_hdrs or None)
+        day_resp = _request(f"{WEATHER_API_BASE}/7d", base_params, auth_hdrs or None)
         day_data = _safe_get(day_resp, "daily", default=[]) or []
     except Exception:
         pass
 
     try:
-        hour_resp = await _request(f"{WEATHER_API_BASE}/24h", base_params, auth_hdrs or None)
+        hour_resp = _request(f"{WEATHER_API_BASE}/24h", base_params, auth_hdrs or None)
         hour_data = _safe_get(hour_resp, "hourly", default=[]) or []
     except Exception:
         pass
@@ -243,7 +243,7 @@ async def get_weather(lat: float, lon: float) -> dict:
 # 城市查询
 # ---------------------------------------------------------------------------
 
-async def _get_location_id(lat: float, lon: float) -> str:
+def _get_location_id(lat: float, lon: float) -> str:
     """
     根据经纬度查询和风天气城市 ID。
 
@@ -258,7 +258,7 @@ async def _get_location_id(lat: float, lon: float) -> str:
     if not auth_hdrs and QWEATHER_KEY:
         params["key"] = QWEATHER_KEY
     try:
-        data = await _request(GEO_API_BASE, params, auth_hdrs or None)
+        data = _request(GEO_API_BASE, params, auth_hdrs or None)
         locations = _safe_get(data, "location", default=[]) or []
         if locations:
             loc_id = locations[0].get("id")

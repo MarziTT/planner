@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: pixel-planner-api
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && gunicorn wsgi:app -b 0.0.0.0:$PORT
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: PIXEL_SECRET_KEY
+        sync: false
+      - key: JWT_ISSUER
+        sync: false
+      - key: JWT_ACCESS_TTL_SECONDS
+        sync: false
+      - key: JWT_REFRESH_TTL_SECONDS
+        sync: false
+      - key: APP_VERSION
+        sync: false
+      - key: APP_BUILD
+        sync: false
+      - key: APP_DOWNLOAD_URL
+        sync: false
+      - key: QWEATHER_PRIVATE_KEY
+        sync: false
+      - key: QWEATHER_KID
+        sync: false
+      - key: QWEATHER_PROJECT_ID
+        sync: false
+      - key: BACKDOOR_PHONE
+        sync: false
+      - key: BACKDOOR_CODE
+        sync: false
