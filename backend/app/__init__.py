@@ -36,7 +36,17 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
 
     @app.get("/healthz")
     def healthcheck():
-        return {"ok": True, "data": {"status": "healthy"}, "error": None, "meta": {}}
+        try:
+            db.session.execute(text("SELECT 1"))
+            db_status = "ok"
+        except Exception:
+            db_status = "unreachable"
+        return {
+            "ok": True,
+            "data": {"status": "healthy", "db": db_status},
+            "error": None,
+            "meta": {},
+        }
 
     return app
 
