@@ -139,7 +139,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               child: LinearProgressIndicator(),
             ),
           if (selectedEvent != null) ...[
-            _ReminderReturnBanner(event: selectedEvent),
+            _ReminderReturnBanner(event: selectedEvent, isZzz: isZzzTheme),
             const SizedBox(height: 12),
           ],
           if (plannerState.errorMessage != null) ...[
@@ -587,17 +587,15 @@ class _ZzzLedMarquee extends StatelessWidget {
 }
 
 class _ReminderReturnBanner extends StatelessWidget {
-  const _ReminderReturnBanner({required this.event});
+  const _ReminderReturnBanner({required this.event, required this.isZzz});
 
   final PlannerEvent event;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (isZzz) {
-      final now = DateTime.now();
-      final tl = _timeLabel(now);
-      final dl = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       return Container(
         decoration: BoxDecoration(
           color: _zzzSurfaceColor,
@@ -612,24 +610,13 @@ class _ReminderReturnBanner extends StatelessWidget {
             const Icon(Icons.terminal, size: 16, color: _zzzCyan),
             const SizedBox(width: 8),
             Expanded(
-              child: InkWell(
-                onTap: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(value),
-                  );
-                  if (time == null || !context.mounted) return;
-                  onChanged(DateTime(value.year, value.month, value.day,
-                      time.hour, time.minute));
-                },
-                child: Text(
-                  '> SET_TIME: $tl  > SET_DATE: $dl',
-                  style: const TextStyle(
-                    color: _zzzCyan,
-                    fontSize: 13,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w500,
-                  ),
+              child: Text(
+                '> RETURN: ${_timeLabel(event.startsAt)}  ${event.title}',
+                style: const TextStyle(
+                  color: _zzzCyan,
+                  fontSize: 13,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
@@ -666,8 +653,6 @@ class _ReminderReturnBanner extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ],
           ),
         ],
       ),
@@ -759,8 +744,6 @@ class _WorkModeQuickPanel extends StatelessWidget {
                 ),
               );
             }).toList(),
-          ),
-        ],
           ),
         ],
       ),
