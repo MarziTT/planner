@@ -66,9 +66,7 @@ class PlannerRepository {
       'endsAt': endsAt.toIso8601String(),
       'status': event.status,
     };
-    if (tagId != null) {
-      data['tagIds'] = [tagId];
-    }
+    data['tagIds'] = tagId != null ? [tagId] : [];
     final response = await _dio.put('/events/${event.id}', data: data);
     return PlannerEvent.fromJson(
       Map<String, dynamic>.from(response.data['data']['item'] as Map),

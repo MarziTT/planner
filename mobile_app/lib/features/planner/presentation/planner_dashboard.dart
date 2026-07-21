@@ -981,7 +981,14 @@ class _EventTile extends ConsumerWidget {
                               ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        if (event.tagIds.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          _TagChips(
+                            tagIds: event.tagIds,
+                            tags: ref.watch(tagsControllerProvider).tags,
+                            isZzz: isZzz,
+                          ),
+                        ],
                         Text(
                           _timeLabel(event.startsAt),
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -1348,4 +1355,55 @@ String _timeLabel(DateTime dt) =>
 Color _colorFromHex(String hex) {
   final h = hex.replaceFirst('#', '');
   return Color(int.parse('FF$h', radix: 16));
+}
+
+class _TagChips extends StatelessWidget {
+  const _TagChips({
+    required this.tagIds,
+    required this.tags,
+    required this.isZzz,
+  });
+
+  final List<int> tagIds;
+  final List<Tag> tags;
+  final bool isZzz;
+
+  @override
+  Widget build(BuildContext context) {
+    final matched = tags.where((t) => tagIds.contains(t.id)).toList();
+    if (matched.isEmpty) return const SizedBox.shrink();
+
+    return Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: matched.map((tag) {
+        final color = _colorFromHex(tag.color);
+        final fg = isZzz ? Colors.white.withValues(alpha: 0.92) : color;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isZzz ? 0.22 : 0.12),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                tag.name,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: isZzz ? Colors.white.withValues(alpha: 0.88) : color,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
