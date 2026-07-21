@@ -528,8 +528,6 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             child: const Text('\u4fdd\u5b58'),
           ),
         ],
-          ),
-        ],
       ),
     );
 
@@ -597,8 +595,9 @@ class _ReminderReturnBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     if (isZzz) {
-      final tl = _timeLabel();
-      final dl = _dateLabel();
+      final now = DateTime.now();
+      final tl = _timeLabel(now);
+      final dl = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
       return Container(
         decoration: BoxDecoration(
           color: _zzzSurfaceColor,
@@ -1938,7 +1937,7 @@ class _TagChips extends StatelessWidget {
   });
 
   final List<int> tagIds;
-  final List<Tag> tags;
+  final List<PlannerTag> tags;
   final bool isZzz;
 
   @override
