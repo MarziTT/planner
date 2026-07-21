@@ -5,6 +5,8 @@ import '../../../core/theme/theme_controller.dart';
 import '../../auth/state/auth_controller.dart';
 import '../../fitness/presentation/fitness_panel.dart';
 import '../../profile/state/profile_controller.dart';
+import '../../tags/domain/tag_model.dart';
+import '../../tags/state/tags_controller.dart';
 import '../../updates/presentation/hot_update_image.dart';
 import '../../weather/presentation/weather_card.dart';
 import '../../weather/state/weather_controller.dart';
@@ -346,9 +348,11 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
     DateTime? initialDay,
   }) async {
     final titleController = TextEditingController(text: event?.title ?? '');
+    final tags = ref.read(tagsControllerProvider).tags;
     final baseDay = initialDay ?? DateTime.now();
     var startsAt = event?.startsAt ??
         DateTime(baseDay.year, baseDay.month, baseDay.day, 9);
+    var selectedTagId = event != null && event.tagIds.isNotEmpty ? event.tagIds.first : null;
 
     final saved = await showDialog<bool>(
       context: context,
@@ -368,12 +372,55 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                   autofocus: true,
                   decoration: const InputDecoration(labelText: '\u6807\u9898'),
                 ),
-                const SizedBox(height: 12),
-                _DateTimeField(
-                  label: '\u5f00\u59cb\u65f6\u95f4',
+                const SizedBox(height: 14),
+                _ModernTimePicker(
                   value: startsAt,
                   onChanged: (value) => setLocalState(() => startsAt = value),
                 ),
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  DropdownButtonFormField<int>(
+                    value: selectedTagId,
+                    decoration: const InputDecoration(
+                      labelText: '\u6807\u7b7e',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: [
+                      const DropdownMenuItem<int>(
+                        value: null,
+                        child: Text('(\u65e0\u6807\u7b7e)'),
+                      ),
+                      ...tags.map(
+                        (tag) => DropdownMenuItem<int>(
+                          value: tag.id,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: _colorFromHex(tag.color),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(tag.name),
+                              if (tag.isRecurring) ...[
+                                const SizedBox(width: 6),
+                                Icon(Icons.repeat, size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setLocalState(() => selectedTagId = value),
+                  ),
+                ],
               ],
             ),
           ),
@@ -404,6 +451,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
         title: title,
         startsAt: startsAt,
         endsAt: endsAt,
+        tagId: selectedTagId,
       );
       return;
     }
@@ -413,6 +461,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
       title: title,
       startsAt: startsAt,
       endsAt: endsAt,
+      tagId: selectedTagId,
     );
   }
 
@@ -1156,53 +1205,93 @@ class _ZzzGifSpec {
   final String label;
 }
 
-class _DateTimeField extends StatelessWidget {
-  const _DateTimeField({
-    required this.label,
+class _ModernTimePicker extends StatelessWidget {
+  const _ModernTimePicker({
     required this.value,
     required this.onChanged,
   });
 
-  final String label;
   final DateTime value;
   final ValueChanged<DateTime> onChanged;
 
+  String _timeLabel() {
+    return '\${value.hour.toString().padLeft(2, '0')}:\${value.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _dateLabel() {
+    return '\${value.year}-\${value.month.toString().padLeft(2, '0')}-\${value.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () async {
-        final date = await showDatePicker(
-          context: context,
-          initialDate: value,
-          firstDate: DateTime(2020),
-          lastDate: DateTime(2035),
-        );
-        if (date == null || !context.mounted) {
-          return;
-        }
-        final time = await showTimePicker(
-          context: context,
-          initialTime: TimeOfDay.fromDateTime(value),
-        );
-        if (time == null) {
-          return;
-        }
-        onChanged(
-          DateTime(
-            date.year,
-            date.month,
-            date.day,
-            time.hour,
-            time.minute,
-          ),
-        );
-      },
-      icon: const Icon(Icons.schedule_outlined),
-      label: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Row(
         children: [
-          Text(label),
-          Text(_fullDateTimeLabel(value)),
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: value,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2035),
+                );
+                if (date == null || !context.mounted) return;
+                onChanged(DateTime(date.year, date.month, date.day,
+                    value.hour, value.minute));
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 18,
+                        color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text(_dateLabel(),
+                        style: theme.textTheme.bodyLarge),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 24,
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          ),
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () async {
+                final time = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.fromDateTime(value),
+                );
+                if (time == null || !context.mounted) return;
+                onChanged(DateTime(value.year, value.month, value.day,
+                    time.hour, time.minute));
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 18,
+                        color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text(_timeLabel(),
+                        style: theme.textTheme.bodyLarge),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

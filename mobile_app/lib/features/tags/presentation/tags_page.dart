@@ -135,34 +135,67 @@ class TagsPage extends ConsumerWidget {
       {PlannerTag? tag}) async {
     final nameController = TextEditingController(text: tag?.name ?? '');
     final colorController = TextEditingController(text: tag?.color ?? '#5B8CFF');
+    var isRecurring = tag?.isRecurring ?? false;
+    var recurrenceRule = tag?.recurrenceRule ?? '';
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(tag == null ? '新增标签' : '编辑标签'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: '名称'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocalState) => AlertDialog(
+          title: Text(tag == null ? '新增标签' : '编辑标签'),
+          content: SizedBox(
+            width: 320,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: '名称'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: colorController,
+                    decoration: const InputDecoration(labelText: '颜色 HEX'),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('长期日程'),
+                    subtitle: const Text('每天重复的事件，可独立修改单次时间'),
+                    value: isRecurring,
+                    onChanged: (value) =>
+                        setLocalState(() => isRecurring = value),
+                  ),
+                  if (isRecurring) ...[
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: recurrenceRule.isEmpty ? 'daily' : recurrenceRule,
+                      decoration: const InputDecoration(labelText: '重复规则'),
+                      items: const [
+                        DropdownMenuItem(value: 'daily', child: Text('每天')),
+                        DropdownMenuItem(value: 'weekly', child: Text('每周')),
+                        DropdownMenuItem(value: 'monthly', child: Text('每月')),
+                        DropdownMenuItem(value: 'weekday', child: Text('工作日')),
+                      ],
+                      onChanged: (value) => setLocalState(
+                          () => recurrenceRule = value ?? 'daily'),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: colorController,
-              decoration: const InputDecoration(labelText: '颜色 HEX'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('保存'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
     if (result != true) return;
@@ -171,9 +204,20 @@ class TagsPage extends ConsumerWidget {
         colorController.text.trim().isEmpty ? '#5B8CFF' : colorController.text.trim();
     if (name.isEmpty) return;
     if (tag == null) {
-      await ref.read(tagsControllerProvider.notifier).create(name, color);
+      await ref.read(tagsControllerProvider.notifier).create(
+        name,
+        color,
+        isRecurring: isRecurring,
+        recurrenceRule: recurrenceRule,
+      );
     } else {
-      await ref.read(tagsControllerProvider.notifier).update(tag, name, color);
+      await ref.read(tagsControllerProvider.notifier).update(
+        tag,
+        name,
+        color,
+        isRecurring: isRecurring,
+        recurrenceRule: recurrenceRule,
+      );
     }
   }
 }

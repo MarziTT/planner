@@ -33,33 +33,44 @@ List<ReminderSchedule> buildReminderSchedules({
   final upcoming = events.where((event) => event.startsAt.isAfter(now)).toList()
     ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
 
+  // Multi-stage lead times: farther away → earlier reminder, closer → shorter
+  const stages = [1440, 120, 30, 15, 5]; // 1 day, 2 hours, 30 min, 15 min, 5 min
+
   final schedules = <ReminderSchedule>[];
   for (var index = 0; index < upcoming.length; index += 1) {
     final event = upcoming[index];
-    final triggerAt = event.startsAt.subtract(
-      Duration(minutes: settings.notificationsLeadMinutes),
-    );
-    if (!triggerAt.isAfter(now)) {
-      continue;
+
+    for (final leadMinutes in stages) {
+      final triggerAt = event.startsAt.subtract(
+        Duration(minutes: leadMinutes),
+      );
+      if (!triggerAt.isAfter(now)) {
+        continue;
+      }
+
+      final nextEvent = index + 1 < upcoming.length ? upcoming[index + 1] : null;
+      final nextLine = nextEvent == null
+          ? '后面暂时没有其他安排'
+          : '下一条 ${_timeLabel(nextEvent.startsAt)} ${nextEvent.title}';
+
+      final leadLabel = leadMinutes >= 1440
+          ? '${leadMinutes ~/ 1440} 天'
+          : leadMinutes >= 60
+              ? '${leadMinutes ~/ 60} 小时'
+              : '$leadMinutes 分钟';
+
+      schedules.add(
+        ReminderSchedule(
+          eventId: event.id * 100 + leadMinutes, // composite ID for multi-stage
+          title: '即将开始：${event.title}',
+          body: '${_timeLabel(event.startsAt)} · 还有 $leadLabel · $nextLine',
+          triggerAt: triggerAt,
+          startsAt: event.startsAt,
+          leadMinutes: leadMinutes,
+          nextSummary: nextLine,
+        ),
+      );
     }
-
-    final nextEvent = index + 1 < upcoming.length ? upcoming[index + 1] : null;
-    final nextLine = nextEvent == null
-        ? '后面暂时没有其他安排'
-        : '下一条 ${_timeLabel(nextEvent.startsAt)} ${nextEvent.title}';
-
-    schedules.add(
-      ReminderSchedule(
-        eventId: event.id,
-        title: '即将开始：${event.title}',
-        body:
-            '${_timeLabel(event.startsAt)} · 还有 ${settings.notificationsLeadMinutes} 分钟 · $nextLine',
-        triggerAt: triggerAt,
-        startsAt: event.startsAt,
-        leadMinutes: settings.notificationsLeadMinutes,
-        nextSummary: nextLine,
-      ),
-    );
   }
   return schedules;
 }

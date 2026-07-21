@@ -13,9 +13,11 @@ class ProfileRepository {
 
   final Dio _dio;
 
-  Future<UserProfile> fetchProfile() async {
+  Future<UserProfile?> fetchProfile() async {
     final response = await _dio.get('/profile');
-    return UserProfile.fromJson(Map<String, dynamic>.from(response.data['data']['item'] as Map));
+    final item = response.data['data']['item'];
+    if (item == null) return null;
+    return UserProfile.fromJson(Map<String, dynamic>.from(item as Map));
   }
 
   Future<UserProfile> saveProfile(UserProfile profile) async {

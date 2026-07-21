@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/secure_token_storage.dart';
 
-const _defaultApiBaseUrl = 'https://planner-ecwt.onrender.com/api/v1';
+const _defaultApiBaseUrl = 'https://planner-production-d1ee.up.railway.app/api/v1';
 const _skipAuthRefreshKey = 'skipAuthRefresh';
 
 final apiClientProvider = Provider<Dio>((ref) {

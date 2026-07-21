@@ -21,13 +21,31 @@ class TagsRepository {
     return items.map(PlannerTag.fromJson).toList();
   }
 
-  Future<PlannerTag> createTag({required String name, required String color}) async {
-    final response = await _dio.post('/tags', data: {'name': name, 'color': color});
+  Future<PlannerTag> createTag({
+    required String name,
+    required String color,
+    bool isRecurring = false,
+    String recurrenceRule = '',
+  }) async {
+    final response = await _dio.post('/tags', data: {
+      'name': name,
+      'color': color,
+      'isRecurring': isRecurring,
+      'recurrenceRule': recurrenceRule,
+    });
     return PlannerTag.fromJson(Map<String, dynamic>.from(response.data['data']['item'] as Map));
   }
 
-  Future<PlannerTag> updateTag(PlannerTag tag, {required String name, required String color}) async {
-    final response = await _dio.put('/tags/' + tag.id.toString(), data: {'name': name, 'color': color});
+  Future<PlannerTag> updateTag(PlannerTag tag, {
+    required String name,
+    required String color,
+    bool? isRecurring,
+    String? recurrenceRule,
+  }) async {
+    final data = <String, dynamic>{'name': name, 'color': color};
+    if (isRecurring != null) data['isRecurring'] = isRecurring;
+    if (recurrenceRule != null) data['recurrenceRule'] = recurrenceRule;
+    final response = await _dio.put('/tags/' + tag.id.toString(), data: data);
     return PlannerTag.fromJson(Map<String, dynamic>.from(response.data['data']['item'] as Map));
   }
 

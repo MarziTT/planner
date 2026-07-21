@@ -89,12 +89,14 @@ class PlannerController extends StateNotifier<PlannerState> {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    int? tagId,
   }) async {
     try {
       final item = await _repository.createEvent(
         title: title,
         startsAt: startsAt,
         endsAt: endsAt,
+        tagId: tagId,
       );
       final events = [...state.events, item]
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
@@ -111,6 +113,7 @@ class PlannerController extends StateNotifier<PlannerState> {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    int? tagId,
   }) async {
     try {
       final updated = await _repository.updateEvent(
@@ -118,6 +121,7 @@ class PlannerController extends StateNotifier<PlannerState> {
         title: title,
         startsAt: startsAt,
         endsAt: endsAt,
+        tagId: tagId,
       );
       final events = state.events
           .map((item) => item.id == updated.id ? updated : item)

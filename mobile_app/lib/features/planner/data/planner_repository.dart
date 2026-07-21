@@ -33,6 +33,7 @@ class PlannerRepository {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    int? tagId,
     List<int>? tagIds,
   }) async {
     final data = <String, dynamic>{
@@ -41,8 +42,10 @@ class PlannerRepository {
       'endsAt': endsAt.toIso8601String(),
       'status': 'planned',
     };
-    if (tagIds != null && tagIds.isNotEmpty) {
-      data['tagIds'] = tagIds;
+    final effectiveTagIds = tagIds ??
+        (tagId != null ? [tagId] : null);
+    if (effectiveTagIds != null && effectiveTagIds.isNotEmpty) {
+      data['tagIds'] = effectiveTagIds;
     }
     final response = await _dio.post('/events', data: data);
     return PlannerEvent.fromJson(
@@ -55,13 +58,18 @@ class PlannerRepository {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    int? tagId,
   }) async {
-    final response = await _dio.put('/events/${event.id}', data: {
+    final data = <String, dynamic>{
       'title': title,
       'startsAt': startsAt.toIso8601String(),
       'endsAt': endsAt.toIso8601String(),
       'status': event.status,
-    });
+    };
+    if (tagId != null) {
+      data['tagIds'] = [tagId];
+    }
+    final response = await _dio.put('/events/${event.id}', data: data);
     return PlannerEvent.fromJson(
       Map<String, dynamic>.from(response.data['data']['item'] as Map),
     );

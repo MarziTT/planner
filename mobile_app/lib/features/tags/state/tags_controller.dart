@@ -45,19 +45,33 @@ class TagsController extends StateNotifier<TagsState> {
     }
   }
 
-  Future<void> create(String name, String color) async {
+  Future<void> create(String name, String color, {bool isRecurring = false, String recurrenceRule = ''}) async {
     try {
-      final tag = await _repository.createTag(name: name, color: color);
+      final tag = await _repository.createTag(
+        name: name,
+        color: color,
+        isRecurring: isRecurring,
+        recurrenceRule: recurrenceRule,
+      );
       state = state.copyWith(tags: [...state.tags, tag], clearError: true);
     } catch (_) {
       state = state.copyWith(errorMessage: '新增标签失败');
     }
   }
 
-  Future<void> update(PlannerTag tag, String name, String color) async {
+  Future<void> update(PlannerTag tag, String name, String color, {bool? isRecurring, String? recurrenceRule}) async {
     try {
-      final updated = await _repository.updateTag(tag, name: name, color: color);
-      state = state.copyWith(tags: state.tags.map((item) => item.id == updated.id ? updated : item).toList(), clearError: true);
+      final updated = await _repository.updateTag(
+        tag,
+        name: name,
+        color: color,
+        isRecurring: isRecurring,
+        recurrenceRule: recurrenceRule,
+      );
+      state = state.copyWith(
+        tags: state.tags.map((item) => item.id == updated.id ? updated : item).toList(),
+        clearError: true,
+      );
     } catch (_) {
       state = state.copyWith(errorMessage: '编辑标签失败');
     }
