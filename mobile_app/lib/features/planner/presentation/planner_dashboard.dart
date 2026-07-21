@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,6 +16,13 @@ import '../domain/planner_models.dart';
 import '../state/planner_controller.dart';
 
 const _defaultEventDuration = Duration(hours: 1);
+
+const _zzzBgColor = Color(0xFF170F17);
+const _zzzSurfaceColor = Color(0xFF0D0B12);
+const _zzzRed = Color(0xFFE53935);
+const _zzzCyan = Color(0xFF00E5FF);
+const _zzzTextColor = Color(0xFFE8E0F0);
+const _zzzMutedColor = Color(0xFF7B6E88);
 const _zzzGifSpecs = <_ZzzGifSpec>[
   _ZzzGifSpec(
       'zzz.transform', 'assets/themes/zzz/transform.gif', '\u53d8\u8eab'),
@@ -110,9 +118,21 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
         await ref.read(plannerControllerProvider.notifier).loadDashboard();
         await ref.read(profileControllerProvider.notifier).load();
       },
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: Stack(
         children: [
+          if (isZzzTheme)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _ZzzScanlinePainter(),
+                ),
+              ),
+            ),
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            children: [
+          if (isZzzTheme)
+            _ZzzLedMarquee(date: effectiveSelectedDay),
           if (plannerState.loading)
             const Padding(
               padding: EdgeInsets.only(bottom: 12),
@@ -238,6 +258,8 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               goal: profile.fitnessGoal,
             ),
           ],
+        ],
+          ),
         ],
       ),
     );
@@ -376,6 +398,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                 _ModernTimePicker(
                   value: startsAt,
                   onChanged: (value) => setLocalState(() => startsAt = value),
+                  isZzz: ref.read(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz,
                 ),
                 if (tags.isNotEmpty) ...[
                   const SizedBox(height: 14),
@@ -425,14 +448,27 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('\u53d6\u6d88'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('\u4fdd\u5b58'),
-            ),
+            if (ref.read(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz) ...[
+              _ZzzEditorButton(
+                label: 'CANCEL',
+                onPressed: () => Navigator.of(context).pop(false),
+              ),
+              const SizedBox(width: 8),
+              _ZzzEditorButton(
+                label: 'SAVE',
+                primary: true,
+                onPressed: () => Navigator.of(context).pop(true),
+              ),
+            ] else ...[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('\u53d6\u6d88'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('\u4fdd\u5b58'),
+              ),
+            ],
           ],
         ),
       ),
@@ -492,6 +528,8 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             child: const Text('\u4fdd\u5b58'),
           ),
         ],
+          ),
+        ],
       ),
     );
 
@@ -509,6 +547,47 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
   }
 }
 
+class _ZzzLedMarquee extends StatelessWidget {
+  const _ZzzLedMarquee({required this.date});
+
+  final DateTime date;
+
+  String get _weekday {
+    const weekdays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+    return weekdays[date.weekday - 1];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} $_weekday';
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      decoration: BoxDecoration(
+        color: _zzzRed.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(
+          color: _zzzRed.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Text(
+        '■■■ $ds ■■■ ACTIVE DREAM SESSION ■■■',
+        style: const TextStyle(
+          color: _zzzRed,
+          fontSize: 10,
+          fontFamily: 'monospace',
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+        textAlign: TextAlign.center,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+      ),
+    );
+  }
+}
+
 class _ReminderReturnBanner extends StatelessWidget {
   const _ReminderReturnBanner({required this.event});
 
@@ -517,6 +596,48 @@ class _ReminderReturnBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      final tl = _timeLabel();
+      final dl = _dateLabel();
+      return Container(
+        decoration: BoxDecoration(
+          color: _zzzSurfaceColor,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzCyan.withValues(alpha: 0.45),
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(value),
+                  );
+                  if (time == null || !context.mounted) return;
+                  onChanged(DateTime(value.year, value.month, value.day,
+                      time.hour, time.minute));
+                },
+                child: Text(
+                  '> SET_TIME: $tl  > SET_DATE: $dl',
+                  style: const TextStyle(
+                    color: _zzzCyan,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -546,6 +667,8 @@ class _ReminderReturnBanner extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
           ),
         ],
       ),
@@ -639,6 +762,8 @@ class _WorkModeQuickPanel extends StatelessWidget {
             }).toList(),
           ),
         ],
+          ),
+        ],
       ),
     );
   }
@@ -661,6 +786,48 @@ class _InlineError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      final tl = _timeLabel();
+      final dl = _dateLabel();
+      return Container(
+        decoration: BoxDecoration(
+          color: _zzzSurfaceColor,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzCyan.withValues(alpha: 0.45),
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(value),
+                  );
+                  if (time == null || !context.mounted) return;
+                  onChanged(DateTime(value.year, value.month, value.day,
+                      time.hour, time.minute));
+                },
+                child: Text(
+                  '> SET_TIME: $tl  > SET_DATE: $dl',
+                  style: const TextStyle(
+                    color: _zzzCyan,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -837,52 +1004,38 @@ class _EventTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isZzz = zzzBackground != null;
-    final foreground = isZzz
-        ? Colors.white
-        : _isDone
-            ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
-            : theme.colorScheme.onSurface;
-    final muted = isZzz
-        ? Colors.white.withValues(alpha: 0.76)
-        : _isDone
-            ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.40)
-            : theme.colorScheme.onSurfaceVariant;
+    if (isZzz) return _buildZzzTile(context, ref, theme);
+
+    final foreground = _isDone
+        ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
+        : theme.colorScheme.onSurface;
+    final muted = _isDone
+        ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.40)
+        : theme.colorScheme.onSurfaceVariant;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: isZzz
-              ? const Color(0xFF0A0B10)
-              : highlighted
-                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.72)
-                  : _isDone
-                      ? theme.colorScheme.surfaceContainerLowest
-                      : theme.colorScheme.surfaceContainerLow,
+          color: highlighted
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.72)
+              : _isDone
+                  ? theme.colorScheme.surfaceContainerLowest
+                  : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: highlighted
                 ? theme.colorScheme.primary.withValues(alpha: 0.42)
-                : isZzz
-                    ? Colors.white.withValues(alpha: 0.18)
-                    : _isDone
-                        ? theme.colorScheme.outlineVariant.withValues(alpha: 0.20)
-                        : theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+                : _isDone
+                    ? theme.colorScheme.outlineVariant.withValues(alpha: 0.20)
+                    : theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
           ),
         ),
         child: Stack(
           children: [
-            if (zzzBackground != null)
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: 104,
-                child: _ZzzSideArt(spec: zzzBackground!, opacity: 0.58),
-              ),
             Padding(
-              padding: EdgeInsets.fromLTRB(14, 14, isZzz ? 92 : 14, 14),
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -891,15 +1044,8 @@ class _EventTile extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
                     decoration: BoxDecoration(
-                      color: isZzz
-                          ? Colors.black.withValues(alpha: 0.48)
-                          : theme.colorScheme.surface,
+                      color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: isZzz
-                          ? Border.all(
-                              color: Colors.white.withValues(alpha: 0.18),
-                            )
-                          : null,
                     ),
                     child: Column(
                       children: [
@@ -955,9 +1101,7 @@ class _EventTile extends ConsumerWidget {
                                 child: Text(
                                   '当前提醒',
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: isZzz
-                                        ? Colors.white
-                                        : theme.colorScheme.primary,
+                                    color: theme.colorScheme.primary,
                                   ),
                                 ),
                               ),
@@ -1036,6 +1180,202 @@ class _EventTile extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+  Widget _buildZzzTile(BuildContext context, WidgetRef ref, ThemeData theme) {
+    final titlePrefix = event.id > 0 ? 'Z-${event.id} ' : '';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ClipPath(
+        clipper: _ZzzCapsuleClipper(chamfer: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: _zzzSurfaceColor,
+            border: Border.all(
+              color: _zzzCyan.withValues(alpha: 0.55),
+              width: 1.5,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                left: 0, top: 0, bottom: 0,
+                child: Container(
+                  width: 4,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [_zzzRed, Color(0x33E53935)],
+                    ),
+                  ),
+                ),
+              ),
+              if (zzzBackground != null)
+                Positioned(
+                  right: 0, top: 0, bottom: 0,
+                  width: 104,
+                  child: Opacity(
+                    opacity: 0.58,
+                    child: _ZzzSideArt(spec: zzzBackground!, opacity: 0.58),
+                  ),
+                ),
+              Positioned.fill(
+                child: CustomPaint(painter: _ZzzScanlinePainter()),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 72,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.48),
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(
+                          color: _zzzCyan.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            _timeLabel(event.startsAt),
+                            style: const TextStyle(
+                              color: _zzzCyan,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 15,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${event.startsAt.month}/${event.startsAt.day}',
+                            style: TextStyle(
+                              color: _zzzCyan.withValues(alpha: 0.7),
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '$titlePrefix${event.title}',
+                                  style: const TextStyle(
+                                    color: _zzzTextColor,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                    fontFamily: 'monospace',
+                                    decoration: TextDecoration.none,
+                                  ),
+                                ),
+                              ),
+                              if (highlighted)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _zzzRed.withValues(alpha: 0.22),
+                                    borderRadius: BorderRadius.circular(2),
+                                    border: Border.all(
+                                      color: _zzzRed.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    '当前提醒',
+                                    style: TextStyle(
+                                      color: _zzzRed,
+                                      fontSize: 10,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ),
+                              if (_isDone && !highlighted)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _zzzMutedColor.withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                  child: const Text(
+                                    '已完成',
+                                    style: TextStyle(
+                                      color: _zzzMutedColor,
+                                      fontSize: 10,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          if (event.tagIds.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _TagChips(
+                              tagIds: event.tagIds,
+                              tags: ref.watch(tagsControllerProvider).tags,
+                              isZzz: true,
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          Text(
+                            _timeLabel(event.startsAt),
+                            style: TextStyle(
+                              color: _zzzMutedColor,
+                              fontSize: 11,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              _ZzzActionButton(
+                                icon: _isDone
+                                    ? Icons.check_circle
+                                    : Icons.radio_button_unchecked,
+                                label: _isDone ? 'UNDO' : 'DONE',
+                                isLoading: isDeleting,
+                                onPressed: onToggle,
+                              ),
+                              const SizedBox(width: 8),
+                              _ZzzActionButton(
+                                icon: Icons.edit_outlined,
+                                label: 'EDIT',
+                                onPressed: onEdit,
+                              ),
+                              const SizedBox(width: 8),
+                              _ZzzActionButton(
+                                icon: Icons.delete_outline,
+                                label: 'DEL',
+                                isLoading: isDeleting,
+                                onPressed: onDelete,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1199,6 +1539,65 @@ class _ZzzSideArt extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ZzzActionButton extends StatelessWidget {
+  const _ZzzActionButton({
+    required this.icon,
+    required this.label,
+    this.isLoading = false,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isLoading;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: isLoading ? null : onPressed,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: _zzzCyan.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzCyan.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: _zzzCyan.withValues(alpha: 0.85)),
+            const SizedBox(width: 4),
+            if (isLoading)
+              const SizedBox(
+                width: 12, height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: _zzzCyan,
+                ),
+              )
+            else
+              Text(
+                '> $label',
+                style: const TextStyle(
+                  color: _zzzCyan,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1212,14 +1611,59 @@ class _ZzzGifSpec {
   final String label;
 }
 
+class _ZzzEditorButton extends StatelessWidget {
+  const _ZzzEditorButton({
+    required this.label,
+    this.primary = false,
+    this.onPressed,
+  });
+
+  final String label;
+  final bool primary;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: primary
+              ? _zzzRed.withValues(alpha: 0.18)
+              : _zzzCyan.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: primary
+                ? _zzzRed.withValues(alpha: 0.55)
+                : _zzzCyan.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Text(
+          '> $label',
+          style: TextStyle(
+            color: primary ? _zzzRed : _zzzCyan,
+            fontSize: 12,
+            fontFamily: 'monospace',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ModernTimePicker extends StatelessWidget {
   const _ModernTimePicker({
     required this.value,
     required this.onChanged,
+    this.isZzz = false,
   });
 
   final DateTime value;
   final ValueChanged<DateTime> onChanged;
+  final bool isZzz;
 
   String _timeLabel() {
     final h = value.hour.toString().padLeft(2, '0');
@@ -1237,6 +1681,48 @@ class _ModernTimePicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      final tl = _timeLabel();
+      final dl = _dateLabel();
+      return Container(
+        decoration: BoxDecoration(
+          color: _zzzSurfaceColor,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzCyan.withValues(alpha: 0.45),
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(value),
+                  );
+                  if (time == null || !context.mounted) return;
+                  onChanged(DateTime(value.year, value.month, value.day,
+                      time.hour, time.minute));
+                },
+                child: Text(
+                  '> SET_TIME: $tl  > SET_DATE: $dl',
+                  style: const TextStyle(
+                    color: _zzzCyan,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
@@ -1305,6 +1791,8 @@ class _ModernTimePicker extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ],
       ),
     );
   }
@@ -1322,6 +1810,48 @@ class _EmptyBand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      final tl = _timeLabel();
+      final dl = _dateLabel();
+      return Container(
+        decoration: BoxDecoration(
+          color: _zzzSurfaceColor,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzCyan.withValues(alpha: 0.45),
+          ),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
+            const SizedBox(width: 8),
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  final time = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(value),
+                  );
+                  if (time == null || !context.mounted) return;
+                  onChanged(DateTime(value.year, value.month, value.day,
+                      time.hour, time.minute));
+                },
+                child: Text(
+                  '> SET_TIME: $tl  > SET_DATE: $dl',
+                  style: const TextStyle(
+                    color: _zzzCyan,
+                    fontSize: 13,
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1344,6 +1874,8 @@ class _EmptyBand extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ],
       ),
     );
   }
@@ -1355,6 +1887,47 @@ String _timeLabel(DateTime dt) =>
 Color _colorFromHex(String hex) {
   final h = hex.replaceFirst('#', '');
   return Color(int.parse('FF$h', radix: 16));
+}
+
+class _ZzzCapsuleClipper extends CustomClipper<Path> {
+  const _ZzzCapsuleClipper({required this.chamfer});
+
+  final double chamfer;
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+    path.moveTo(chamfer, 0);
+    path.lineTo(w - chamfer, 0);
+    path.lineTo(w, chamfer);
+    path.lineTo(w, h - chamfer);
+    path.lineTo(w - chamfer, h);
+    path.lineTo(chamfer, h);
+    path.lineTo(0, h - chamfer);
+    path.lineTo(0, chamfer);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _ZzzScanlinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0x08FFFFFF)
+      ..strokeWidth = 1;
+    for (double y = 0; y < size.height; y += 3) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _TagChips extends StatelessWidget {
@@ -1378,11 +1951,45 @@ class _TagChips extends StatelessWidget {
       runSpacing: 4,
       children: matched.map((tag) {
         final color = _colorFromHex(tag.color);
-        final fg = isZzz ? Colors.white.withValues(alpha: 0.92) : color;
+        if (isZzz) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: color.withValues(alpha: 0.55),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  tag.name,
+                  style: const TextStyle(
+                    color: _zzzTextColor,
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: isZzz ? 0.22 : 0.12),
+            color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -1391,13 +1998,13 @@ class _TagChips extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
               const SizedBox(width: 4),
               Text(
                 tag.name,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: isZzz ? Colors.white.withValues(alpha: 0.88) : color,
+                  color: color,
                 ),
               ),
             ],
