@@ -38,8 +38,8 @@ class BaseConfig:
         "UPDATE_RESOURCE_DIR",
         str((BASE_DIR.parent / "assets" / "resources").resolve()),
     )
-    APP_VERSION = os.getenv("APP_VERSION", "5.0.0")
-    APP_BUILD = os.getenv("APP_BUILD", "50000")
+    APP_VERSION = os.getenv("APP_VERSION", "5.1.0")
+    APP_BUILD = os.getenv("APP_BUILD", "50100")
     APP_DOWNLOAD_URL = os.getenv("APP_DOWNLOAD_URL", "")
 
     SMS_CODE_EXPIRE_SECONDS = int(os.getenv("SMS_CODE_EXPIRE_SECONDS", "300"))

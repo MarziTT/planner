@@ -1215,11 +1215,16 @@ class _ModernTimePicker extends StatelessWidget {
   final ValueChanged<DateTime> onChanged;
 
   String _timeLabel() {
-    return '\${value.hour.toString().padLeft(2, '0')}:\${value.minute.toString().padLeft(2, '0')}';
+    final h = value.hour.toString().padLeft(2, '0');
+    final m = value.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
 
   String _dateLabel() {
-    return '\${value.year}-\${value.month.toString().padLeft(2, '0')}-\${value.day.toString().padLeft(2, '0')}';
+    final y = value.year;
+    final mo = value.month.toString().padLeft(2, '0');
+    final d = value.day.toString().padLeft(2, '0');
+    return '$y-$mo-$d';
   }
 
   @override
@@ -1340,5 +1345,7 @@ class _EmptyBand extends StatelessWidget {
 String _timeLabel(DateTime dt) =>
     '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
-String _fullDateTimeLabel(DateTime dt) =>
-    '${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${_timeLabel(dt)}';
+Color _colorFromHex(String hex) {
+  final h = hex.replaceFirst('#', '');
+  return Color(int.parse('FF$h', radix: 16));
+}
