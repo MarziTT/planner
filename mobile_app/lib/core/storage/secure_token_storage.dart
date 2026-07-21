@@ -101,6 +101,12 @@ class TokenStorage {
     invalidateNotifier.value++;
   }
 
+  void clearCache() {
+    _cachedAccessToken = null;
+    _cachedRefreshToken = null;
+    _cachedSessionUser = null;
+  }
+
   Future<void> savePhoneNumber(String phone) async {
     await _storage.write(key: _loginPhoneKey, value: phone);
   }

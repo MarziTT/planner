@@ -21,22 +21,26 @@ class AuthRepository {
   final TokenStorage _storage;
 
   Future<AuthSession?> restoreSession() async {
-    final accessToken = await _storage.readAccessToken();
-    final refreshToken = await _storage.readRefreshToken();
-    final userJson = await _storage.readSessionUser();
-    if (accessToken == null || refreshToken == null || userJson == null) {
-      return null;
+    // Android Keystore may not be ready immediately after process restart.
+    // Retry a few times to avoid falsely reporting a logged-out state.
+    for (int attempt = 0; attempt < 5; attempt++) {
+      final accessToken = await _storage.readAccessToken();
+      final refreshToken = await _storage.readRefreshToken();
+      final userJson = await _storage.readSessionUser();
+      if (accessToken != null && refreshToken != null && userJson != null) {
+        final user = AuthUser.fromJson(userJson);
+        return AuthSession(
+          user: user,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        );
+      }
+      if (attempt < 4) {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        _storage.clearCache();
+      }
     }
-
-    final user = AuthUser.fromJson(userJson);
-    // Do NOT eagerly refresh on startup — let the interceptor handle
-    // the first 401 silently. This avoids flushing the session on transient
-    // network errors or server hiccups.
-    return AuthSession(
-      user: user,
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-    );
+    return null;
   }
 
   Future<void> sendCode({required String phone}) async {
