@@ -28,7 +28,7 @@ class BaseConfig:
 
     JWT_ISSUER = os.getenv("JWT_ISSUER", "pixel-planner")
     JWT_ACCESS_TTL_SECONDS = int(os.getenv("JWT_ACCESS_TTL_SECONDS", "3600"))
-    JWT_REFRESH_TTL_SECONDS = int(os.getenv("JWT_REFRESH_TTL_SECONDS", "2592000"))
+    JWT_REFRESH_TTL_SECONDS = int(os.getenv("JWT_REFRESH_TTL_SECONDS", "31536000"))
 
     UPDATE_MANIFEST_PATH = os.getenv(
         "UPDATE_MANIFEST_PATH",
