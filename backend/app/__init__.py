@@ -91,6 +91,29 @@ def _ensure_tables(app: Flask) -> None:
             db.session.rollback()
             pass  # Best-effort; app starts regardless
 
+        # PostgreSQL-specific: add is_recurring/recurrence_rule columns if tags table exists without them
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            if "tags" in tables:
+                cols = {c["name"] for c in inspector.get_columns("tags")}
+                dialect = db.engine.dialect.name
+                if "is_recurring" not in cols:
+                    if dialect == "postgresql":
+                        db.session.execute(text(
+                            "ALTER TABLE tags ADD COLUMN is_recurring BOOLEAN NOT NULL DEFAULT false"
+                        ))
+                    db.session.commit()
+                if "recurrence_rule" not in cols:
+                    if dialect == "postgresql":
+                        db.session.execute(text(
+                            "ALTER TABLE tags ADD COLUMN recurrence_rule VARCHAR(120) NOT NULL DEFAULT ''"
+                        ))
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
+            pass
+
         # PostgreSQL-specific: add zzz_enabled column if settings table exists without it
         try:
             inspector = inspect(db.engine)

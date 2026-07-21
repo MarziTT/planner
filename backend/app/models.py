@@ -60,6 +60,8 @@ class Tag(TimestampMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     name = db.Column(db.String(64), nullable=False)
     color = db.Column(db.String(16), nullable=False, default="#5B8CFF")
+    is_recurring = db.Column(db.Boolean, default=False, nullable=False)
+    recurrence_rule = db.Column(db.String(120), default="", nullable=False)
 
 
 class Event(TimestampMixin, db.Model):

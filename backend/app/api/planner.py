@@ -38,7 +38,13 @@ def _todo_to_dict(todo: Todo):
 
 
 def _tag_to_dict(tag: Tag):
-    return {"id": tag.id, "name": tag.name, "color": tag.color}
+    return {
+        "id": tag.id,
+        "name": tag.name,
+        "color": tag.color,
+        "isRecurring": tag.is_recurring,
+        "recurrenceRule": tag.recurrence_rule,
+    }
 
 
 @planner_bp.get("/events")
@@ -186,6 +192,8 @@ def create_tag():
         user_id=g.current_user.id,
         name=payload["name"].strip(),
         color=payload.get("color") or "#5B8CFF",
+        is_recurring=bool(payload.get("isRecurring", False)),
+        recurrence_rule=payload.get("recurrenceRule") or "",
     )
     db.session.add(tag)
     db.session.commit()
@@ -203,6 +211,10 @@ def update_tag(tag_id: int):
         tag.name = payload["name"].strip()
     if "color" in payload:
         tag.color = payload["color"] or "#5B8CFF"
+    if "isRecurring" in payload:
+        tag.is_recurring = bool(payload["isRecurring"])
+    if "recurrenceRule" in payload:
+        tag.recurrence_rule = payload["recurrenceRule"] or ""
     db.session.commit()
     return success({"item": _tag_to_dict(tag)})
 
