@@ -1,9 +1,11 @@
 {
-    "latestVersion":  "5.1.0",
-    "buildNumber":  "50100",
+    "latestVersion":  "5.2.0",
+    "buildNumber":  "50200",
     "required":  false,
     "downloadUrl":  "http://192.168.1.126:8888/app-release.apk",
     "releaseNotes":  [
+                         "ZZZ 主题全面视觉重构：切角胶囊卡片、扫描线、LED 滚动条",
+                         "ZZZ 专属操作按钮 + 编辑器按钮 + HUD 终端风格时间面板",
                          "全新时间选择器：日期+时间拆分点击，视觉更现代",
                          "事件编辑支持选择标签，重复日程标签同步显示",
                          "标签支持长期日程设定（每天/每周/每月/工作日）",
