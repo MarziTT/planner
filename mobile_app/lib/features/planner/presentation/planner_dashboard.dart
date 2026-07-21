@@ -768,48 +768,6 @@ class _InlineError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    if (isZzz) {
-      final tl = _timeLabel();
-      final dl = _dateLabel();
-      return Container(
-        decoration: BoxDecoration(
-          color: _zzzSurfaceColor,
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(
-            color: _zzzCyan.withValues(alpha: 0.45),
-          ),
-        ),
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
-            const SizedBox(width: 8),
-            Expanded(
-              child: InkWell(
-                onTap: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(value),
-                  );
-                  if (time == null || !context.mounted) return;
-                  onChanged(DateTime(value.year, value.month, value.day,
-                      time.hour, time.minute));
-                },
-                child: Text(
-                  '> SET_TIME: $tl  > SET_DATE: $dl',
-                  style: const TextStyle(
-                    color: _zzzCyan,
-                    fontSize: 13,
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1166,7 +1124,6 @@ class _EventTile extends ConsumerWidget {
       ),
     );
   }
-}
 
   Widget _buildZzzTile(BuildContext context, WidgetRef ref, ThemeData theme) {
     final titlePrefix = event.id > 0 ? 'Z-${event.id} ' : '';
@@ -1363,6 +1320,7 @@ class _EventTile extends ConsumerWidget {
     );
   }
 }
+
 class _TodoTile extends ConsumerWidget {
   const _TodoTile({
     required this.todo,
