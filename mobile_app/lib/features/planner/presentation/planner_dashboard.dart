@@ -405,7 +405,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                 if (tags.isNotEmpty) ...[
                   const SizedBox(height: 14),
                   DropdownButtonFormField<int>(
-                    value: selectedTagId,
+                    initialValue: selectedTagId,
                     decoration: const InputDecoration(
                       labelText: '\u6807\u7b7e',
                       border: OutlineInputBorder(),

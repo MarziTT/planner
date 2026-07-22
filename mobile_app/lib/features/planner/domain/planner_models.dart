@@ -16,16 +16,23 @@
   final List<int> tagIds;
 
   factory PlannerEvent.fromJson(Map<String, dynamic> json) {
+    final dynamic rawTag = json['tagId'] ?? json['tagIds'];
+    final List<int> tagIds;
+    if (rawTag is int) {
+      tagIds = [rawTag];
+    } else if (rawTag is List<dynamic>) {
+      tagIds = rawTag.map((e) => (e as num).toInt()).toList();
+    } else {
+      tagIds = const [];
+    }
+
     return PlannerEvent(
       id: (json['id'] as num).toInt(),
       title: json['title'] as String? ?? '',
       startsAt: DateTime.parse(json['startsAt'] as String),
       endsAt: DateTime.parse(json['endsAt'] as String),
       status: json['status'] as String? ?? 'planned',
-      tagIds: (json['tagIds'] as List<dynamic>?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          const [],
+      tagIds: tagIds,
     );
   }
 }
