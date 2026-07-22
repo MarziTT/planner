@@ -130,3 +130,20 @@ def _ensure_tables(app: Flask) -> None:
         except Exception:
             db.session.rollback()
             pass
+
+        # PostgreSQL-specific: add identity column if profiles table exists without it
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            if "profiles" in tables:
+                cols = {c["name"] for c in inspector.get_columns("profiles")}
+                if "identity" not in cols:
+                    dialect = db.engine.dialect.name
+                    if dialect == "postgresql":
+                        db.session.execute(text(
+                            "ALTER TABLE profiles ADD COLUMN identity VARCHAR(32) NOT NULL DEFAULT 'worker'"
+                        ))
+                    db.session.commit()
+        except Exception:
+            db.session.rollback()
+            pass
