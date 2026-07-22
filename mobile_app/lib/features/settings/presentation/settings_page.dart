@@ -111,12 +111,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         .map(
                           (preset) => DropdownMenuItem(
                             value: preset,
-                            child: Text(_labelOf(preset)),
+                            child: Text(_labelOf(preset),
+                                style: isZzz
+                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    : null),
                           ),
                         )
                         .toList(),
                     onChanged: (value) async {
                       if (value == null || settings == null) return;
+                      if (value == themeState.preset) return;
                       themeController.switchPreset(value);
                       await ref
                           .read(settingsControllerProvider.notifier)
@@ -171,6 +175,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         : null,
                     onSelectionChanged: (value) async {
                       final selected = value.first;
+                      if (selected == themeState.mode) return;
                       themeController.setThemeMode(selected);
                       if (settings == null) return;
                       await ref
@@ -196,16 +201,25 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   BorderSide(color: Color(0xFF00FF41)))
                           : null,
                     ),
-                    items: const [
+                    items: [
                       DropdownMenuItem(
-                          value: 'stable', child: Text(_stableLabel)),
+                          value: 'stable',
+                          child: Text(_stableLabel,
+                              style: isZzz
+                                  ? const TextStyle(color: Color(0xFFE0F0E0))
+                                  : null)),
                       DropdownMenuItem(
-                          value: 'beta', child: Text(_betaLabel)),
+                          value: 'beta',
+                          child: Text(_betaLabel,
+                              style: isZzz
+                                  ? const TextStyle(color: Color(0xFFE0F0E0))
+                                  : null)),
                     ],
                     onChanged: settings == null
                         ? null
                         : (value) async {
                             if (value == null) return;
+                            if (value == settings.updateChannel) return;
                             await ref
                                 .read(
                                     settingsControllerProvider.notifier)
@@ -255,7 +269,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         .map(
                           (value) => DropdownMenuItem(
                             value: value,
-                            child: Text('提前 $value 分钟'),
+                            child: Text('提前 $value 分钟',
+                                style: isZzz
+                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    : null),
                           ),
                         )
                         .toList(),
@@ -264,6 +281,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             ? null
                             : (value) async {
                                 if (value == null) return;
+                                if (value == settings.notificationsLeadMinutes) return;
                                 await ref
                                     .read(settingsControllerProvider
                                         .notifier)
