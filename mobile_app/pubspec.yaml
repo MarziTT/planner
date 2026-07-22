@@ -1,7 +1,7 @@
 name: pixel_planner_mobile
 description: FlowDay schedule assistant rebuilt with Flutter.
 publish_to: "none"
-version: 5.2.1+50201
+version: 5.2.2+50202
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
