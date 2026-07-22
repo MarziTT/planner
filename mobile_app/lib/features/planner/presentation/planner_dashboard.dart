@@ -110,17 +110,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
         await ref.read(plannerControllerProvider.notifier).loadDashboard();
         await ref.read(profileControllerProvider.notifier).load();
       },
-      child: Stack(
-        children: [
-          if (isZzzTheme)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _ZzzDreamBackgroundPainter(),
-                ),
-              ),
-            ),
-          ListView(
+      child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
           if (isZzzTheme)
@@ -283,8 +273,6 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             ),
           ],
         ],
-          ),
-        ],
       ),
     );
   }
@@ -412,9 +400,12 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                   side: BorderSide(color: _zzzGreen.withValues(alpha: 0.3), width: 1.5),
                 )
               : null,
-          title: Text(event == null
-              ? '\u65b0\u589e\u884c\u7a0b'
-              : '\u7f16\u8f91\u884c\u7a0b'),
+          title: Text(
+            event == null ? '\u65b0\u589e\u884c\u7a0b' : '\u7f16\u8f91\u884c\u7a0b',
+            style: isZzz
+                ? const TextStyle(color: Color(0xFFE0F0E0))
+                : null,
+          ),
           content: SizedBox(
             width: 420,
             child: Column(
@@ -424,7 +415,24 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                 TextField(
                   controller: titleController,
                   autofocus: true,
-                  decoration: const InputDecoration(labelText: '\u6807\u9898'),
+                  style: isZzz
+                      ? const TextStyle(color: Color(0xFFE0F0E0))
+                      : null,
+                  decoration: isZzz
+                      ? const InputDecoration(
+                          labelText: '\u6807\u9898',
+                          labelStyle: TextStyle(color: Color(0xFFA0A0B8)),
+                          border: OutlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFF00FF41)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFF00FF41)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderSide: BorderSide(color: Color(0xFF00FF41)),
+                          ),
+                        )
+                      : const InputDecoration(labelText: '\u6807\u9898'),
                 ),
                 const SizedBox(height: 14),
                 _ModernTimePicker(
@@ -441,9 +449,12 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                       border: OutlineInputBorder(),
                     ),
                     items: [
-                      const DropdownMenuItem<int>(
+                      DropdownMenuItem<int>(
                         value: null,
-                        child: Text('(\u65e0\u6807\u7b7e)'),
+                        child: Text('(\u65e0\u6807\u7b7e)',
+                            style: isZzz
+                                ? const TextStyle(color: Color(0xFFE0F0E0))
+                                : null),
                       ),
                       ...tags.map(
                         (tag) => DropdownMenuItem<int>(
@@ -459,13 +470,18 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              Text(tag.name),
+                              Text(tag.name,
+                                  style: isZzz
+                                      ? const TextStyle(color: Color(0xFFE0F0E0))
+                                      : null),
                               if (tag.isRecurring) ...[
                                 const SizedBox(width: 6),
                                 Icon(Icons.repeat, size: 14,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant),
+                                    color: isZzz
+                                        ? const Color(0xFFA0A0B8)
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant),
                               ],
                             ],
                           ),
@@ -2146,73 +2162,6 @@ class _ZzzCapsuleClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
-}
-
-class _ZzzDreamBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rng = _DreamRng(42);
-    // Subtle dream grid
-    final gridPaint = Paint()
-      ..color = const Color(0x08FF1744)
-      ..strokeWidth = 0.5;
-    for (double x = 0; x < size.width; x += 48) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-    for (double y = 0; y < size.height; y += 48) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-    // Broken mirror cracks
-    final crackPaint = Paint()
-      ..color = const Color(0x0A00FF41)
-      ..strokeWidth = 0.7
-      ..style = PaintingStyle.stroke;
-    for (int i = 0; i < 8; i++) {
-      final path = Path();
-      final startX = rng.nextDouble() * size.width;
-      final startY = rng.nextDouble() * size.height;
-      path.moveTo(startX, startY);
-      var cx = startX;
-      var cy = startY;
-      for (int seg = 0; seg < rng.nextIntInRange(2, 5); seg++) {
-        cx += (rng.nextDouble() - 0.5) * 140;
-        cy += (rng.nextDouble() - 0.5) * 140;
-        path.lineTo(cx, cy);
-      }
-      canvas.drawPath(path, crackPaint);
-    }
-    // Dream particles
-    final particlePaint = Paint()
-      ..color = const Color(0x0F00FF41);
-    for (int i = 0; i < 30; i++) {
-      final px = rng.nextDouble() * size.width;
-      final py = rng.nextDouble() * size.height;
-      final radius = rng.nextDouble() * 2 + 0.5;
-      canvas.drawCircle(Offset(px, py), radius, particlePaint);
-      // Red glow particles (fewer)
-      if (i < 8) {
-        final redPaint = Paint()
-          ..color = const Color(0x0AFF1744);
-        canvas.drawCircle(Offset(px, py), radius * 2.5, redPaint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _DreamRng {
-  _DreamRng(this._seed);
-  int _seed;
-
-  double nextDouble() {
-    _seed = (_seed * 1103515245 + 12345) & 0x7fffffff;
-    return _seed / 0x7fffffff;
-  }
-
-  int nextIntInRange(int min, int max) =>
-      min + (nextDouble() * (max - min)).toInt();
 }
 
 class _ZzzScanlinePainter extends CustomPainter {
