@@ -1,6 +1,6 @@
 {
-    "latestVersion":  "5.2.0",
-    "buildNumber":  "50200",
+    "latestVersion":  "5.2.1",
+    "buildNumber":  "50201",
     "required":  false,
     "downloadUrl":  "http://192.168.1.126:8888/app-release.apk",
     "releaseNotes":  [
