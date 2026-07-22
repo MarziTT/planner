@@ -66,15 +66,32 @@ class PlannerRepository {
       'endsAt': endsAt.toIso8601String(),
       'status': event.status,
     };
-    data['tagIds'] = tagId != null ? [tagId] : [];
+    if (tagId != null) {
+      data['tagIds'] = [tagId];
+    }
     final response = await _dio.put('/events/${event.id}', data: data);
-    return PlannerEvent.fromJson(
+    final result = PlannerEvent.fromJson(
       Map<String, dynamic>.from(response.data['data']['item'] as Map),
     );
+    if (tagId != null && !result.tagIds.contains(tagId)) {
+      return _ensureTagIds(result, [tagId]);
+    }
+    return result;
   }
 
   Future<void> deleteEvent(int id) async {
     await _dio.delete('/events/$id');
+  }
+
+  PlannerEvent _ensureTagIds(PlannerEvent event, List<int> tagIds) {
+    return PlannerEvent(
+      id: event.id,
+      title: event.title,
+      startsAt: event.startsAt,
+      endsAt: event.endsAt,
+      status: event.status,
+      tagIds: tagIds,
+    );
   }
 
   Future<PlannerTodo> createTodo({required String title}) async {
@@ -107,14 +124,22 @@ class PlannerRepository {
 
   Future<PlannerEvent> toggleEvent(PlannerEvent event) async {
     final newStatus = event.status == 'done' ? 'planned' : 'done';
-    final response = await _dio.put('/events/${event.id}', data: {
+    final data = <String, dynamic>{
       'title': event.title,
       'startsAt': event.startsAt.toIso8601String(),
       'endsAt': event.endsAt.toIso8601String(),
       'status': newStatus,
-    });
-    return PlannerEvent.fromJson(
+    };
+    if (event.tagIds.isNotEmpty) {
+      data['tagIds'] = event.tagIds;
+    }
+    final response = await _dio.put('/events/${event.id}', data: data);
+    final result = PlannerEvent.fromJson(
       Map<String, dynamic>.from(response.data['data']['item'] as Map),
     );
+    if (event.tagIds.isNotEmpty && result.tagIds.isEmpty) {
+      return _ensureTagIds(result, event.tagIds);
+    }
+    return result;
   }
 }

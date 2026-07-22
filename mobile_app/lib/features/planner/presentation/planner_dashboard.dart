@@ -11,84 +11,28 @@ import '../../tags/state/tags_controller.dart';
 import '../../updates/presentation/hot_update_image.dart';
 import '../../weather/presentation/weather_card.dart';
 import '../../weather/state/weather_controller.dart';
+import '../../../widgets/zzz_gif_decoration.dart';
 import 'planner_calendar_panel.dart';
 import '../domain/planner_models.dart';
 import '../state/planner_controller.dart';
 
 const _defaultEventDuration = Duration(hours: 1);
 
-const _zzzBgColor = Color(0xFF0A0A0F);
-const _zzzSurfaceColor = Color(0xFF0D0B12);
-const _zzzRed = Color(0xFFFF1744);
-const _zzzGreen = Color(0xFF00FF41);
-const _zzzTextColor = Color(0xFFE0F0E0);
-const _zzzSilver = Color(0xFFA0A0B8);
-const _zzzGifSpecs = <_ZzzGifSpec>[
-  _ZzzGifSpec('zzz.10号', 'assets/themes/zzz/10号.gif', '10号'),
-  _ZzzGifSpec('zzz.11号', 'assets/themes/zzz/11号.gif', '11号'),
-  _ZzzGifSpec('zzz.12号', 'assets/themes/zzz/12号.gif', '12号'),
-  _ZzzGifSpec('zzz.13', 'assets/themes/zzz/13.gif', '13'),
-  _ZzzGifSpec('zzz.14', 'assets/themes/zzz/14.gif', '14'),
-  _ZzzGifSpec('zzz.15', 'assets/themes/zzz/15.gif', '15'),
-  _ZzzGifSpec('zzz.16', 'assets/themes/zzz/16.gif', '16'),
-  _ZzzGifSpec('zzz.17', 'assets/themes/zzz/17.gif', '17'),
-  _ZzzGifSpec('zzz.18', 'assets/themes/zzz/18.gif', '18'),
-  _ZzzGifSpec('zzz.19', 'assets/themes/zzz/19.gif', '19'),
-  _ZzzGifSpec('zzz.1号', 'assets/themes/zzz/1号.gif', '1号'),
-  _ZzzGifSpec('zzz.20', 'assets/themes/zzz/20.gif', '20'),
-  _ZzzGifSpec('zzz.21', 'assets/themes/zzz/21.gif', '21'),
-  _ZzzGifSpec('zzz.22', 'assets/themes/zzz/22.gif', '22'),
-  _ZzzGifSpec('zzz.23', 'assets/themes/zzz/23.gif', '23'),
-  _ZzzGifSpec('zzz.24', 'assets/themes/zzz/24.gif', '24'),
-  _ZzzGifSpec('zzz.25', 'assets/themes/zzz/25.gif', '25'),
-  _ZzzGifSpec('zzz.26', 'assets/themes/zzz/26.gif', '26'),
-  _ZzzGifSpec('zzz.27', 'assets/themes/zzz/27.gif', '27'),
-  _ZzzGifSpec('zzz.28', 'assets/themes/zzz/28.gif', '28'),
-  _ZzzGifSpec('zzz.29', 'assets/themes/zzz/29.gif', '29'),
-  _ZzzGifSpec('zzz.2号', 'assets/themes/zzz/2号.gif', '2号'),
-  _ZzzGifSpec('zzz.30', 'assets/themes/zzz/30.gif', '30'),
-  _ZzzGifSpec('zzz.31', 'assets/themes/zzz/31.gif', '31'),
-  _ZzzGifSpec('zzz.32', 'assets/themes/zzz/32.gif', '32'),
-  _ZzzGifSpec('zzz.33', 'assets/themes/zzz/33.gif', '33'),
-  _ZzzGifSpec('zzz.34', 'assets/themes/zzz/34.gif', '34'),
-  _ZzzGifSpec('zzz.35', 'assets/themes/zzz/35.gif', '35'),
-  _ZzzGifSpec('zzz.36', 'assets/themes/zzz/36.gif', '36'),
-  _ZzzGifSpec('zzz.37', 'assets/themes/zzz/37.gif', '37'),
-  _ZzzGifSpec('zzz.38', 'assets/themes/zzz/38.gif', '38'),
-  _ZzzGifSpec('zzz.39', 'assets/themes/zzz/39.gif', '39'),
-  _ZzzGifSpec('zzz.3号', 'assets/themes/zzz/3号.gif', '3号'),
-  _ZzzGifSpec('zzz.40', 'assets/themes/zzz/40.gif', '40'),
-  _ZzzGifSpec('zzz.41', 'assets/themes/zzz/41.gif', '41'),
-  _ZzzGifSpec('zzz.42', 'assets/themes/zzz/42.gif', '42'),
-  _ZzzGifSpec('zzz.43', 'assets/themes/zzz/43.gif', '43'),
-  _ZzzGifSpec('zzz.4号', 'assets/themes/zzz/4号.gif', '4号'),
-  _ZzzGifSpec('zzz.5号', 'assets/themes/zzz/5号.gif', '5号'),
-  _ZzzGifSpec('zzz.6号', 'assets/themes/zzz/6号.gif', '6号'),
-  _ZzzGifSpec('zzz.7号', 'assets/themes/zzz/7号.gif', '7号'),
-  _ZzzGifSpec('zzz.8号', 'assets/themes/zzz/8号.gif', '8号'),
-  _ZzzGifSpec('zzz.9号', 'assets/themes/zzz/9号.gif', '9号'),
-  _ZzzGifSpec('zzz.冲击', 'assets/themes/zzz/冲击.gif', '冲击'),
-  _ZzzGifSpec('zzz.分身', 'assets/themes/zzz/分身.gif', '分身'),
-  _ZzzGifSpec('zzz.变换', 'assets/themes/zzz/变换.gif', '变换'),
-  _ZzzGifSpec('zzz.器械', 'assets/themes/zzz/器械.gif', '器械'),
-  _ZzzGifSpec('zzz.奇异', 'assets/themes/zzz/奇异.gif', '奇异'),
-  _ZzzGifSpec('zzz.恢复', 'assets/themes/zzz/恢复.gif', '恢复'),
-  _ZzzGifSpec('zzz.惩戒秩序', 'assets/themes/zzz/惩戒秩序.gif', '惩戒秩序'),
-  _ZzzGifSpec('zzz.护盾', 'assets/themes/zzz/护盾.gif', '护盾'),
-  _ZzzGifSpec('zzz.等离子', 'assets/themes/zzz/等离子.gif', '等离子'),
-  _ZzzGifSpec('zzz.重力', 'assets/themes/zzz/重力.gif', '重力'),
-  _ZzzGifSpec('zzz.雨天', 'assets/themes/zzz/雨天.gif', '雨天'),
-  _ZzzGifSpec('zzz.飞行', 'assets/themes/zzz/飞行.gif', '飞行'),
-];
+const _zzzBgColor = zzzBgColor;
+const _zzzSurfaceColor = zzzSurfaceColor;
+const _zzzRed = zzzRed;
+const _zzzGreen = zzzGreen;
+const _zzzTextColor = zzzTextColor;
+const _zzzSilver = zzzSilver;
 
-_ZzzGifSpec _zzzSpecForEvent(PlannerEvent event) {
+ZzzGifSpec _zzzSpecForEvent(PlannerEvent event) {
   final seed = Object.hash(event.id, event.title, event.startsAt.day);
-  return _zzzGifSpecs[seed.abs() % _zzzGifSpecs.length];
+  return zzzGifSpecs[seed.abs() % zzzGifSpecs.length];
 }
 
-_ZzzGifSpec _zzzSpecForTodo(PlannerTodo todo) {
+ZzzGifSpec _zzzSpecForTodo(PlannerTodo todo) {
   final seed = Object.hash(todo.id, todo.title, todo.completed);
-  return _zzzGifSpecs[seed.abs() % _zzzGifSpecs.length];
+  return zzzGifSpecs[seed.abs() % zzzGifSpecs.length];
 }
 
 class PlannerDashboard extends ConsumerStatefulWidget {
@@ -1170,7 +1114,7 @@ class _EventTile extends ConsumerWidget {
 
   final PlannerEvent event;
   final bool highlighted;
-  final _ZzzGifSpec? zzzBackground;
+  final ZzzGifSpec? zzzBackground;
   final bool isDeleting;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
@@ -1576,7 +1520,7 @@ class _TodoTile extends ConsumerWidget {
   });
 
   final PlannerTodo todo;
-  final _ZzzGifSpec? zzzBackground;
+  final ZzzGifSpec? zzzBackground;
   final bool isDeleting;
   final VoidCallback onEdit;
   final Future<void> Function() onDelete;
@@ -1785,7 +1729,7 @@ class _TodoTile extends ConsumerWidget {
 class _ZzzSideArt extends StatelessWidget {
   const _ZzzSideArt({required this.spec, required this.opacity});
 
-  final _ZzzGifSpec spec;
+  final ZzzGifSpec spec;
   final double opacity;
 
   @override
@@ -1898,14 +1842,6 @@ class _ZzzActionButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _ZzzGifSpec {
-  const _ZzzGifSpec(this.resourceId, this.asset, this.label);
-
-  final String resourceId;
-  final String asset;
-  final String label;
 }
 
 class _ZzzEditorButton extends StatelessWidget {

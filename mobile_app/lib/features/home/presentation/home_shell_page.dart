@@ -18,6 +18,7 @@ import '../../settings/presentation/settings_page.dart';
 import '../../settings/state/settings_controller.dart';
 import '../../tags/presentation/tags_page.dart';
 import '../../updates/presentation/update_banner.dart';
+import '../../../widgets/zzz_gif_decoration.dart';
 
 const _zzzBgColor = 0xFF0A0A0F;
 const _zzzSurfaceColor = 0xFF0D0B12;
@@ -228,11 +229,25 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     return Scaffold(
       backgroundColor: isZzz ? zzzBg : null,
       appBar: appBar,
-      body: Column(
+      body: Stack(
         children: [
-          const UpdateBanner(),
-          if (currentIndex == 0) const QuickCaptureBar(),
-          Expanded(child: pages[currentIndex]),
+          if (isZzz)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: ZzzCornerArt(
+                spec: zzzSpecFromSeed(DateTime.now().day + 2),
+                size: 80,
+                opacity: 0.22,
+              ),
+            ),
+          Column(
+            children: [
+              const UpdateBanner(),
+              if (currentIndex == 0) const QuickCaptureBar(),
+              Expanded(child: pages[currentIndex]),
+            ],
+          ),
         ],
       ),
       floatingActionButton: GestureDetector(

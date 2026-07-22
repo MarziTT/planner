@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../main.dart';
 import '../../../core/storage/secure_token_storage.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/auth_controller.dart';
 
 const _savedPhoneKey = 'login_phone';
@@ -122,16 +123,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
     return Scaffold(
       backgroundColor: isZzz ? const Color(_zzzBgColor) : colorScheme.surface,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(18, 24, 18, 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 430),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const _BrandHeader(),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(18, 24, 18, 28),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _BrandHeader(),
                   const SizedBox(height: 28),
                   DecoratedBox(
                     decoration: BoxDecoration(
@@ -284,7 +287,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
-        ),
+          if (isZzz)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: ZzzCornerArt(
+                spec: zzzSpecFromSeed(DateTime.now().day + 1),
+                size: 72,
+                opacity: 0.3,
+              ),
+            ),
+        ],
       ),
     );
   }

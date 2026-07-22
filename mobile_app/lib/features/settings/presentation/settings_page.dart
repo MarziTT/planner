@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
 import '../../updates/state/update_controller.dart';
+import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/settings_controller.dart';
 
 const _zzzPreviewAssets = <String>[
@@ -61,13 +62,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final isZzz =
         themeState.preset == PlannerThemePreset.kamenRiderZzz;
 
-    return Container(
-      color: isZzz ? const Color(0xFF0A0A0F) : null,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text(
-            _pageTitle,
+    return Stack(
+      children: [
+        Container(
+          color: isZzz ? const Color(0xFF0A0A0F) : null,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Text(
+                _pageTitle,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: isZzz ? const Color(0xFFE0F0E0) : null,
                 ),
@@ -129,16 +132,28 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ],
                   const SizedBox(height: 12),
                   SegmentedButton<ThemeMode>(
-                    segments: const [
+                    segments: [
                       ButtonSegment(
                           value: ThemeMode.system,
-                          label: Text(_modeSystem)),
+                          label: Text(_modeSystem,
+                              style: isZzz
+                                  ? const TextStyle(
+                                      color: Color(0xFFE0F0E0))
+                                  : null)),
                       ButtonSegment(
                           value: ThemeMode.light,
-                          label: Text(_modeLight)),
+                          label: Text(_modeLight,
+                              style: isZzz
+                                  ? const TextStyle(
+                                      color: Color(0xFFE0F0E0))
+                                  : null)),
                       ButtonSegment(
                           value: ThemeMode.dark,
-                          label: Text(_modeDark)),
+                          label: Text(_modeDark,
+                              style: isZzz
+                                  ? const TextStyle(
+                                      color: Color(0xFFE0F0E0))
+                                  : null)),
                     ],
                     selected: {themeState.mode},
                     style: isZzz
@@ -211,8 +226,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         : (value) => ref
                             .read(settingsControllerProvider.notifier)
                             .updateNotifications(enabled: value),
-                    title: const Text(_notifyTitle),
-                    subtitle: const Text(_notifySubtitle),
+                    title: Text(_notifyTitle,
+                        style: isZzz
+                            ? const TextStyle(color: Color(0xFFE0F0E0))
+                            : null),
+                    subtitle: Text(_notifySubtitle,
+                        style: isZzz
+                            ? const TextStyle(color: Color(0xFFA0A0B8))
+                            : null),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<int>(
@@ -266,7 +287,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             .save(
                               settings.copyWith(voiceEnabled: value),
                             ),
-                    title: const Text(_voiceLabel),
+                    title: Text(_voiceLabel,
+                        style: isZzz
+                            ? const TextStyle(color: Color(0xFFE0F0E0))
+                            : null),
                   ),
                 ],
               ),
@@ -363,13 +387,26 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               child: Text(
                 settingsState.errorMessage!,
                 style: TextStyle(
-                    color: Theme.of(context).colorScheme.error),
+                    color: isZzz
+                        ? const Color(0xFFFF1744)
+                        : Theme.of(context).colorScheme.error),
               ),
             ),
           ],
         ],
       ),
-    );
+      ),
+      if (isZzz)
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: ZzzCornerArt(
+            spec: zzzSpecFromSeed(DateTime.now().day + 3),
+            size: 68,
+            opacity: 0.28,
+          ),
+        ),
+    ]);
   }
 
   String _labelOf(PlannerThemePreset preset) {

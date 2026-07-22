@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../profile/domain/profile_model.dart';
 import '../../profile/state/profile_controller.dart';
+import '../../../widgets/zzz_gif_decoration.dart';
 import '../domain/tag_model.dart';
 import '../state/tags_controller.dart';
 
@@ -27,30 +28,35 @@ class TagsPage extends ConsumerWidget {
     final scheme = theme.colorScheme;
     final isZzz = ref.watch(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz;
 
-    return Container(
-      color: isZzz ? const Color(_zzzBgColor) : null,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        children: [
-          Row(
+    return Stack(
+      children: [
+        Container(
+          color: isZzz ? const Color(_zzzBgColor) : null,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
-              if (isZzz)
-                Container(
-                  decoration: const BoxDecoration(
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(_zzzGreen),
-                        blurRadius: 8,
-                        spreadRadius: -2,
+              Row(
+                children: [
+                  if (isZzz)
+                    Container(
+                      decoration: const BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(_zzzGreen),
+                            blurRadius: 8,
+                            spreadRadius: -2,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: const Icon(Icons.sell_outlined, size: 22, color: Color(_zzzGreen)),
-                )
-              else
-                Icon(Icons.sell_outlined, size: 22, color: scheme.primary),
+                      child: const Icon(Icons.sell_outlined, size: 22, color: Color(_zzzGreen)),
+                    )
+                  else
+                    Icon(Icons.sell_outlined, size: 22, color: scheme.primary),
               const SizedBox(width: 10),
-              Expanded(child: Text('标签管理', style: theme.textTheme.titleLarge)),
+              Expanded(child: Text('标签管理',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: isZzz ? const Color(_zzzGreenLight) : null,
+                  ))),
               FilledButton.icon(
                 onPressed: () => _showTagDialog(context, ref, isZzz: isZzz),
                 icon: const Icon(Icons.add, size: 18),
@@ -174,7 +180,18 @@ class TagsPage extends ConsumerWidget {
           ),
         ],
       ),
-    );
+      ),
+      if (isZzz)
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: ZzzCornerArt(
+            spec: zzzSpecFromSeed(DateTime.now().day + 5),
+            size: 64,
+            opacity: 0.28,
+          ),
+        ),
+    ]);
   }
 
   Future<void> _showTagDialog(BuildContext context, WidgetRef ref, {PlannerTag? tag, bool isZzz = false}) async {
@@ -278,8 +295,14 @@ class TagsPage extends ConsumerWidget {
                   const SizedBox(height: 16),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('长期日程'),
-                    subtitle: const Text('每天重复的事件，可独立修改单次时间'),
+                    title: Text('长期日程',
+                        style: isZzz
+                            ? const TextStyle(color: Color(_zzzGreenLight))
+                            : null),
+                    subtitle: Text('每天重复的事件，可独立修改单次时间',
+                        style: isZzz
+                            ? const TextStyle(color: Color(_zzzGreen))
+                            : null),
                     value: isRecurring,
                     onChanged: (value) => setLocalState(() => isRecurring = value),
                   ),
@@ -307,11 +330,31 @@ class TagsPage extends ConsumerWidget {
                               border: OutlineInputBorder(),
                               contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             ),
-                      items: const [
-                        DropdownMenuItem(value: 'daily', child: Text('每天')),
-                        DropdownMenuItem(value: 'weekly', child: Text('每周')),
-                        DropdownMenuItem(value: 'monthly', child: Text('每月')),
-                        DropdownMenuItem(value: 'weekday', child: Text('工作日')),
+                      items: [
+                        DropdownMenuItem(
+                            value: 'daily',
+                            child: Text('每天',
+                                style: isZzz
+                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    : null)),
+                        DropdownMenuItem(
+                            value: 'weekly',
+                            child: Text('每周',
+                                style: isZzz
+                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    : null)),
+                        DropdownMenuItem(
+                            value: 'monthly',
+                            child: Text('每月',
+                                style: isZzz
+                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    : null)),
+                        DropdownMenuItem(
+                            value: 'weekday',
+                            child: Text('工作日',
+                                style: isZzz
+                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    : null)),
                       ],
                       onChanged: (value) => setLocalState(() => recurrenceRule = value ?? 'daily'),
                     ),

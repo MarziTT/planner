@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
+import '../../../widgets/zzz_gif_decoration.dart';
 import '../domain/profile_model.dart';
 import '../state/profile_controller.dart';
 
@@ -70,33 +71,35 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final isZzz = ref.watch(themeControllerProvider).preset ==
         PlannerThemePreset.kamenRiderZzz;
 
-    return Container(
-      color: isZzz ? const Color(0xFF0A0A0F) : null,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-        children: [
-          Row(
+    return Stack(
+      children: [
+        Container(
+          color: isZzz ? const Color(0xFF0A0A0F) : null,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
-              Container(
-                decoration: isZzz
-                    ? const BoxDecoration(boxShadow: [
-                        BoxShadow(
-                            color: Color(0x3300FF41), blurRadius: 6),
-                      ])
-                    : null,
-                child: Icon(Icons.person_outline,
-                    size: 22,
-                    color: isZzz ? const Color(0xFF00FF41) : scheme.primary),
+              Row(
+                children: [
+                  Container(
+                    decoration: isZzz
+                        ? const BoxDecoration(boxShadow: [
+                            BoxShadow(
+                                color: Color(0x3300FF41), blurRadius: 6),
+                          ])
+                        : null,
+                    child: Icon(Icons.person_outline,
+                        size: 22,
+                        color: isZzz ? const Color(0xFF00FF41) : scheme.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('个人设置',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: isZzz ? const Color(0xFFE0F0E0) : null,
+                        )),
+                  ),
+                ],
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('个人设置',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: isZzz ? const Color(0xFFE0F0E0) : null,
-                    )),
-              ),
-            ],
-          ),
           const SizedBox(height: 6),
           Text(
             '先告诉我你现在的生活形态，首页会按你的节奏切出更贴近的提醒和工作模式。',
@@ -215,9 +218,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               children: [
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('开启健身模块'),
-                  subtitle:
-                      const Text('只有你确认自己有健身安排时，首页才展示训练入口。'),
+                  title: Text('开启健身模块',
+                      style: isZzz
+                          ? const TextStyle(color: Color(0xFFE0F0E0))
+                          : null),
+                  subtitle: Text(
+                      '只有你确认自己有健身安排时，首页才展示训练入口。',
+                      style: isZzz
+                          ? const TextStyle(color: Color(0xFFA0A0B8))
+                          : null),
                   value: _wantsFitness,
                   activeColor: isZzz
                       ? const Color(0xFF00FF41)
@@ -227,7 +236,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 if (_wantsFitness) ...[
                   const SizedBox(height: 4),
-                  Text('健身方式', style: theme.textTheme.titleSmall),
+                  Text('健身方式',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: isZzz ? const Color(0xFFE0F0E0) : null,
+                      )),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -352,7 +364,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ],
       ),
-    );
+      ),
+      if (isZzz)
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: ZzzCornerArt(
+            spec: zzzSpecFromSeed(DateTime.now().day + 4),
+            size: 70,
+            opacity: 0.26,
+          ),
+        ),
+    ]);
   }
 }
 
