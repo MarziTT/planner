@@ -34,8 +34,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/themes/zzz/transform.gif
-    - assets/themes/zzz/shield.gif
-    - assets/themes/zzz/equipment.gif
-    - assets/themes/zzz/flight.gif
-    - assets/themes/zzz/rain.gif
+    - assets/themes/zzz/
