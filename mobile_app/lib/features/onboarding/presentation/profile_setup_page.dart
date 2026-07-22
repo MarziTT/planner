@@ -85,13 +85,18 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
     final themeState = ref.watch(themeControllerProvider);
     final themeController = ref.read(themeControllerProvider.notifier);
     final theme = Theme.of(context);
+    final isZzz = themeState.preset == PlannerThemePreset.kamenRiderZzz;
 
     return Scaffold(
+      backgroundColor: isZzz ? const Color(0xFF0A0A0F) : null,
       appBar: AppBar(
-        title: const Text('完善节奏档案'),
+        backgroundColor: isZzz ? const Color(0xFF0A0A0F) : null,
+        title: Text('完善节奏档案',
+            style: isZzz ? const TextStyle(color: Color(0xFF00FF41)) : null),
         actions: [
           TextButton(
             onPressed: profileState.loading ? null : _skip,
+            style: isZzz ? TextButton.styleFrom(foregroundColor: const Color(0xFF00FF41)) : null,
             child: const Text('跳过'),
           ),
         ],
@@ -101,10 +106,14 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         children: [
           Text(
             '先选一个最接近你的身份，FlowDay 会用它来调整首页、标签和上班模式。',
-            style: theme.textTheme.titleMedium?.copyWith(height: 1.35),
+            style: theme.textTheme.titleMedium?.copyWith(
+              height: 1.35,
+              color: isZzz ? const Color(0xFFE0F0E0) : null,
+            ),
           ),
           const SizedBox(height: 18),
           _IdentityPicker(
+            isZzz: isZzz,
             value: _identity,
             onChanged: (value) => setState(() {
               _identity = value;
@@ -124,12 +133,13 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             }),
           ),
           const SizedBox(height: 18),
-          _SectionTitle(title: _routineTitle),
+          _SectionTitle(title: _routineTitle, isZzz: isZzz),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: _TimeCard(
+                  isZzz: isZzz,
                   label: _routineStartLabel,
                   value: _routineStart,
                   onTap: () => _pickTime(start: true),
@@ -138,6 +148,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               const SizedBox(width: 10),
               Expanded(
                 child: _TimeCard(
+                  isZzz: isZzz,
                   label: _routineEndLabel,
                   value: _routineEnd,
                   onTap: () => _pickTime(start: false),
@@ -148,10 +159,28 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
           const SizedBox(height: 18),
           TextField(
             controller: _focusController,
-            decoration: InputDecoration(
-              labelText: _focusLabel,
-              prefixIcon: const Icon(Icons.flag_outlined),
-            ),
+            style: isZzz ? const TextStyle(color: Color(0xFFE0F0E0)) : null,
+            decoration: isZzz
+                ? InputDecoration(
+                    labelText: _focusLabel,
+                    labelStyle: const TextStyle(color: Color(0xFF00FF41)),
+                    prefixIcon: const Icon(Icons.flag_outlined, color: Color(0xFF00FF41)),
+                    filled: true,
+                    fillColor: const Color(0xFF0D0B12),
+                    border: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFF00FF41)),
+                    ),
+                    enabledBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFF00FF41)),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Color(0xFF00FF41)),
+                    ),
+                  )
+                : InputDecoration(
+                    labelText: _focusLabel,
+                    prefixIcon: const Icon(Icons.flag_outlined),
+                  ),
           ),
           const SizedBox(height: 18),
           SwitchListTile.adaptive(
@@ -159,6 +188,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             title: const Text('我想显示训练/健身模块'),
             subtitle: const Text('开启后首页会显示训练面板。'),
             value: _wantsFitness,
+            activeColor: isZzz ? const Color(0xFF00FF41) : null,
             onChanged: (value) => setState(() => _wantsFitness = value),
           ),
           if (_wantsFitness) ...[
@@ -168,6 +198,22 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
               selected: {_fitnessMode},
               onSelectionChanged: (value) =>
                   setState(() => _fitnessMode = value.first),
+              style: isZzz
+                  ? ButtonStyle(
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return const Color(0xFF00FF41);
+                        }
+                        return null;
+                      }),
+                      foregroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return const Color(0xFF0A0A0F);
+                        }
+                        return null;
+                      }),
+                    )
+                  : null,
               segments: const [
                 ButtonSegment(value: 'self', label: Text('自主健身')),
                 ButtonSegment(value: 'coach', label: Text('私教陪练')),
@@ -175,9 +221,10 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
             ),
           ],
           const SizedBox(height: 24),
-          const _SectionTitle(title: '选一个你喜欢的主题'),
+          _SectionTitle(title: '选一个你喜欢的主题', isZzz: isZzz),
           const SizedBox(height: 10),
           _ThemePicker(
+            isZzz: isZzz,
             presets: _publicPresets,
             selected: themeState.preset,
             onSelected: (preset) => themeController.switchPreset(preset),
@@ -193,10 +240,26 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
                   )
                 : const Icon(Icons.check_rounded),
             label: Text(profileState.loading ? '正在保存...' : '保存并进入应用'),
+            style: isZzz
+                ? FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF00FF41),
+                    foregroundColor: const Color(0xFF0A0A0F),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ).copyWith(
+                    shadowColor: WidgetStateProperty.all(const Color(0xFF00FF41)),
+                    elevation: WidgetStateProperty.all(6),
+                  )
+                : null,
           ),
           const SizedBox(height: 8),
           OutlinedButton(
             onPressed: profileState.loading ? null : _skip,
+            style: isZzz
+                ? OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF00FF41),
+                    side: const BorderSide(color: Color(0xFF00FF41)),
+                  )
+                : null,
             child: const Text('先跳过，直接进入应用'),
           ),
           if (profileState.errorMessage != null) ...[
@@ -265,10 +328,11 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
 }
 
 class _IdentityPicker extends StatelessWidget {
-  const _IdentityPicker({required this.value, required this.onChanged});
+  const _IdentityPicker({required this.value, required this.onChanged, this.isZzz = false});
 
   final String value;
   final ValueChanged<String> onChanged;
+  final bool isZzz;
 
   static const _items = [
     _IdentityOption('worker', '上班族', Icons.work_outline_rounded, '按上下班时间组织待办'),
@@ -296,19 +360,30 @@ class _IdentityPicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? theme.colorScheme.primaryContainer
-                  : theme.colorScheme.surfaceContainerLow,
+                  : (isZzz ? const Color(0xFF0D0B12) : theme.colorScheme.surfaceContainerLow),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: selected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outlineVariant,
+                    ? (isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary)
+                    : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.outlineVariant),
               ),
+              boxShadow: selected && isZzz
+                  ? const [
+                      BoxShadow(
+                        color: Color(0xFF00FF41),
+                        blurRadius: 8,
+                        spreadRadius: -4,
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(item.icon,
-                    color: selected ? theme.colorScheme.primary : null),
+                    color: selected
+                        ? (isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary)
+                        : null),
                 const SizedBox(height: 8),
                 Text(item.label, style: theme.textTheme.titleSmall),
                 const SizedBox(height: 4),
@@ -338,9 +413,10 @@ class _IdentityOption {
 }
 
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
+  const _SectionTitle({required this.title, this.isZzz = false});
 
   final String title;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -348,6 +424,7 @@ class _SectionTitle extends StatelessWidget {
       title,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w800,
+            color: isZzz ? const Color(0xFF00FF41) : null,
           ),
     );
   }
@@ -358,11 +435,13 @@ class _TimeCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.onTap,
+    this.isZzz = false,
   });
 
   final String label;
   final String value;
   final VoidCallback onTap;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -372,6 +451,8 @@ class _TimeCard extends StatelessWidget {
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         alignment: Alignment.centerLeft,
+        backgroundColor: isZzz ? const Color(0xFF0D0B12) : null,
+        side: isZzz ? const BorderSide(color: Color(0xFF00FF41)) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,11 +492,13 @@ class _ThemePicker extends StatelessWidget {
     required this.presets,
     required this.selected,
     required this.onSelected,
+    this.isZzz = false,
   });
 
   final List<PlannerThemePreset> presets;
   final PlannerThemePreset selected;
   final ValueChanged<PlannerThemePreset> onSelected;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -437,14 +520,23 @@ class _ThemePicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected
                   ? theme.colorScheme.primaryContainer
-                  : theme.colorScheme.surfaceContainerLow,
+                  : (isZzz ? const Color(0xFF0D0B12) : theme.colorScheme.surfaceContainerLow),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.outlineVariant,
+                    ? (isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary)
+                    : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.outlineVariant),
                 width: isSelected ? 2 : 1,
               ),
+              boxShadow: isSelected && isZzz
+                  ? const [
+                      BoxShadow(
+                        color: Color(0xFF00FF41),
+                        blurRadius: 8,
+                        spreadRadius: -4,
+                      ),
+                    ]
+                  : null,
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

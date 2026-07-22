@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/theme_controller.dart';
 import '../../profile/domain/profile_model.dart';
 import '../../profile/state/profile_controller.dart';
 import '../domain/tag_model.dart';
 import '../state/tags_controller.dart';
+
+const _zzzBgColor = 0xFF0A0A0F;
+const _zzzSurfaceColor = 0xFF0D0B12;
+const _zzzGreen = 0xFF00FF41;
+const _zzzRed = 0xFFFF1744;
+const _zzzSilver = 0xFFA0A0B8;
+const _zzzGreenLight = 0xFFE0F0E0;
 
 class TagsPage extends ConsumerWidget {
   const TagsPage({super.key});
@@ -17,111 +25,159 @@ class TagsPage extends ConsumerWidget {
     final existingNames = state.tags.map((tag) => tag.name).toSet();
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isZzz = ref.watch(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-      children: [
-        Row(
-          children: [
-            Icon(Icons.sell_outlined, size: 22, color: scheme.primary),
-            const SizedBox(width: 10),
-            Expanded(child: Text('标签管理', style: theme.textTheme.titleLarge)),
-            FilledButton.icon(
-              onPressed: () => _showTagDialog(context, ref),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('新增'),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    return Container(
+      color: isZzz ? const Color(_zzzBgColor) : null,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+        children: [
+          Row(
+            children: [
+              if (isZzz)
+                Container(
+                  decoration: const BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(_zzzGreen),
+                        blurRadius: 8,
+                        spreadRadius: -2,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.sell_outlined, size: 22, color: Color(_zzzGreen)),
+                )
+              else
+                Icon(Icons.sell_outlined, size: 22, color: scheme.primary),
+              const SizedBox(width: 10),
+              Expanded(child: Text('标签管理', style: theme.textTheme.titleLarge)),
+              FilledButton.icon(
+                onPressed: () => _showTagDialog(context, ref, isZzz: isZzz),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('新增'),
+                style: isZzz
+                    ? FilledButton.styleFrom(
+                        backgroundColor: const Color(_zzzGreen),
+                        foregroundColor: const Color(_zzzBgColor),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ).copyWith(
+                        shadowColor: WidgetStateProperty.all(const Color(_zzzGreen)),
+                        elevation: WidgetStateProperty.all(6),
+                      )
+                    : FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '先用几枚顺手的标签就够了，不用一上来分很细。',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: isZzz ? const Color(_zzzGreenLight) : scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          _SectionCard(
+            isZzz: isZzz,
+            title: '${_identityLabel(profile?.identity ?? 'worker')}常用标签',
+            subtitle: '点一下就加到你的标签库里。',
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: presets.map((preset) {
+                final added = existingNames.contains(preset.name);
+                return ActionChip(
+                  avatar: CircleAvatar(radius: 7, backgroundColor: _colorFromHex(preset.color)),
+                  label: Text(
+                    added ? '${preset.name} 已有' : preset.name,
+                    style: TextStyle(fontSize: 13, color: added ? scheme.onSurfaceVariant : null),
+                  ),
+                  onPressed: added
+                      ? null
+                      : () => ref.read(tagsControllerProvider.notifier).create(preset.name, preset.color),
+                  side: added
+                      ? BorderSide(color: isZzz ? const Color(_zzzGreen) : scheme.outlineVariant)
+                      : (isZzz ? const BorderSide(color: Color(_zzzGreen)) : null),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          if (state.errorMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isZzz
+                      ? const [
+                          BoxShadow(
+                            color: Color(_zzzRed),
+                            blurRadius: 10,
+                            spreadRadius: -4,
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, size: 18, color: scheme.error),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(state.errorMessage!,
+                          style: TextStyle(color: scheme.onErrorContainer, fontSize: 13)),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Text(
-          '先用几枚顺手的标签就够了，不用一上来分很细。',
-          style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 20),
 
-        _SectionCard(
-          title: '${_identityLabel(profile?.identity ?? 'worker')}常用标签',
-          subtitle: '点一下就加到你的标签库里。',
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: presets.map((preset) {
-              final added = existingNames.contains(preset.name);
-              return ActionChip(
-                avatar: CircleAvatar(radius: 7, backgroundColor: _colorFromHex(preset.color)),
-                label: Text(
-                  added ? '${preset.name} 已有' : preset.name,
-                  style: TextStyle(fontSize: 13, color: added ? scheme.onSurfaceVariant : null),
-                ),
-                onPressed: added
-                    ? null
-                    : () => ref.read(tagsControllerProvider.notifier).create(preset.name, preset.color),
-                side: added ? BorderSide(color: scheme.outlineVariant) : null,
-              );
-            }).toList(),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        if (state.errorMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              padding: const EdgeInsets.all(12),
+          if (state.tags.isEmpty && !state.loading)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
               decoration: BoxDecoration(
-                color: scheme.errorContainer,
-                borderRadius: BorderRadius.circular(12),
+                color: isZzz ? const Color(_zzzSurfaceColor) : scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: isZzz ? Border.all(color: const Color(_zzzGreen)) : null,
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(Icons.error_outline, size: 18, color: scheme.error),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(state.errorMessage!,
-                        style: TextStyle(color: scheme.onErrorContainer, fontSize: 13)),
-                  ),
+                  Icon(Icons.sell_outlined, size: 36,
+                      color: isZzz
+                          ? const Color(_zzzGreen).withValues(alpha: 0.4)
+                          : scheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                  const SizedBox(height: 10),
+                  Text('还没有标签，先加几个最常用的就行。',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isZzz ? const Color(_zzzGreenLight) : scheme.onSurfaceVariant,
+                      )),
                 ],
               ),
             ),
-          ),
 
-        if (state.tags.isEmpty && !state.loading)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                Icon(Icons.sell_outlined, size: 36,
-                    color: scheme.onSurfaceVariant.withValues(alpha: 0.4)),
-                const SizedBox(height: 10),
-                Text('还没有标签，先加几个最常用的就行。',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-              ],
+          ...state.tags.map(
+            (tag) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _TagRow(
+                isZzz: isZzz,
+                tag: tag,
+                onEdit: () => _showTagDialog(context, ref, tag: tag, isZzz: isZzz),
+                onDelete: () => ref.read(tagsControllerProvider.notifier).remove(tag.id),
+              ),
             ),
           ),
-
-        ...state.tags.map(
-          (tag) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: _TagRow(
-              tag: tag,
-              onEdit: () => _showTagDialog(context, ref, tag: tag),
-              onDelete: () => ref.read(tagsControllerProvider.notifier).remove(tag.id),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Future<void> _showTagDialog(BuildContext context, WidgetRef ref, {PlannerTag? tag}) async {
+  Future<void> _showTagDialog(BuildContext context, WidgetRef ref, {PlannerTag? tag, bool isZzz = false}) async {
     final nameController = TextEditingController(text: tag?.name ?? '');
     final colorController = TextEditingController(text: tag?.color ?? '#5B8CFF');
     var isRecurring = tag?.isRecurring ?? false;
@@ -131,7 +187,15 @@ class TagsPage extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
-          title: Text(tag == null ? '新增标签' : '编辑标签'),
+          backgroundColor: isZzz ? const Color(_zzzSurfaceColor) : null,
+          shape: isZzz
+              ? RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: const BorderSide(color: Color(_zzzGreen)),
+                )
+              : null,
+          title: Text(tag == null ? '新增标签' : '编辑标签',
+              style: isZzz ? const TextStyle(color: Color(_zzzGreenLight)) : null),
           content: SizedBox(
             width: 340,
             child: SingleChildScrollView(
@@ -142,11 +206,27 @@ class TagsPage extends ConsumerWidget {
                   TextField(
                     controller: nameController,
                     autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: '名称',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
+                    style: isZzz ? const TextStyle(color: Color(_zzzGreenLight)) : null,
+                    decoration: isZzz
+                        ? const InputDecoration(
+                            labelText: '名称',
+                            labelStyle: TextStyle(color: Color(_zzzGreen)),
+                            border: OutlineInputBorder(
+                              borderSide: BorderSide(color: Color(_zzzGreen)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Color(_zzzGreen)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderSide: BorderSide(color: Color(_zzzGreen)),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          )
+                        : const InputDecoration(
+                            labelText: '名称',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
                   ),
                   const SizedBox(height: 14),
                   Row(
@@ -154,11 +234,27 @@ class TagsPage extends ConsumerWidget {
                       Expanded(
                         child: TextField(
                           controller: colorController,
-                          decoration: const InputDecoration(
-                            labelText: '颜色 HEX',
-                            border: OutlineInputBorder(),
-                            contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          ),
+                          style: isZzz ? const TextStyle(color: Color(_zzzGreenLight)) : null,
+                          decoration: isZzz
+                              ? const InputDecoration(
+                                  labelText: '颜色 HEX',
+                                  labelStyle: TextStyle(color: Color(_zzzGreen)),
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Color(_zzzGreen)),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Color(_zzzGreen)),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Color(_zzzGreen)),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                )
+                              : const InputDecoration(
+                                  labelText: '颜色 HEX',
+                                  border: OutlineInputBorder(),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                ),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -170,7 +266,11 @@ class TagsPage extends ConsumerWidget {
                             colorController.text.trim().isEmpty ? '#5B8CFF' : colorController.text.trim(),
                           ),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                          border: Border.all(
+                            color: isZzz
+                                ? const Color(_zzzGreen)
+                                : Theme.of(context).colorScheme.outlineVariant,
+                          ),
                         ),
                       ),
                     ],
@@ -187,11 +287,26 @@ class TagsPage extends ConsumerWidget {
                     const SizedBox(height: 4),
                     DropdownButtonFormField<String>(
                       initialValue: recurrenceRule.isEmpty ? 'daily' : recurrenceRule,
-                      decoration: const InputDecoration(
-                        labelText: '重复规则',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      ),
+                      decoration: isZzz
+                          ? const InputDecoration(
+                              labelText: '重复规则',
+                              labelStyle: TextStyle(color: Color(_zzzGreen)),
+                              border: OutlineInputBorder(
+                                borderSide: BorderSide(color: Color(_zzzGreen)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Color(_zzzGreen)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Color(_zzzGreen)),
+                              ),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            )
+                          : const InputDecoration(
+                              labelText: '重复规则',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
                       items: const [
                         DropdownMenuItem(value: 'daily', child: Text('每天')),
                         DropdownMenuItem(value: 'weekly', child: Text('每周')),
@@ -208,10 +323,21 @@ class TagsPage extends ConsumerWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('取消'),
+              child: Text('取消',
+                  style: isZzz ? const TextStyle(color: Color(_zzzGreen)) : null),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
+              style: isZzz
+                  ? FilledButton.styleFrom(
+                      backgroundColor: const Color(_zzzGreen),
+                      foregroundColor: const Color(_zzzBgColor),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ).copyWith(
+                      shadowColor: WidgetStateProperty.all(const Color(_zzzGreen)),
+                      elevation: WidgetStateProperty.all(6),
+                    )
+                  : null,
               child: const Text('保存'),
             ),
           ],
@@ -237,10 +363,11 @@ class TagsPage extends ConsumerWidget {
 }
 
 class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, this.subtitle, required this.child});
+  const _SectionCard({required this.title, this.subtitle, required this.child, this.isZzz = false});
   final String title;
   final String? subtitle;
   final Widget child;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -248,19 +375,34 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
+        color: isZzz ? const Color(_zzzSurfaceColor) : theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
+        border: Border.all(
+          color: isZzz ? const Color(_zzzGreen) : theme.colorScheme.outlineVariant,
+        ),
+        boxShadow: isZzz
+            ? const [
+                BoxShadow(
+                  color: Color(_zzzGreen),
+                  blurRadius: 8,
+                  spreadRadius: -4,
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: theme.textTheme.titleSmall),
+          Text(title,
+              style: isZzz
+                  ? theme.textTheme.titleSmall?.copyWith(color: const Color(_zzzGreen))
+                  : theme.textTheme.titleSmall),
           if (subtitle != null) ...[
             const SizedBox(height: 4),
-            Text(subtitle!, style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            )),
+            Text(subtitle!,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: isZzz ? const Color(_zzzGreenLight) : theme.colorScheme.onSurfaceVariant,
+                )),
           ],
           const SizedBox(height: 12),
           child,
@@ -271,10 +413,11 @@ class _SectionCard extends StatelessWidget {
 }
 
 class _TagRow extends StatelessWidget {
-  const _TagRow({required this.tag, required this.onEdit, required this.onDelete});
+  const _TagRow({required this.tag, required this.onEdit, required this.onDelete, this.isZzz = false});
   final PlannerTag tag;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -285,22 +428,46 @@ class _TagRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: scheme.surface,
+        color: isZzz ? const Color(_zzzSurfaceColor) : scheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+        border: Border.all(
+          color: isZzz ? const Color(_zzzGreen) : scheme.outlineVariant.withValues(alpha: 0.7),
+        ),
       ),
       child: Row(
         children: [
-          Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: isZzz
+                  ? [
+                      BoxShadow(
+                        color: color,
+                        blurRadius: 6,
+                        spreadRadius: -1,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tag.name, style: theme.textTheme.bodyMedium),
-                Text(tag.color, style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant, fontSize: 11, fontFamily: 'monospace',
-                )),
+                Text(tag.name,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: isZzz ? const Color(_zzzGreenLight) : null,
+                    )),
+                Text(tag.color,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isZzz ? const Color(_zzzGreenLight).withValues(alpha: 0.6) : scheme.onSurfaceVariant,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                    )),
               ],
             ),
           ),
@@ -315,8 +482,8 @@ class _TagRow extends StatelessWidget {
               child: Text(_recurrenceLabel(tag.recurrenceRule),
                   style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
             ),
-          _CompactIconButton(icon: Icons.edit_outlined, onPressed: onEdit),
-          _CompactIconButton(icon: Icons.delete_outline_rounded, onPressed: onDelete, isDestructive: true),
+          _CompactIconButton(icon: Icons.edit_outlined, onPressed: onEdit, isZzz: isZzz),
+          _CompactIconButton(icon: Icons.delete_outline_rounded, onPressed: onDelete, isDestructive: true, isZzz: isZzz),
         ],
       ),
     );
@@ -324,14 +491,18 @@ class _TagRow extends StatelessWidget {
 }
 
 class _CompactIconButton extends StatelessWidget {
-  const _CompactIconButton({required this.icon, required this.onPressed, this.isDestructive = false});
+  const _CompactIconButton({required this.icon, required this.onPressed, this.isDestructive = false, this.isZzz = false});
   final IconData icon;
   final VoidCallback onPressed;
   final bool isDestructive;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final color = isZzz
+        ? const Color(_zzzGreen)
+        : (isDestructive ? scheme.error : scheme.onSurfaceVariant);
     return SizedBox(
       width: 34,
       height: 34,
@@ -340,7 +511,7 @@ class _CompactIconButton extends StatelessWidget {
         icon: Icon(icon, size: 18),
         padding: EdgeInsets.zero,
         style: IconButton.styleFrom(
-          foregroundColor: isDestructive ? scheme.error : scheme.onSurfaceVariant,
+          foregroundColor: color,
         ),
       ),
     );
