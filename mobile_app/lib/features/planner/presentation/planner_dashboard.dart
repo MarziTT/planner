@@ -144,7 +144,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
           ],
           if (plannerState.errorMessage != null) ...[
             const SizedBox(height: 12),
-            _InlineError(message: plannerState.errorMessage!),
+            _InlineError(message: plannerState.errorMessage!, isZzz: isZzzTheme),
           ],
           const WeatherCard(),
           const SizedBox(height: 14),
@@ -226,15 +226,17 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             ),
           ],
           const SizedBox(height: 18),
-          const _SectionHeader(
+          _SectionHeader(
             title: '接下来',
             caption: '只放未来关键日程，不再重复展示待办。',
+            isZzz: isZzzTheme,
           ),
           const SizedBox(height: 10),
           if (upcomingItems.isEmpty)
-            const _EmptyBand(
+            _EmptyBand(
               title: '还没有后续节点',
               message: '如果有航班、训练或重要会议，可以在上方速记里直接记下。',
+              isZzz: isZzzTheme,
             )
           else
             _AgendaList(
@@ -761,13 +763,44 @@ class _WorkQuickAction {
 class _InlineError extends StatelessWidget {
   const _InlineError({
     required this.message,
+    this.isZzz = false,
   });
 
   final String message;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _zzzRed.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzRed.withValues(alpha: 0.35),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, size: 18, color: _zzzRed),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '> ERROR: $message',
+                style: const TextStyle(
+                  color: _zzzRed,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -788,14 +821,55 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
     required this.caption,
+    this.isZzz = false,
   });
 
   final String title;
   final String caption;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '> $title',
+              style: const TextStyle(
+                color: _zzzCyan,
+                fontSize: 13,
+                fontFamily: 'monospace',
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              caption,
+              style: TextStyle(
+                color: _zzzMutedColor,
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+            ),
+            const SizedBox(height: 4),
+            Container(
+              height: 1,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_zzzCyan, Color(0x00E5FF00)],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1340,98 +1414,190 @@ class _TodoTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isZzz = zzzBackground != null;
-    final foreground = isZzz ? Colors.white : theme.colorScheme.onSurface;
-    final muted = isZzz
-        ? Colors.white.withValues(alpha: 0.70)
-        : theme.colorScheme.onSurfaceVariant;
+
+    if (isZzz) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: ClipPath(
+          clipper: _ZzzCapsuleClipper(chamfer: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: _zzzSurfaceColor,
+              border: Border.all(
+                color: todo.completed
+                    ? _zzzMutedColor.withValues(alpha: 0.3)
+                    : _zzzCyan.withValues(alpha: 0.45),
+                width: 1.5,
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  left: 0, top: 0, bottom: 0,
+                  child: Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: todo.completed
+                            ? [_zzzMutedColor, const Color(0x337B6E88)]
+                            : [_zzzRed, const Color(0x33E53935)],
+                      ),
+                    ),
+                  ),
+                ),
+                if (zzzBackground != null)
+                  Positioned(
+                    right: 0, top: 0, bottom: 0,
+                    width: 88,
+                    child: _ZzzSideArt(spec: zzzBackground!, opacity: 0.36),
+                  ),
+                Positioned.fill(
+                  child: CustomPaint(painter: _ZzzScanlinePainter()),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: isDeleting ? null : () {
+                          ref.read(plannerControllerProvider.notifier).toggleTodo(todo, !todo.completed);
+                        },
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: todo.completed
+                                ? _zzzCyan.withValues(alpha: 0.18)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(
+                              color: todo.completed
+                                  ? _zzzCyan.withValues(alpha: 0.6)
+                                  : _zzzMutedColor.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          child: todo.completed
+                              ? const Icon(Icons.check, size: 14, color: _zzzCyan)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              todo.title,
+                              style: TextStyle(
+                                color: todo.completed ? _zzzMutedColor : _zzzTextColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                                fontFamily: 'monospace',
+                                decoration: todo.completed ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                _ZzzActionButton(
+                                  icon: Icons.edit_outlined,
+                                  label: 'EDIT',
+                                  onPressed: isDeleting ? null : onEdit,
+                                ),
+                                const SizedBox(width: 8),
+                                _ZzzActionButton(
+                                  icon: Icons.delete_outline,
+                                  label: 'DEL',
+                                  isLoading: isDeleting,
+                                  onPressed: isDeleting ? null : onDelete,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: isZzz
-              ? const Color(0xFF0A0B10)
-              : theme.colorScheme.surfaceContainerLow,
+          color: theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(16),
-          border: isZzz
-              ? Border.all(color: Colors.white.withValues(alpha: 0.14))
-              : null,
         ),
-        child: Stack(
-          children: [
-            if (zzzBackground != null)
-              Positioned(
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: 88,
-                child: _ZzzSideArt(spec: zzzBackground!, opacity: 0.36),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+          child: Row(
+            children: [
+              Checkbox(
+                value: todo.completed,
+                onChanged: isDeleting
+                    ? null
+                    : (value) {
+                        if (value == null) {
+                          return;
+                        }
+                        ref
+                            .read(plannerControllerProvider.notifier)
+                            .toggleTodo(todo, value);
+                      },
               ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(12, 10, isZzz ? 70 : 12, 10),
-              child: Row(
-                children: [
-                  Checkbox(
-                    value: todo.completed,
-                    onChanged: isDeleting
-                        ? null
-                        : (value) {
-                            if (value == null) {
-                              return;
-                            }
-                            ref
-                                .read(plannerControllerProvider.notifier)
-                                .toggleTodo(todo, value);
-                          },
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          todo.title,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: foreground,
-                            decoration: todo.completed
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          todo.completed
-                              ? '已完成'
-                              : '\u5f85\u5904\u7406',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: muted,
-                          ),
-                        ),
-                      ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      todo.title,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        decoration: todo.completed
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
                     ),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    color: foreground,
-                    onPressed: isDeleting ? null : onEdit,
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    color: foreground,
-                    onPressed: isDeleting ? null : onDelete,
-                    icon: isDeleting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.delete_outline),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      todo.completed
+                          ? '已完成'
+                          : '待处理',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                color: theme.colorScheme.onSurface,
+                onPressed: isDeleting ? null : onEdit,
+                icon: const Icon(Icons.edit_outlined),
+              ),
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                color: theme.colorScheme.onSurface,
+                onPressed: isDeleting ? null : onDelete,
+                icon: isDeleting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.delete_outline),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1738,14 +1904,60 @@ class _EmptyBand extends StatelessWidget {
   const _EmptyBand({
     required this.title,
     required this.message,
+    this.isZzz = false,
   });
 
   final String title;
   final String message;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    if (isZzz) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _zzzSurfaceColor,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: _zzzCyan.withValues(alpha: 0.25),
+          ),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.terminal, size: 18, color: _zzzMutedColor),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '> NO_DATA: $title',
+                    style: const TextStyle(
+                      color: _zzzMutedColor,
+                      fontSize: 13,
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      color: _zzzMutedColor,
+                      fontSize: 11,
+                      fontFamily: 'monospace',
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1811,7 +2023,7 @@ class _ZzzScanlinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0x08FFFFFF)
+      ..color = const Color(0x0CFFFFFF)
       ..strokeWidth = 1;
     for (double y = 0; y < size.height; y += 3) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
