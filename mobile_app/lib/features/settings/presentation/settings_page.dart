@@ -414,16 +414,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ],
       ),
       ),
-      if (isZzz)
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: ZzzCornerArt(
-            spec: zzzSpecFromSeed(DateTime.now().day + 3),
-            size: 68,
-            opacity: 0.28,
-          ),
-        ),
+      // TODO: 暂时隐藏 ZZZ 角标
+      // if (isZzz)
+      //   Positioned(
+      //     right: 0,
+      //     bottom: 0,
+      //     child: ZzzCornerArt(
+      //       spec: zzzSpecFromSeed(DateTime.now().day + 3),
+      //       size: 68,
+      //       opacity: 0.28,
+      //     ),
+      //   ),
     ]);
   }
 

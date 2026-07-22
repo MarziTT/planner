@@ -231,16 +231,17 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       appBar: appBar,
       body: Stack(
         children: [
-          if (isZzz)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: ZzzCornerArt(
-                spec: zzzSpecFromSeed(DateTime.now().day + 2),
-                size: 80,
-                opacity: 0.22,
-              ),
-            ),
+          // TODO: 暂时隐藏 ZZZ 角标
+          // if (isZzz)
+          //   Positioned(
+          //     right: 0,
+          //     bottom: 0,
+          //     child: ZzzCornerArt(
+          //       spec: zzzSpecFromSeed(DateTime.now().day + 2),
+          //       size: 80,
+          //       opacity: 0.22,
+          //     ),
+          //   ),
           Column(
             children: [
               const UpdateBanner(),

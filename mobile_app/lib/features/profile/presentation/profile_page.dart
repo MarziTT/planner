@@ -365,16 +365,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
         ],
       ),
       ),
-      if (isZzz)
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: ZzzCornerArt(
-            spec: zzzSpecFromSeed(DateTime.now().day + 4),
-            size: 70,
-            opacity: 0.26,
-          ),
-        ),
+      // TODO: 暂时隐藏 ZZZ 角标
+      // if (isZzz)
+      //   Positioned(
+      //     right: 0,
+      //     bottom: 0,
+      //     child: ZzzCornerArt(
+      //       spec: zzzSpecFromSeed(DateTime.now().day + 4),
+      //       size: 70,
+      //       opacity: 0.26,
+      //     ),
+      //   ),
     ]);
   }
 }

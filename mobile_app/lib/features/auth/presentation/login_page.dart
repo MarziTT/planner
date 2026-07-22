@@ -289,16 +289,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
-          if (isZzz)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: ZzzCornerArt(
-                spec: zzzSpecFromSeed(DateTime.now().day + 1),
-                size: 72,
-                opacity: 0.3,
-              ),
-            ),
+          // TODO: 暂时隐藏 ZZZ 角标
+          // if (isZzz)
+          //   Positioned(
+          //     right: 0,
+          //     bottom: 0,
+          //     child: ZzzCornerArt(
+          //       spec: zzzSpecFromSeed(DateTime.now().day + 1),
+          //       size: 72,
+          //       opacity: 0.3,
+          //     ),
+          //   ),
         ],
       ),
     );

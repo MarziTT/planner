@@ -181,16 +181,17 @@ class TagsPage extends ConsumerWidget {
         ],
       ),
       ),
-      if (isZzz)
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: ZzzCornerArt(
-            spec: zzzSpecFromSeed(DateTime.now().day + 5),
-            size: 64,
-            opacity: 0.28,
-          ),
-        ),
+      // TODO: 暂时隐藏 ZZZ 角标
+      // if (isZzz)
+      //   Positioned(
+      //     right: 0,
+      //     bottom: 0,
+      //     child: ZzzCornerArt(
+      //       spec: zzzSpecFromSeed(DateTime.now().day + 5),
+      //       size: 64,
+      //       opacity: 0.28,
+      //     ),
+      //   ),
     ]);
   }
 
