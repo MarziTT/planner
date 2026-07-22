@@ -135,155 +135,157 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const _BrandHeader(),
-                  const SizedBox(height: 28),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: isZzz
-                          ? zzzSurface
-                          : colorScheme.surfaceContainerLowest,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: isZzz
-                            ? zzzGreen.withValues(alpha: 0.55)
-                            : colorScheme.outlineVariant
-                                .withValues(alpha: 0.52),
-                      ),
-                      boxShadow: isZzz
-                          ? [
-                              BoxShadow(
-                                color: zzzGreen.withValues(alpha: 0.18),
-                                blurRadius: 28,
-                                offset: const Offset(0, 18),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: colorScheme.shadow
-                                    .withValues(alpha: 0.08),
-                                blurRadius: 28,
-                                offset: const Offset(0, 18),
-                              ),
-                            ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            '手机号登录',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: isZzz ? zzzGreenLight : null,
-                            ),
+                      const SizedBox(height: 28),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: isZzz
+                              ? zzzSurface
+                              : colorScheme.surfaceContainerLowest,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: isZzz
+                                ? zzzGreen.withValues(alpha: 0.55)
+                                : colorScheme.outlineVariant
+                                    .withValues(alpha: 0.52),
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            '输入手机号获取验证码，新用户将自动注册。',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: isZzz
-                                  ? zzzGreenLight
-                                  : colorScheme.onSurfaceVariant,
-                              height: 1.35,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-                          TextField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            textInputAction: TextInputAction.next,
-                            onChanged: (_) => setState(() {}),
-                            decoration: InputDecoration(
-                              labelText: '手机号',
-                              hintText: '请输入手机号',
-                              prefixIcon: Icon(Icons.phone_android_rounded,
-                                  color: isZzz ? zzzGreen : null),
-                              fillColor: isZzz ? zzzSurface : null,
-                              filled: isZzz ? true : null,
-                              focusedBorder: isZzz
-                                  ? OutlineInputBorder(
-                                      borderSide: BorderSide(color: zzzGreen),
-                                    )
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _codeController,
-                                  keyboardType: TextInputType.number,
-                                  textInputAction: TextInputAction.done,
-                                  onSubmitted: (_) =>
-                                      authState.loading ? null : _submit(),
-                                  decoration: InputDecoration(
-                                    labelText: '验证码',
-                                    hintText: '6位验证码',
-                                    prefixIcon: Icon(Icons.pin_outlined,
-                                        color: isZzz ? zzzGreen : null),
-                                    fillColor: isZzz ? zzzSurface : null,
-                                    filled: isZzz ? true : null,
-                                    focusedBorder: isZzz
-                                        ? OutlineInputBorder(
-                                            borderSide:
-                                                BorderSide(color: zzzGreen),
-                                          )
-                                        : null,
+                          boxShadow: isZzz
+                              ? [
+                                  BoxShadow(
+                                    color: zzzGreen.withValues(alpha: 0.18),
+                                    blurRadius: 28,
+                                    offset: const Offset(0, 18),
                                   ),
+                                ]
+                              : [
+                                  BoxShadow(
+                                    color: colorScheme.shadow
+                                        .withValues(alpha: 0.08),
+                                    blurRadius: 28,
+                                    offset: const Offset(0, 18),
+                                  ),
+                                ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                '手机号登录',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: isZzz ? zzzGreenLight : null,
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              SizedBox(
-                                height: 56,
-                                child: OutlinedButton(
-                                  onPressed: canSendCode && !authState.loading
-                                      ? _sendCode
-                                      : null,
-                                  style: isZzz
-                                      ? OutlinedButton.styleFrom(
-                                          foregroundColor: zzzGreen,
-                                          side: BorderSide(color: zzzGreen),
+                              const SizedBox(height: 6),
+                              Text(
+                                '输入手机号获取验证码，新用户将自动注册。',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: isZzz
+                                      ? zzzGreenLight
+                                      : colorScheme.onSurfaceVariant,
+                                  height: 1.35,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              TextField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                textInputAction: TextInputAction.next,
+                                onChanged: (_) => setState(() {}),
+                                decoration: InputDecoration(
+                                  labelText: '手机号',
+                                  hintText: '请输入手机号',
+                                  prefixIcon: Icon(Icons.phone_android_rounded,
+                                      color: isZzz ? zzzGreen : null),
+                                  fillColor: isZzz ? zzzSurface : null,
+                                  filled: isZzz ? true : null,
+                                  focusedBorder: isZzz
+                                      ? OutlineInputBorder(
+                                          borderSide: BorderSide(color: zzzGreen),
                                         )
                                       : null,
-                                  child: Text(
-                                    _countdown > 0
-                                        ? '${_countdown}s 后重发'
-                                        : '获取验证码',
-                                  ),
                                 ),
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _codeController,
+                                      keyboardType: TextInputType.number,
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (_) =>
+                                          authState.loading ? null : _submit(),
+                                      decoration: InputDecoration(
+                                        labelText: '验证码',
+                                        hintText: '6位验证码',
+                                        prefixIcon: Icon(Icons.pin_outlined,
+                                            color: isZzz ? zzzGreen : null),
+                                        fillColor: isZzz ? zzzSurface : null,
+                                        filled: isZzz ? true : null,
+                                        focusedBorder: isZzz
+                                            ? OutlineInputBorder(
+                                                borderSide:
+                                                    BorderSide(color: zzzGreen),
+                                              )
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    height: 56,
+                                    child: OutlinedButton(
+                                      onPressed: canSendCode && !authState.loading
+                                          ? _sendCode
+                                          : null,
+                                      style: isZzz
+                                          ? OutlinedButton.styleFrom(
+                                              foregroundColor: zzzGreen,
+                                              side: BorderSide(color: zzzGreen),
+                                            )
+                                          : null,
+                                      child: Text(
+                                        _countdown > 0
+                                            ? '${_countdown}s 后重发'
+                                            : '获取验证码',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              if (authState.errorMessage != null) ...[
+                                _ErrorNotice(
+                                  message: authState.errorMessage!,
+                                  isZzz: isZzz,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              _LoginButton(
+                                loading: authState.loading,
+                                isZzz: isZzz,
+                                onPressed: _submit,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
-                          if (authState.errorMessage != null) ...[
-                            _ErrorNotice(
-                              message: authState.errorMessage!,
-                              isZzz: isZzz,
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-                          _LoginButton(
-                            loading: authState.loading,
-                            isZzz: isZzz,
-                            onPressed: _submit,
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 14),
+                      Text(
+                        '登录状态会保存在本机，重新打开也会自动恢复。',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: isZzz
+                              ? zzzGreenLight
+                              : colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    '登录状态会保存在本机，重新打开也会自动恢复。',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: isZzz
-                          ? zzzGreenLight
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
