@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../domain/planner_models.dart';
 
+const _zzzBgColor = Color(0xFF0A0A0F);
+const _zzzGreen = Color(0xFF00FF41);
+const _zzzSurface = Color(0xFF0D0B12);
+
 class PlannerCalendarPanel extends StatelessWidget {
   const PlannerCalendarPanel({
     super.key,
@@ -12,7 +16,10 @@ class PlannerCalendarPanel extends StatelessWidget {
     required this.onPreviousMonth,
     required this.onNextMonth,
     required this.onSelectDay,
+    this.isZzz = false,
   });
+
+  final bool isZzz;
 
   final DateTime visibleMonth;
   final DateTime selectedDay;
@@ -37,11 +44,22 @@ class PlannerCalendarPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
+        color: isZzz ? _zzzSurface : theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: isZzz
+              ? _zzzGreen.withValues(alpha: 0.3)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
         ),
+        boxShadow: isZzz
+            ? [
+                BoxShadow(
+                  color: _zzzGreen.withValues(alpha: 0.06),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,13 +74,16 @@ class PlannerCalendarPanel extends StatelessWidget {
                       '${visibleMonth.year}年${visibleMonth.month}月',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
+                        color: isZzz ? _zzzGreen : null,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '点日期直接看当天，节假日和有安排的日子会标出来。',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: isZzz
+                            ? const Color(0xFFA0A0B8).withValues(alpha: 0.7)
+                            : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -120,6 +141,7 @@ class PlannerCalendarPanel extends StatelessWidget {
                 isToday: isToday,
                 hasEvents: hasEvents,
                 holidayLabel: holiday,
+                isZzz: isZzz,
                 onTap: () => onSelectDay(day),
               );
             },
@@ -164,6 +186,7 @@ class _CalendarDayCell extends StatelessWidget {
     required this.hasEvents,
     required this.holidayLabel,
     required this.onTap,
+    this.isZzz = false,
   });
 
   final DateTime day;
@@ -173,32 +196,37 @@ class _CalendarDayCell extends StatelessWidget {
   final bool hasEvents;
   final String? holidayLabel;
   final VoidCallback onTap;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final weekend =
         day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
+    final red = isZzz ? const Color(0xFFFF1744) : theme.colorScheme.error;
+    final primaryColor = isZzz ? _zzzGreen : theme.colorScheme.primary;
     final foreground = isSelected
-        ? theme.colorScheme.onPrimary
+        ? (isZzz ? _zzzBgColor : theme.colorScheme.onPrimary)
         : weekend
-            ? theme.colorScheme.error.withValues(alpha: inMonth ? 0.92 : 0.52)
+            ? red.withValues(alpha: inMonth ? 0.92 : 0.52)
             : inMonth
-                ? theme.colorScheme.onSurface
-                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55);
+                ? (isZzz ? const Color(0xFFE0E0E0) : theme.colorScheme.onSurface)
+                : (isZzz ? const Color(0xFFA0A0B8).withValues(alpha: 0.55) : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55));
     final markerLabel = holidayLabel ?? (isToday ? '\u4eca' : null);
     final markerColor = isSelected
-        ? theme.colorScheme.onPrimary.withValues(alpha: 0.88)
+        ? (isZzz ? _zzzBgColor.withValues(alpha: 0.88) : theme.colorScheme.onPrimary.withValues(alpha: 0.88))
         : holidayLabel != null
-            ? theme.colorScheme.primary
+            ? primaryColor
             : theme.colorScheme.onSurfaceVariant;
+    final selectedBg = isZzz ? _zzzGreen : theme.colorScheme.primary;
+    final todayBg = isZzz ? _zzzGreen.withValues(alpha: 0.18) : theme.colorScheme.primaryContainer.withValues(alpha: 0.72);
 
     return Material(
       color: isSelected
-          ? theme.colorScheme.primary
+          ? selectedBg
           : isToday
-              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.72)
-              : theme.colorScheme.surface,
+              ? todayBg
+              : (isZzz ? Colors.transparent : theme.colorScheme.surface),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -251,8 +279,8 @@ class _CalendarDayCell extends StatelessWidget {
                     height: 4,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? theme.colorScheme.onPrimary
-                          : theme.colorScheme.primary,
+                          ? (isZzz ? _zzzBgColor : theme.colorScheme.onPrimary)
+                          : primaryColor,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),

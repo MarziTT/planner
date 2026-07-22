@@ -226,6 +226,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               _visibleMonth = DateTime(day.year, day.month);
               _followToday = _isSameDay(normalizedDay, normalizedToday);
             }),
+            isZzz: zzzBackground != null,
           ),
           const SizedBox(height: 12),
           if (_hasCompletedTodos(plannerState.todos))
@@ -1286,6 +1287,13 @@ class _EventTile extends ConsumerWidget {
               color: _zzzGreen.withValues(alpha: 0.55),
               width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: _zzzGreen.withValues(alpha: 0.12),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: Stack(
             children: [
@@ -1503,6 +1511,13 @@ class _TodoTile extends ConsumerWidget {
                     : _zzzGreen.withValues(alpha: 0.45),
                 width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: (todo.completed ? _zzzSilver : _zzzGreen).withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  spreadRadius: 0,
+                ),
+              ],
             ),
             child: Stack(
               children: [
@@ -1741,15 +1756,30 @@ class _ZzzActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: isLoading ? null : onPressed,
-      borderRadius: BorderRadius.circular(2),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: _zzzGreen.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(
-            color: _zzzGreen.withValues(alpha: 0.35),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              _zzzGreen.withValues(alpha: 0.13),
+              _zzzGreen.withValues(alpha: 0.05),
+            ],
           ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _zzzGreen.withValues(alpha: 0.4),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _zzzGreen.withValues(alpha: 0.1),
+              blurRadius: 6,
+              spreadRadius: 0,
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
