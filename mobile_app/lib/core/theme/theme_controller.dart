@@ -126,9 +126,9 @@ class ThemeController extends StateNotifier<ThemeState> {
         lightMuted = const Color(0xFFF2FAF8);
         darkMuted = const Color(0xFF0F1A19);
       case PlannerThemePreset.kamenRiderZzz:
-        seed = const Color(0xFFE53935);
+        seed = const Color(0xFFFF1744);
         lightMuted = const Color(0xFFFFF1F1);
-        darkMuted = const Color(0xFF170F17);
+        darkMuted = const Color(0xFF0A0A0F);
     }
 
     return ThemeState(

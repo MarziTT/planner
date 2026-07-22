@@ -17,12 +17,12 @@ import '../state/planner_controller.dart';
 
 const _defaultEventDuration = Duration(hours: 1);
 
-const _zzzBgColor = Color(0xFF170F17);
+const _zzzBgColor = Color(0xFF0A0A0F);
 const _zzzSurfaceColor = Color(0xFF0D0B12);
-const _zzzRed = Color(0xFFE53935);
-const _zzzCyan = Color(0xFF00E5FF);
-const _zzzTextColor = Color(0xFFE8E0F0);
-const _zzzMutedColor = Color(0xFF7B6E88);
+const _zzzRed = Color(0xFFFF1744);
+const _zzzGreen = Color(0xFF00FF41);
+const _zzzTextColor = Color(0xFFE0F0E0);
+const _zzzSilver = Color(0xFFA0A0B8);
 const _zzzGifSpecs = <_ZzzGifSpec>[
   _ZzzGifSpec(
       'zzz.transform', 'assets/themes/zzz/transform.gif', '\u53d8\u8eab'),
@@ -124,7 +124,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
-                  painter: _ZzzScanlinePainter(),
+                  painter: _ZzzDreamBackgroundPainter(),
                 ),
               ),
             ),
@@ -560,30 +560,56 @@ class _ZzzLedMarquee extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} $_weekday';
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-      decoration: BoxDecoration(
-        color: _zzzRed.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(
-          color: _zzzRed.withValues(alpha: 0.35),
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(top: 6, bottom: 6),
+          decoration: BoxDecoration(
+            color: _zzzGreen.withValues(alpha: 0.06),
+            border: Border(
+              top: BorderSide(color: _zzzGreen.withValues(alpha: 0.55), width: 1.5),
+              bottom: BorderSide(color: _zzzGreen.withValues(alpha: 0.55), width: 1.5),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Belt buckle accent
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(width: 20, height: 1, color: _zzzRed.withValues(alpha: 0.6)),
+                  Container(
+                    width: 8, height: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: _zzzRed.withValues(alpha: 0.25),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: _zzzRed.withValues(alpha: 0.7), width: 1.5),
+                    ),
+                  ),
+                  Container(width: 20, height: 1, color: _zzzRed.withValues(alpha: 0.6)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ZEZ-TZDRIVER — $ds',
+                style: const TextStyle(
+                  color: _zzzGreen,
+                  fontSize: 10,
+                  fontFamily: 'monospace',
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ],
+          ),
         ),
-      ),
-      child: Text(
-        '■■■ $ds ■■■ ACTIVE DREAM SESSION ■■■',
-        style: const TextStyle(
-          color: _zzzRed,
-          fontSize: 10,
-          fontFamily: 'monospace',
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-        textAlign: TextAlign.center,
-        overflow: TextOverflow.ellipsis,
-        maxLines: 1,
-      ),
+      ],
     );
   }
 }
@@ -603,19 +629,19 @@ class _ReminderReturnBanner extends StatelessWidget {
           color: _zzzSurfaceColor,
           borderRadius: BorderRadius.circular(2),
           border: Border.all(
-            color: _zzzCyan.withValues(alpha: 0.45),
+            color: _zzzGreen.withValues(alpha: 0.45),
           ),
         ),
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
+            const Icon(Icons.terminal, size: 16, color: _zzzGreen),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 '> RETURN: ${_timeLabel(event.startsAt)}  ${event.title}',
                 style: const TextStyle(
-                  color: _zzzCyan,
+                  color: _zzzGreen,
                   fontSize: 13,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w500,
@@ -840,7 +866,7 @@ class _SectionHeader extends StatelessWidget {
             Text(
               '> $title',
               style: const TextStyle(
-                color: _zzzCyan,
+                color: _zzzGreen,
                 fontSize: 13,
                 fontFamily: 'monospace',
                 fontWeight: FontWeight.w700,
@@ -851,7 +877,7 @@ class _SectionHeader extends StatelessWidget {
             Text(
               caption,
               style: TextStyle(
-                color: _zzzMutedColor,
+                color: _zzzSilver,
                 fontSize: 11,
                 fontFamily: 'monospace',
               ),
@@ -862,7 +888,7 @@ class _SectionHeader extends StatelessWidget {
               width: double.infinity,
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_zzzCyan, Color(0x00E5FF00)],
+                  colors: [_zzzGreen, Color(0x0000FF41)],
                 ),
               ),
             ),
@@ -1209,7 +1235,7 @@ class _EventTile extends ConsumerWidget {
           decoration: BoxDecoration(
             color: _zzzSurfaceColor,
             border: Border.all(
-              color: _zzzCyan.withValues(alpha: 0.55),
+              color: _zzzGreen.withValues(alpha: 0.55),
               width: 1.5,
             ),
           ),
@@ -1223,7 +1249,7 @@ class _EventTile extends ConsumerWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [_zzzRed, Color(0x33E53935)],
+                      colors: [_zzzGreen, Color(0x3300FF41)],
                     ),
                   ),
                 ),
@@ -1252,7 +1278,7 @@ class _EventTile extends ConsumerWidget {
                         color: Colors.black.withValues(alpha: 0.48),
                         borderRadius: BorderRadius.circular(2),
                         border: Border.all(
-                          color: _zzzCyan.withValues(alpha: 0.35),
+                          color: _zzzGreen.withValues(alpha: 0.35),
                         ),
                       ),
                       child: Column(
@@ -1260,7 +1286,7 @@ class _EventTile extends ConsumerWidget {
                           Text(
                             _timeLabel(event.startsAt),
                             style: const TextStyle(
-                              color: _zzzCyan,
+                              color: _zzzGreen,
                               fontWeight: FontWeight.w800,
                               fontSize: 15,
                               fontFamily: 'monospace',
@@ -1270,7 +1296,7 @@ class _EventTile extends ConsumerWidget {
                           Text(
                             '${event.startsAt.month}/${event.startsAt.day}',
                             style: TextStyle(
-                              color: _zzzCyan.withValues(alpha: 0.7),
+                              color: _zzzGreen.withValues(alpha: 0.7),
                               fontSize: 11,
                               fontFamily: 'monospace',
                             ),
@@ -1324,13 +1350,13 @@ class _EventTile extends ConsumerWidget {
                                     horizontal: 8, vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: _zzzMutedColor.withValues(alpha: 0.18),
+                                    color: _zzzSilver.withValues(alpha: 0.18),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                   child: const Text(
                                     '已完成',
                                     style: TextStyle(
-                                      color: _zzzMutedColor,
+                                      color: _zzzSilver,
                                       fontSize: 10,
                                       fontFamily: 'monospace',
                                     ),
@@ -1350,7 +1376,7 @@ class _EventTile extends ConsumerWidget {
                           Text(
                             _timeLabel(event.startsAt),
                             style: TextStyle(
-                              color: _zzzMutedColor,
+                              color: _zzzSilver,
                               fontSize: 11,
                               fontFamily: 'monospace',
                             ),
@@ -1425,8 +1451,8 @@ class _TodoTile extends ConsumerWidget {
               color: _zzzSurfaceColor,
               border: Border.all(
                 color: todo.completed
-                    ? _zzzMutedColor.withValues(alpha: 0.3)
-                    : _zzzCyan.withValues(alpha: 0.45),
+                    ? _zzzSilver.withValues(alpha: 0.3)
+                    : _zzzGreen.withValues(alpha: 0.45),
                 width: 1.5,
               ),
             ),
@@ -1441,8 +1467,8 @@ class _TodoTile extends ConsumerWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: todo.completed
-                            ? [_zzzMutedColor, const Color(0x337B6E88)]
-                            : [_zzzRed, const Color(0x33E53935)],
+                            ? [_zzzSilver, const Color(0x33A0A0B8)]
+                            : [_zzzRed, const Color(0x33FF1744)],
                       ),
                     ),
                   ),
@@ -1469,17 +1495,17 @@ class _TodoTile extends ConsumerWidget {
                           height: 22,
                           decoration: BoxDecoration(
                             color: todo.completed
-                                ? _zzzCyan.withValues(alpha: 0.18)
+                                ? _zzzGreen.withValues(alpha: 0.18)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(2),
                             border: Border.all(
                               color: todo.completed
-                                  ? _zzzCyan.withValues(alpha: 0.6)
-                                  : _zzzMutedColor.withValues(alpha: 0.4),
+                                  ? _zzzGreen.withValues(alpha: 0.6)
+                                  : _zzzSilver.withValues(alpha: 0.4),
                             ),
                           ),
                           child: todo.completed
-                              ? const Icon(Icons.check, size: 14, color: _zzzCyan)
+                              ? const Icon(Icons.check, size: 14, color: _zzzGreen)
                               : null,
                         ),
                       ),
@@ -1491,7 +1517,7 @@ class _TodoTile extends ConsumerWidget {
                             Text(
                               todo.title,
                               style: TextStyle(
-                                color: todo.completed ? _zzzMutedColor : _zzzTextColor,
+                                color: todo.completed ? _zzzSilver : _zzzTextColor,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 14,
                                 fontFamily: 'monospace',
@@ -1632,9 +1658,9 @@ class _ZzzSideArt extends StatelessWidget {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  Color(0xFF0A0B10),
-                  Color(0x990A0B10),
-                  Color(0x000A0B10),
+                  _zzzBgColor,
+                  Color(0x990A0A0F),
+                  Color(0x000A0A0F),
                 ],
               ),
             ),
@@ -1671,30 +1697,30 @@ class _ZzzActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: _zzzCyan.withValues(alpha: 0.08),
+          color: _zzzGreen.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(2),
           border: Border.all(
-            color: _zzzCyan.withValues(alpha: 0.35),
+            color: _zzzGreen.withValues(alpha: 0.35),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: _zzzCyan.withValues(alpha: 0.85)),
+            Icon(icon, size: 14, color: _zzzGreen.withValues(alpha: 0.85)),
             const SizedBox(width: 4),
             if (isLoading)
               const SizedBox(
                 width: 12, height: 12,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  color: _zzzCyan,
+                  color: _zzzGreen,
                 ),
               )
             else
               Text(
                 '> $label',
                 style: const TextStyle(
-                  color: _zzzCyan,
+                  color: _zzzGreen,
                   fontSize: 10,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
@@ -1736,18 +1762,18 @@ class _ZzzEditorButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: primary
               ? _zzzRed.withValues(alpha: 0.18)
-              : _zzzCyan.withValues(alpha: 0.08),
+              : _zzzGreen.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(2),
           border: Border.all(
             color: primary
                 ? _zzzRed.withValues(alpha: 0.55)
-                : _zzzCyan.withValues(alpha: 0.35),
+                : _zzzGreen.withValues(alpha: 0.35),
           ),
         ),
         child: Text(
           '> $label',
           style: TextStyle(
-            color: primary ? _zzzRed : _zzzCyan,
+            color: primary ? _zzzRed : _zzzGreen,
             fontSize: 12,
             fontFamily: 'monospace',
             fontWeight: FontWeight.w600,
@@ -1793,13 +1819,13 @@ class _ModernTimePicker extends StatelessWidget {
           color: _zzzSurfaceColor,
           borderRadius: BorderRadius.circular(2),
           border: Border.all(
-            color: _zzzCyan.withValues(alpha: 0.45),
+            color: _zzzGreen.withValues(alpha: 0.45),
           ),
         ),
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.terminal, size: 16, color: _zzzCyan),
+            const Icon(Icons.terminal, size: 16, color: _zzzGreen),
             const SizedBox(width: 8),
             Expanded(
               child: InkWell(
@@ -1815,7 +1841,7 @@ class _ModernTimePicker extends StatelessWidget {
                 child: Text(
                   '> SET_TIME: $tl  > SET_DATE: $dl',
                   style: const TextStyle(
-                    color: _zzzCyan,
+                    color: _zzzGreen,
                     fontSize: 13,
                     fontFamily: 'monospace',
                     fontWeight: FontWeight.w500,
@@ -1921,12 +1947,12 @@ class _EmptyBand extends StatelessWidget {
           color: _zzzSurfaceColor,
           borderRadius: BorderRadius.circular(2),
           border: Border.all(
-            color: _zzzCyan.withValues(alpha: 0.25),
+            color: _zzzGreen.withValues(alpha: 0.25),
           ),
         ),
         child: Row(
           children: [
-            const Icon(Icons.terminal, size: 18, color: _zzzMutedColor),
+            const Icon(Icons.terminal, size: 18, color: _zzzSilver),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -1935,7 +1961,7 @@ class _EmptyBand extends StatelessWidget {
                   Text(
                     '> NO_DATA: $title',
                     style: const TextStyle(
-                      color: _zzzMutedColor,
+                      color: _zzzSilver,
                       fontSize: 13,
                       fontFamily: 'monospace',
                       fontWeight: FontWeight.w600,
@@ -1945,7 +1971,7 @@ class _EmptyBand extends StatelessWidget {
                   Text(
                     message,
                     style: const TextStyle(
-                      color: _zzzMutedColor,
+                      color: _zzzSilver,
                       fontSize: 11,
                       fontFamily: 'monospace',
                       height: 1.35,
@@ -2019,11 +2045,78 @@ class _ZzzCapsuleClipper extends CustomClipper<Path> {
   bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }
 
+class _ZzzDreamBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rng = _DreamRng(42);
+    // Subtle dream grid
+    final gridPaint = Paint()
+      ..color = const Color(0x08FF1744)
+      ..strokeWidth = 0.5;
+    for (double x = 0; x < size.width; x += 48) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += 48) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    // Broken mirror cracks
+    final crackPaint = Paint()
+      ..color = const Color(0x0A00FF41)
+      ..strokeWidth = 0.7
+      ..style = PaintingStyle.stroke;
+    for (int i = 0; i < 8; i++) {
+      final path = Path();
+      final startX = rng.nextDouble() * size.width;
+      final startY = rng.nextDouble() * size.height;
+      path.moveTo(startX, startY);
+      var cx = startX;
+      var cy = startY;
+      for (int seg = 0; seg < rng.nextIntInRange(2, 5); seg++) {
+        cx += (rng.nextDouble() - 0.5) * 140;
+        cy += (rng.nextDouble() - 0.5) * 140;
+        path.lineTo(cx, cy);
+      }
+      canvas.drawPath(path, crackPaint);
+    }
+    // Dream particles
+    final particlePaint = Paint()
+      ..color = const Color(0x0F00FF41);
+    for (int i = 0; i < 30; i++) {
+      final px = rng.nextDouble() * size.width;
+      final py = rng.nextDouble() * size.height;
+      final radius = rng.nextDouble() * 2 + 0.5;
+      canvas.drawCircle(Offset(px, py), radius, particlePaint);
+      // Red glow particles (fewer)
+      if (i < 8) {
+        final redPaint = Paint()
+          ..color = const Color(0x0AFF1744);
+        canvas.drawCircle(Offset(px, py), radius * 2.5, redPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DreamRng {
+  _DreamRng(this._seed);
+  int _seed;
+
+  double nextDouble() {
+    _seed = (_seed * 1103515245 + 12345) & 0x7fffffff;
+    return _seed / 0x7fffffff;
+  }
+
+  int nextIntInRange(int min, int max) =>
+      min + (nextDouble() * (max - min)).toInt();
+}
+
 class _ZzzScanlinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0x0CFFFFFF)
+      ..color = const Color(0x0D00FF41)
       ..strokeWidth = 1;
     for (double y = 0; y < size.height; y += 3) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
