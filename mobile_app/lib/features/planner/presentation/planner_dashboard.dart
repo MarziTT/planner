@@ -226,7 +226,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               _visibleMonth = DateTime(day.year, day.month);
               _followToday = _isSameDay(normalizedDay, normalizedToday);
             }),
-            isZzz: zzzBackground != null,
+            isZzz: isZzzTheme,
           ),
           const SizedBox(height: 12),
           if (_hasCompletedTodos(plannerState.todos))

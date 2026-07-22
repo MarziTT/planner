@@ -98,7 +98,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ? const Color(0xFF0D0B12)
                           : null,
                       filled: isZzz ? true : null,
-                      focusBorder: isZzz
+                      focusedBorder: isZzz
                           ? const OutlineInputBorder(
                               borderSide:
                                   BorderSide(color: Color(0xFF00FF41)))
@@ -175,7 +175,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ? const Color(0xFF0D0B12)
                           : null,
                       filled: isZzz ? true : null,
-                      focusBorder: isZzz
+                      focusedBorder: isZzz
                           ? const OutlineInputBorder(
                               borderSide:
                                   BorderSide(color: Color(0xFF00FF41)))
@@ -224,7 +224,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ? const Color(0xFF0D0B12)
                           : null,
                       filled: isZzz ? true : null,
-                      focusBorder: isZzz
+                      focusedBorder: isZzz
                           ? const OutlineInputBorder(
                               borderSide:
                                   BorderSide(color: Color(0xFF00FF41)))
