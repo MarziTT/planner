@@ -58,172 +58,317 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final settingsState = ref.watch(settingsControllerProvider);
     final updateInfo = ref.watch(updateControllerProvider).info;
     final settings = settingsState.settings;
+    final isZzz =
+        themeState.preset == PlannerThemePreset.kamenRiderZzz;
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Text(_pageTitle, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                DropdownButtonFormField<PlannerThemePreset>(
-                  initialValue: themeState.preset,
-                  decoration: const InputDecoration(labelText: _presetLabel),
-                  items: themeState.availablePresets
-                      .map(
-                        (preset) => DropdownMenuItem(
-                          value: preset,
-                          child: Text(_labelOf(preset)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) async {
-                    if (value == null || settings == null) return;
-                    themeController.switchPreset(value);
-                    await ref.read(settingsControllerProvider.notifier).save(
-                          settings.copyWith(theme: value.name),
-                        );
-                  },
-                ),
-                if (themeState.preset == PlannerThemePreset.kamenRiderZzz) ...[
-                  const SizedBox(height: 14),
-                  const _ZzzThemePreview(),
-                ],
-                const SizedBox(height: 12),
-                SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(
-                        value: ThemeMode.system, label: Text(_modeSystem)),
-                    ButtonSegment(
-                        value: ThemeMode.light, label: Text(_modeLight)),
-                    ButtonSegment(
-                        value: ThemeMode.dark, label: Text(_modeDark)),
-                  ],
-                  selected: {themeState.mode},
-                  onSelectionChanged: (value) async {
-                    final selected = value.first;
-                    themeController.setThemeMode(selected);
-                    if (settings == null) return;
-                    await ref.read(settingsControllerProvider.notifier).save(
-                          settings.copyWith(themeMode: selected.name),
-                        );
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  initialValue: settings?.updateChannel ?? 'stable',
-                  decoration: const InputDecoration(labelText: _channelLabel),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'stable', child: Text(_stableLabel)),
-                    DropdownMenuItem(value: 'beta', child: Text(_betaLabel)),
-                  ],
-                  onChanged: settings == null
-                      ? null
-                      : (value) async {
-                          if (value == null) return;
-                          await ref
-                              .read(settingsControllerProvider.notifier)
-                              .save(
-                                settings.copyWith(updateChannel: value),
-                              );
-                        },
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  value: settings?.notificationsEnabled ?? true,
-                  onChanged: settings == null
-                      ? null
-                      : (value) => ref
-                          .read(settingsControllerProvider.notifier)
-                          .updateNotifications(enabled: value),
-                  title: const Text(_notifyTitle),
-                  subtitle: const Text(_notifySubtitle),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  initialValue: settings?.notificationsLeadMinutes ?? 15,
-                  decoration: const InputDecoration(labelText: _leadLabel),
-                  items: _notificationLeadOptions
-                      .map(
-                        (value) => DropdownMenuItem(
-                          value: value,
-                          child: Text('提前 $value 分钟'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged:
-                      settings == null || !(settings.notificationsEnabled)
-                          ? null
-                          : (value) async {
-                              if (value == null) return;
-                              await ref
-                                  .read(settingsControllerProvider.notifier)
-                                  .updateNotifications(
-                                    enabled: settings.notificationsEnabled,
-                                    leadMinutes: value,
-                                  );
-                            },
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  value: settings?.voiceEnabled ?? true,
-                  onChanged: settings == null
-                      ? null
-                      : (value) =>
-                          ref.read(settingsControllerProvider.notifier).save(
-                                settings.copyWith(voiceEnabled: value),
-                              ),
-                  title: const Text(_voiceLabel),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_versionTitle,
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Text(updateInfo == null
-                    ? _checking
-                    : '最新版本 ${updateInfo.version} (${updateInfo.buildNumber})'),
-                const SizedBox(height: 8),
-                Text(
-                  _resourceUpdateHint,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (updateInfo != null &&
-                    updateInfo.releaseNotes.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ...updateInfo.releaseNotes.take(3).map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text('• $item'),
-                        ),
-                      ),
-                ],
-              ],
-            ),
-          ),
-        ),
-        if (settingsState.errorMessage != null) ...[
-          const SizedBox(height: 12),
+    return Container(
+      color: isZzz ? const Color(0xFF0A0A0F) : null,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
           Text(
-            settingsState.errorMessage!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+            _pageTitle,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: isZzz ? const Color(0xFFE0F0E0) : null,
+                ),
           ),
+          const SizedBox(height: 12),
+          Card(
+            color: isZzz ? const Color(0xFF0D0B12) : null,
+            shape: isZzz
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: Color(0xFF00FF41)),
+                  )
+                : null,
+            elevation: isZzz ? 4 : null,
+            shadowColor: isZzz
+                ? const Color(0xFF00FF41).withValues(alpha: 0.12)
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<PlannerThemePreset>(
+                    initialValue: themeState.preset,
+                    decoration: InputDecoration(
+                      labelText: _presetLabel,
+                      fillColor: isZzz
+                          ? const Color(0xFF0D0B12)
+                          : null,
+                      filled: isZzz ? true : null,
+                      focusBorder: isZzz
+                          ? const OutlineInputBorder(
+                              borderSide:
+                                  BorderSide(color: Color(0xFF00FF41)))
+                          : null,
+                    ),
+                    items: themeState.availablePresets
+                        .map(
+                          (preset) => DropdownMenuItem(
+                            value: preset,
+                            child: Text(_labelOf(preset)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) async {
+                      if (value == null || settings == null) return;
+                      themeController.switchPreset(value);
+                      await ref
+                          .read(settingsControllerProvider.notifier)
+                          .save(
+                            settings.copyWith(theme: value.name),
+                          );
+                    },
+                  ),
+                  if (themeState.preset ==
+                      PlannerThemePreset.kamenRiderZzz) ...[
+                    const SizedBox(height: 14),
+                    const _ZzzThemePreview(),
+                  ],
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                          value: ThemeMode.system,
+                          label: Text(_modeSystem)),
+                      ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text(_modeLight)),
+                      ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text(_modeDark)),
+                    ],
+                    selected: {themeState.mode},
+                    style: isZzz
+                        ? ButtonStyle(
+                            backgroundColor:
+                                WidgetStateProperty.resolveWith((states) {
+                              if (states
+                                  .contains(WidgetState.selected)) {
+                                return const Color(0xFF00FF41)
+                                    .withValues(alpha: 0.2);
+                              }
+                              return null;
+                            }),
+                          )
+                        : null,
+                    onSelectionChanged: (value) async {
+                      final selected = value.first;
+                      themeController.setThemeMode(selected);
+                      if (settings == null) return;
+                      await ref
+                          .read(settingsControllerProvider.notifier)
+                          .save(
+                            settings.copyWith(
+                                themeMode: selected.name),
+                          );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    initialValue: settings?.updateChannel ?? 'stable',
+                    decoration: InputDecoration(
+                      labelText: _channelLabel,
+                      fillColor: isZzz
+                          ? const Color(0xFF0D0B12)
+                          : null,
+                      filled: isZzz ? true : null,
+                      focusBorder: isZzz
+                          ? const OutlineInputBorder(
+                              borderSide:
+                                  BorderSide(color: Color(0xFF00FF41)))
+                          : null,
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                          value: 'stable', child: Text(_stableLabel)),
+                      DropdownMenuItem(
+                          value: 'beta', child: Text(_betaLabel)),
+                    ],
+                    onChanged: settings == null
+                        ? null
+                        : (value) async {
+                            if (value == null) return;
+                            await ref
+                                .read(
+                                    settingsControllerProvider.notifier)
+                                .save(
+                                  settings.copyWith(
+                                      updateChannel: value),
+                                );
+                          },
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    value: settings?.notificationsEnabled ?? true,
+                    activeColor: isZzz
+                        ? const Color(0xFF00FF41)
+                        : null,
+                    onChanged: settings == null
+                        ? null
+                        : (value) => ref
+                            .read(settingsControllerProvider.notifier)
+                            .updateNotifications(enabled: value),
+                    title: const Text(_notifyTitle),
+                    subtitle: const Text(_notifySubtitle),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<int>(
+                    initialValue:
+                        settings?.notificationsLeadMinutes ?? 15,
+                    decoration: InputDecoration(
+                      labelText: _leadLabel,
+                      fillColor: isZzz
+                          ? const Color(0xFF0D0B12)
+                          : null,
+                      filled: isZzz ? true : null,
+                      focusBorder: isZzz
+                          ? const OutlineInputBorder(
+                              borderSide:
+                                  BorderSide(color: Color(0xFF00FF41)))
+                          : null,
+                    ),
+                    items: _notificationLeadOptions
+                        .map(
+                          (value) => DropdownMenuItem(
+                            value: value,
+                            child: Text('提前 $value 分钟'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged:
+                        settings == null || !(settings.notificationsEnabled)
+                            ? null
+                            : (value) async {
+                                if (value == null) return;
+                                await ref
+                                    .read(settingsControllerProvider
+                                        .notifier)
+                                    .updateNotifications(
+                                      enabled:
+                                          settings.notificationsEnabled,
+                                      leadMinutes: value,
+                                    );
+                              },
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    value: settings?.voiceEnabled ?? true,
+                    activeColor: isZzz
+                        ? const Color(0xFF00FF41)
+                        : null,
+                    onChanged: settings == null
+                        ? null
+                        : (value) => ref
+                            .read(settingsControllerProvider.notifier)
+                            .save(
+                              settings.copyWith(voiceEnabled: value),
+                            ),
+                    title: const Text(_voiceLabel),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Card(
+            color: isZzz ? const Color(0xFF0D0B12) : null,
+            shape: isZzz
+                ? RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    side: const BorderSide(color: Color(0xFF00FF41)),
+                  )
+                : null,
+            elevation: isZzz ? 4 : null,
+            shadowColor: isZzz
+                ? const Color(0xFF00FF41).withValues(alpha: 0.12)
+                : null,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _versionTitle,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(
+                          color: isZzz
+                              ? const Color(0xFFE0F0E0)
+                              : null,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    updateInfo == null
+                        ? _checking
+                        : '最新版本 ${updateInfo.version} (${updateInfo.buildNumber})',
+                    style: TextStyle(
+                      color: isZzz
+                          ? const Color(0xFFE0F0E0)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _resourceUpdateHint,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodySmall
+                        ?.copyWith(
+                          color: isZzz
+                              ? const Color(0xFFA0A0B8)
+                              : null,
+                        ),
+                  ),
+                  if (updateInfo != null &&
+                      updateInfo.releaseNotes.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ...updateInfo.releaseNotes.take(3).map(
+                          (item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '• $item',
+                              style: TextStyle(
+                                color: isZzz
+                                    ? const Color(0xFFE0F0E0)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (settingsState.errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: isZzz
+                  ? BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFFF1744)
+                              .withValues(alpha: 0.15),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    )
+                  : null,
+              child: Text(
+                settingsState.errorMessage!,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
