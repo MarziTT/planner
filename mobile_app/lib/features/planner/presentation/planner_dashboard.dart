@@ -234,11 +234,39 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               padding: const EdgeInsets.only(bottom: 8),
               child: Align(
                 alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _clearCompletedTodos,
-                  icon: const Icon(Icons.auto_delete_outlined, size: 18),
-                  label: const Text('清除已完成待办'),
-                ),
+                child: isZzzTheme
+                    ? InkWell(
+                        onTap: _clearCompletedTodos,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: _zzzSilver.withValues(alpha: 0.25)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.auto_delete_outlined, size: 16, color: _zzzSilver),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '> CLEAR_COMPLETED',
+                                style: TextStyle(
+                                  color: _zzzSilver,
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : TextButton.icon(
+                        onPressed: _clearCompletedTodos,
+                        icon: const Icon(Icons.auto_delete_outlined, size: 18),
+                        label: const Text('清除已完成待办'),
+                      ),
               ),
             ),
           if (agendaItems.isEmpty)
@@ -272,6 +300,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
               onCreate: (title) => ref
                   .read(plannerControllerProvider.notifier)
                   .addQuickTodo(title: title),
+              isZzz: isZzzTheme,
             ),
           ],
           const SizedBox(height: 18),
@@ -426,11 +455,19 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
     var startsAt = event?.startsAt ??
         DateTime(baseDay.year, baseDay.month, baseDay.day, 9);
     var selectedTagId = event != null && event.tagIds.isNotEmpty ? event.tagIds.first : null;
+    final isZzz = ref.read(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz;
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setLocalState) => AlertDialog(
+          backgroundColor: isZzz ? _zzzSurfaceColor : null,
+          shape: isZzz
+              ? RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                  side: BorderSide(color: _zzzGreen.withValues(alpha: 0.3), width: 1.5),
+                )
+              : null,
           title: Text(event == null
               ? '\u65b0\u589e\u884c\u7a0b'
               : '\u7f16\u8f91\u884c\u7a0b'),
@@ -449,7 +486,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                 _ModernTimePicker(
                   value: startsAt,
                   onChanged: (value) => setLocalState(() => startsAt = value),
-                  isZzz: ref.read(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz,
+                  isZzz: isZzz,
                 ),
                 if (tags.isNotEmpty) ...[
                   const SizedBox(height: 14),
@@ -499,7 +536,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             ),
           ),
           actions: [
-            if (ref.read(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz) ...[
+            if (isZzz) ...[
               _ZzzEditorButton(
                 label: 'CANCEL',
                 onPressed: () => Navigator.of(context).pop(false),
@@ -557,9 +594,17 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
     PlannerTodo? todo,
   }) async {
     final controller = TextEditingController(text: todo?.title ?? '');
+    final isZzz = ref.read(themeControllerProvider).preset == PlannerThemePreset.kamenRiderZzz;
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: isZzz ? _zzzSurfaceColor : null,
+        shape: isZzz
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+                side: BorderSide(color: _zzzGreen.withValues(alpha: 0.3), width: 1.5),
+              )
+            : null,
         title: Text(todo == null
             ? '\u65b0\u589e\u5f85\u529e'
             : '\u7f16\u8f91\u5f85\u529e'),
@@ -569,16 +614,29 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
           decoration:
               const InputDecoration(hintText: '\u8f93\u5165\u6807\u9898'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('\u53d6\u6d88'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('\u4fdd\u5b58'),
-          ),
-        ],
+        actions: isZzz
+            ? [
+                _ZzzEditorButton(
+                  label: 'CANCEL',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(width: 8),
+                _ZzzEditorButton(
+                  label: 'SAVE',
+                  primary: true,
+                  onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+                ),
+              ]
+            : [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('\u53d6\u6d88'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+                  child: const Text('\u4fdd\u5b58'),
+                ),
+              ],
       ),
     );
 
@@ -741,10 +799,12 @@ class _WorkModeQuickPanel extends StatelessWidget {
   const _WorkModeQuickPanel({
     required this.todos,
     required this.onCreate,
+    this.isZzz = false,
   });
 
   final List<PlannerTodo> todos;
   final Future<void> Function(String title) onCreate;
+  final bool isZzz;
 
   static const _actions = [
     _WorkQuickAction('开发', Icons.code_rounded),
@@ -761,15 +821,40 @@ class _WorkModeQuickPanel extends StatelessWidget {
         .map((todo) => todo.title.trim())
         .toSet();
 
+    final bgColor = isZzz
+        ? _zzzSurfaceColor
+        : theme.colorScheme.primaryContainer.withValues(alpha: 0.52);
+    final borderColor = isZzz
+        ? _zzzGreen.withValues(alpha: 0.2)
+        : theme.colorScheme.primary.withValues(alpha: 0.14);
+    final accentColor = isZzz ? _zzzGreen : theme.colorScheme.primary;
+    final textDim = isZzz ? _zzzSilver : theme.colorScheme.onSurfaceVariant;
+    final chipBg = isZzz ? _zzzBgColor : theme.colorScheme.surface;
+    final chipDisabled = isZzz
+        ? _zzzSurfaceColor.withValues(alpha: 0.78)
+        : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.78);
+    final chipExistsBorder = isZzz
+        ? _zzzSilver.withValues(alpha: 0.15)
+        : theme.colorScheme.outlineVariant;
+    final chipBorder = isZzz
+        ? _zzzGreen.withValues(alpha: 0.3)
+        : theme.colorScheme.primary.withValues(alpha: 0.24);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.52),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.14),
-        ),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(isZzz ? 2 : 16),
+        border: Border.all(color: borderColor),
+        boxShadow: isZzz
+            ? [
+                BoxShadow(
+                  color: _zzzGreen.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -779,15 +864,22 @@ class _WorkModeQuickPanel extends StatelessWidget {
               Icon(
                 Icons.bolt_rounded,
                 size: 18,
-                color: theme.colorScheme.primary,
+                color: accentColor,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '上班模式',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  isZzz ? '> WORK_MODE' : '上班模式',
+                  style: (isZzz
+                          ? const TextStyle(
+                              color: _zzzGreen,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                              fontFamily: 'monospace',
+                            )
+                          : theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            )),
                 ),
               ),
             ],
@@ -796,7 +888,7 @@ class _WorkModeQuickPanel extends StatelessWidget {
           Text(
             '工作时间只保留几个高频动作，点一下就进入今天安排流。',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: textDim,
               height: 1.3,
             ),
           ),
@@ -811,13 +903,10 @@ class _WorkModeQuickPanel extends StatelessWidget {
                 label: Text(exists ? '${action.title} 已加' : action.title),
                 onPressed: exists ? null : () => onCreate(action.title),
                 visualDensity: VisualDensity.compact,
-                backgroundColor: theme.colorScheme.surface,
-                disabledColor: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.78),
+                backgroundColor: chipBg,
+                disabledColor: chipDisabled,
                 side: BorderSide(
-                  color: exists
-                      ? theme.colorScheme.outlineVariant
-                      : theme.colorScheme.primary.withValues(alpha: 0.24),
+                  color: exists ? chipExistsBorder : chipBorder,
                 ),
               );
             }).toList(),

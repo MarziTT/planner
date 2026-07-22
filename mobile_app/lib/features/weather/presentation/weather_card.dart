@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/theme_controller.dart';
 import '../data/weather_repository.dart';
 import '../state/weather_controller.dart';
 
@@ -49,6 +50,8 @@ class WeatherCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(weatherControllerProvider);
     final controller = ref.read(weatherControllerProvider.notifier);
+    final themeState = ref.watch(themeControllerProvider);
+    final isZzz = themeState.preset == PlannerThemePreset.kamenRiderZzz;
 
     final gradient = state.data != null
         ? _gradientForCode(state.data!.current.condition.code)
@@ -57,6 +60,17 @@ class WeatherCard extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
+        border: isZzz
+            ? Border.all(color: const Color(0xFF00FF41).withValues(alpha: 0.18))
+            : null,
+        boxShadow: isZzz
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF00FF41).withValues(alpha: 0.04),
+                  blurRadius: 10,
+                ),
+              ]
+            : null,
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
