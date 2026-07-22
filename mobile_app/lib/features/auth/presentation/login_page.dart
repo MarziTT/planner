@@ -5,9 +5,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../main.dart';
 import '../../../core/storage/secure_token_storage.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../state/auth_controller.dart';
 
 const _savedPhoneKey = 'login_phone';
+
+const _zzzBgColor = 0xFF0A0A0F;
+const _zzzSurfaceColor = 0xFF0D0B12;
+const _zzzGreen = 0xFF00FF41;
+const _zzzRed = 0xFFFF1744;
+const _zzzGreenLight = 0xFFE0F0E0;
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -104,10 +111,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final authState = ref.watch(authControllerProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final canSendCode = _countdown == 0 && _phoneController.text.trim().isNotEmpty;
+    final isZzz = ref.watch(themeControllerProvider).preset ==
+        PlannerThemePreset.kamenRiderZzz;
+    final canSendCode =
+        _countdown == 0 && _phoneController.text.trim().isNotEmpty;
+
+    final zzzGreen = const Color(_zzzGreen);
+    final zzzGreenLight = const Color(_zzzGreenLight);
+    final zzzSurface = const Color(_zzzSurfaceColor);
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
+      backgroundColor: isZzz ? const Color(_zzzBgColor) : colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -117,23 +131,36 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _BrandHeader(),
+                  const _BrandHeader(),
                   const SizedBox(height: 28),
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLowest,
+                      color: isZzz
+                          ? zzzSurface
+                          : colorScheme.surfaceContainerLowest,
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.52),
+                        color: isZzz
+                            ? zzzGreen.withValues(alpha: 0.55)
+                            : colorScheme.outlineVariant
+                                .withValues(alpha: 0.52),
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colorScheme.shadow.withValues(alpha: 0.08),
-                          blurRadius: 28,
-                          offset: const Offset(0, 18),
-                        ),
-                      ],
+                      boxShadow: isZzz
+                          ? [
+                              BoxShadow(
+                                color: zzzGreen.withValues(alpha: 0.18),
+                                blurRadius: 28,
+                                offset: const Offset(0, 18),
+                              ),
+                            ]
+                          : [
+                              BoxShadow(
+                                color: colorScheme.shadow
+                                    .withValues(alpha: 0.08),
+                                blurRadius: 28,
+                                offset: const Offset(0, 18),
+                              ),
+                            ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
@@ -144,13 +171,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             '手机号登录',
                             style: theme.textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.w800,
+                              color: isZzz ? zzzGreenLight : null,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             '输入手机号获取验证码，新用户将自动注册。',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                              color: isZzz
+                                  ? zzzGreenLight
+                                  : colorScheme.onSurfaceVariant,
                               height: 1.35,
                             ),
                           ),
@@ -160,10 +190,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             keyboardType: TextInputType.phone,
                             textInputAction: TextInputAction.next,
                             onChanged: (_) => setState(() {}),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: '手机号',
                               hintText: '请输入手机号',
-                              prefixIcon: Icon(Icons.phone_android_rounded),
+                              prefixIcon: Icon(Icons.phone_android_rounded,
+                                  color: isZzz ? zzzGreen : null),
+                              fillColor: isZzz ? zzzSurface : null,
+                              filled: isZzz ? true : null,
+                              focusedBorder: isZzz
+                                  ? OutlineInputBorder(
+                                      borderSide: BorderSide(color: zzzGreen),
+                                    )
+                                  : null,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -177,11 +215,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   textInputAction: TextInputAction.done,
                                   onSubmitted: (_) =>
                                       authState.loading ? null : _submit(),
-                                  decoration: const InputDecoration(
+                                  decoration: InputDecoration(
                                     labelText: '验证码',
                                     hintText: '6位验证码',
-                                    prefixIcon:
-                                        Icon(Icons.pin_outlined),
+                                    prefixIcon: Icon(Icons.pin_outlined,
+                                        color: isZzz ? zzzGreen : null),
+                                    fillColor: isZzz ? zzzSurface : null,
+                                    filled: isZzz ? true : null,
+                                    focusedBorder: isZzz
+                                        ? OutlineInputBorder(
+                                            borderSide:
+                                                BorderSide(color: zzzGreen),
+                                          )
+                                        : null,
                                   ),
                                 ),
                               ),
@@ -189,10 +235,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               SizedBox(
                                 height: 56,
                                 child: OutlinedButton(
-                                  onPressed:
-                                      canSendCode && !authState.loading
-                                          ? _sendCode
-                                          : null,
+                                  onPressed: canSendCode && !authState.loading
+                                      ? _sendCode
+                                      : null,
+                                  style: isZzz
+                                      ? OutlinedButton.styleFrom(
+                                          foregroundColor: zzzGreen,
+                                          side: BorderSide(color: zzzGreen),
+                                        )
+                                      : null,
                                   child: Text(
                                     _countdown > 0
                                         ? '${_countdown}s 后重发'
@@ -204,22 +255,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           const SizedBox(height: 14),
                           if (authState.errorMessage != null) ...[
-                            _ErrorNotice(message: authState.errorMessage!),
+                            _ErrorNotice(
+                              message: authState.errorMessage!,
+                              isZzz: isZzz,
+                            ),
                             const SizedBox(height: 12),
                           ],
-                          FilledButton.icon(
-                            onPressed: authState.loading ? null : _submit,
-                            icon: authState.loading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2),
-                                  )
-                                : const Icon(Icons.arrow_forward_rounded),
-                            label: Text(
-                              authState.loading ? '正在登录...' : '登录 / 注册',
-                            ),
+                          _LoginButton(
+                            loading: authState.loading,
+                            isZzz: isZzz,
+                            onPressed: _submit,
                           ),
                         ],
                       ),
@@ -230,7 +275,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     '登录状态会保存在本机，重新打开也会自动恢复。',
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                      color: isZzz
+                          ? zzzGreenLight
+                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -243,6 +290,71 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 }
 
+class _LoginButton extends StatelessWidget {
+  const _LoginButton({
+    required this.loading,
+    required this.isZzz,
+    required this.onPressed,
+  });
+
+  final bool loading;
+  final bool isZzz;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final zzzGreen = const Color(_zzzGreen);
+    final button = FilledButton.icon(
+      onPressed: loading ? null : onPressed,
+      style: isZzz
+          ? FilledButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: zzzGreen,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            )
+          : null,
+      icon: loading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.arrow_forward_rounded),
+      label: Text(
+        loading ? '正在登录...' : '登录 / 注册',
+      ),
+    );
+
+    if (!isZzz) return button;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          colors: [
+            zzzGreen,
+            zzzGreen.withValues(alpha: 0.6),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: zzzGreen.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: button,
+    );
+  }
+}
+
 class _BrandHeader extends StatelessWidget {
   const _BrandHeader();
 
@@ -250,6 +362,10 @@ class _BrandHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isZzz = _readIsZzz(context);
+    final zzzGreen = const Color(_zzzGreen);
+    final zzzGreenLight = const Color(_zzzGreenLight);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,12 +375,22 @@ class _BrandHeader extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: colorScheme.primary,
+                color: isZzz ? zzzGreen : colorScheme.primary,
                 borderRadius: BorderRadius.circular(14),
+                boxShadow: isZzz
+                    ? [
+                        BoxShadow(
+                          color: zzzGreen.withValues(alpha: 0.55),
+                          blurRadius: 14,
+                          offset: const Offset(0, 0),
+                        ),
+                      ]
+                    : null,
               ),
               child: Icon(
                 Icons.auto_awesome_motion_rounded,
-                color: colorScheme.onPrimary,
+                color:
+                    isZzz ? const Color(_zzzBgColor) : colorScheme.onPrimary,
               ),
             ),
             const SizedBox(width: 12),
@@ -277,13 +403,16 @@ class _BrandHeader extends StatelessWidget {
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       height: 1.05,
+                      color: isZzz ? zzzGreenLight : null,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '一句话记录，按时提醒',
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
+                      color: isZzz
+                          ? zzzGreenLight
+                          : colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -295,7 +424,8 @@ class _BrandHeader extends StatelessWidget {
         Text(
           '说一句"明天七点健身"，FlowDay 会帮你放到正确日期。',
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: colorScheme.onSurfaceVariant,
+            color:
+                isZzz ? zzzGreenLight : colorScheme.onSurfaceVariant,
             height: 1.45,
           ),
         ),
@@ -304,25 +434,42 @@ class _BrandHeader extends StatelessWidget {
   }
 }
 
+bool _readIsZzz(BuildContext context) {
+  final scope = ProviderScope.containerOf(context);
+  final state = scope.read(themeControllerProvider);
+  return state.preset == PlannerThemePreset.kamenRiderZzz;
+}
+
 class _ErrorNotice extends StatelessWidget {
-  const _ErrorNotice({required this.message});
+  const _ErrorNotice({required this.message, this.isZzz = false});
 
   final String message;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final zzzRed = const Color(_zzzRed);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colorScheme.errorContainer,
+        color: isZzz ? zzzRed.withValues(alpha: 0.15) : colorScheme.errorContainer,
         borderRadius: BorderRadius.circular(14),
+        boxShadow: isZzz
+            ? [
+                BoxShadow(
+                  color: zzzRed.withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Text(
         message,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: colorScheme.onErrorContainer,
+          color: isZzz ? zzzRed : colorScheme.onErrorContainer,
           height: 1.35,
         ),
       ),

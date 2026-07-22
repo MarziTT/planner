@@ -1,9 +1,10 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/state/auth_controller.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../../fast_capture/domain/capture_enums.dart';
 import '../../fast_capture/presentation/quick_capture_bar.dart';
 import '../../fast_capture/state/fast_capture_controller.dart';
@@ -17,6 +18,13 @@ import '../../settings/presentation/settings_page.dart';
 import '../../settings/state/settings_controller.dart';
 import '../../tags/presentation/tags_page.dart';
 import '../../updates/presentation/update_banner.dart';
+
+const _zzzBgColor = 0xFF0A0A0F;
+const _zzzSurfaceColor = 0xFF0D0B12;
+const _zzzGreen = 0xFF00FF41;
+const _zzzRed = 0xFFFF1744;
+const _zzzSilver = 0xFFA0A0B8;
+const _zzzGreenLight = 0xFFE0F0E0;
 
 class HomeShellPage extends ConsumerStatefulWidget {
   const HomeShellPage({super.key});
@@ -189,16 +197,37 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       SettingsPage(),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('FlowDay 日程'),
-        actions: [
-          IconButton(
-            onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-            icon: const Icon(Icons.logout),
-          ),
-        ],
+    final theme = Theme.of(context);
+    final isZzz = ref.watch(themeControllerProvider).preset ==
+        PlannerThemePreset.kamenRiderZzz;
+    final zzzGreen = const Color(_zzzGreen);
+    final zzzGreenLight = const Color(_zzzGreenLight);
+    final zzzSurface = const Color(_zzzSurfaceColor);
+    final zzzSilver = const Color(_zzzSilver);
+    final zzzBg = const Color(_zzzBgColor);
+
+    PreferredSizeWidget appBar = AppBar(
+      backgroundColor: isZzz ? zzzBg : null,
+      title: Text(
+        'FlowDay 日程',
+        style: isZzz
+            ? TextStyle(color: zzzGreenLight)
+            : null,
       ),
+      actions: [
+        IconButton(
+          onPressed: () => ref.read(authControllerProvider.notifier).logout(),
+          icon: Icon(Icons.logout,
+              color: isZzz
+                  ? zzzGreen
+                  : null),
+        ),
+      ],
+    );
+
+    return Scaffold(
+      backgroundColor: isZzz ? zzzBg : null,
+      appBar: appBar,
       body: Column(
         children: [
           const UpdateBanner(),
@@ -211,33 +240,69 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         child: FloatingActionButton(
           onPressed: () => _showQuickCaptureSheet(context),
           tooltip: '快速速记',
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          backgroundColor: isZzz ? zzzGreen : theme.colorScheme.primary,
+          foregroundColor: isZzz ? zzzBg : theme.colorScheme.onPrimary,
           child: const Icon(Icons.bolt),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (value) => setState(() => currentIndex = value),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: '计划',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.sell_outlined),
-            label: '标签',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            label: '账号',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: '设置',
-          ),
-        ],
+      bottomNavigationBar: _buildNavBar(isZzz, theme, zzzGreen, zzzSilver,
+          zzzSurface),
+    );
+  }
+
+  Widget _buildNavBar(bool isZzz, ThemeData theme, Color zzzGreen,
+      Color zzzSilver, Color zzzSurface) {
+    final nav = NavigationBar(
+      selectedIndex: currentIndex,
+      onDestinationSelected: (value) => setState(() => currentIndex = value),
+      backgroundColor: isZzz ? zzzSurface : null,
+      indicatorColor:
+          isZzz ? zzzGreen.withValues(alpha: 0.22) : null,
+      surfaceTintColor:
+          isZzz ? zzzGreen.withValues(alpha: 0.06) : null,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.calendar_today_outlined),
+          label: '计划',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.sell_outlined),
+          label: '标签',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline),
+          label: '账号',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.settings_outlined),
+          label: '设置',
+        ),
+      ],
+    );
+
+    if (!isZzz) return nav;
+
+    return Theme(
+      data: theme.copyWith(
+        navigationBarTheme: NavigationBarThemeData(
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return IconThemeData(color: zzzGreen);
+            }
+            return IconThemeData(color: zzzSilver);
+          }),
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return TextStyle(
+                  color: zzzGreen,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500);
+            }
+            return TextStyle(color: zzzSilver, fontSize: 12);
+          }),
+        ),
       ),
+      child: nav,
     );
   }
 
@@ -259,10 +324,14 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
   }
 
   void _showQuickCaptureSheet(BuildContext context) {
+    final isZzz = ref.read(themeControllerProvider).preset ==
+        PlannerThemePreset.kamenRiderZzz;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      backgroundColor:
+          isZzz ? const Color(_zzzSurfaceColor) : null,
       builder: (context) => const _QuickCaptureSheet(),
     );
   }
@@ -342,7 +411,8 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
         if (context.mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(completedDirectSubmit ? '已添加到日程' : '已保存行程')),
+            SnackBar(
+                content: Text(completedDirectSubmit ? '已添加到日程' : '已保存行程')),
           );
         }
         Future.microtask(
@@ -353,9 +423,15 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
 
     final state = ref.watch(fastCaptureControllerProvider);
     final theme = Theme.of(context);
+    final isZzz = ref.watch(themeControllerProvider).preset ==
+        PlannerThemePreset.kamenRiderZzz;
     final canInteract = !state.isSubmitting &&
         !state.isRecognizing &&
         state.pendingDraft == null;
+
+    final zzzGreen = const Color(_zzzGreen);
+    final zzzGreenLight = const Color(_zzzGreenLight);
+    final zzzBg = const Color(_zzzBgColor);
 
     return SafeArea(
       child: Padding(
@@ -375,27 +451,32 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                   width: 34,
                   height: 34,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                    color: isZzz
+                        ? zzzGreen.withValues(alpha: 0.15)
+                        : theme.colorScheme.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.bolt_rounded,
                     size: 18,
-                    color: theme.colorScheme.primary,
+                    color: isZzz ? zzzGreen : theme.colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     state.pendingDraft != null ? '请先确认时间' : '快速记一条行程',
-                    style: theme.textTheme.titleSmall,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: isZzz ? zzzGreenLight : null,
+                    ),
                   ),
                 ),
                 if (_controller.text.trim().isNotEmpty)
                   IconButton(
                     tooltip: '清空',
                     onPressed: state.isSubmitting ? null : _controller.clear,
-                    icon: const Icon(Icons.close_rounded),
+                    icon: Icon(Icons.close_rounded,
+                        color: isZzz ? zzzGreenLight : null),
                   ),
               ],
             ),
@@ -404,6 +485,7 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
               _SheetListeningIndicator(
                 partialText: state.partialText,
                 onStop: _toggleMic,
+                isZzz: isZzz,
               )
             else
               Row(
@@ -417,9 +499,16 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                       minLines: 1,
                       maxLines: 3,
                       textInputAction: TextInputAction.send,
+                      cursorColor: isZzz ? zzzGreen : null,
+                      style: TextStyle(
+                          color: isZzz ? zzzGreenLight : null),
                       onSubmitted: (_) => _submit(),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: '比如：今天七点去健身 / 明天五点的飞机',
+                        hintStyle: TextStyle(
+                            color: isZzz
+                                ? zzzGreenLight.withValues(alpha: 0.4)
+                                : null),
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -435,15 +524,23 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                             : '语音录入',
                     style: IconButton.styleFrom(
                       backgroundColor: state.isListening
-                          ? theme.colorScheme.error
+                          ? (isZzz ? zzzGreen : theme.colorScheme.error)
                           : state.isRecognizing
-                              ? theme.colorScheme.primaryContainer
-                              : theme.colorScheme.secondaryContainer,
+                              ? (isZzz
+                                  ? zzzGreen.withValues(alpha: 0.15)
+                                  : theme.colorScheme.primaryContainer)
+                              : (isZzz
+                                  ? zzzGreen.withValues(alpha: 0.12)
+                                  : theme.colorScheme.secondaryContainer),
                       foregroundColor: state.isListening
-                          ? theme.colorScheme.onError
+                          ? (isZzz ? zzzBg : theme.colorScheme.onError)
                           : state.isRecognizing
-                              ? theme.colorScheme.onPrimaryContainer
-                              : theme.colorScheme.onSecondaryContainer,
+                              ? (isZzz
+                                  ? zzzGreen
+                                  : theme.colorScheme.onPrimaryContainer)
+                              : (isZzz
+                                  ? zzzGreen
+                                  : theme.colorScheme.onSecondaryContainer),
                     ),
                     onPressed: state.isRecognizing
                         ? null
@@ -451,10 +548,11 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                             ? _toggleMic
                             : null,
                     icon: state.isRecognizing
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: isZzz ? zzzGreen : null),
                           )
                         : Icon(
                             state.isListening
@@ -463,16 +561,11 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                           ),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: canInteract ? _submit : null,
-                    icon: state.isSubmitting
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.arrow_upward_rounded, size: 18),
-                    label: const Text('确认'),
+                  _ZzzConfirmButton(
+                    isZzz: isZzz,
+                    canInteract: canInteract,
+                    isSubmitting: state.isSubmitting,
+                    onPressed: _submit,
                   ),
                 ],
               ),
@@ -489,14 +582,19 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                               : '检测到时间有歧义，先确认早上还是下午。'
                           : '一句话就能记下来，系统会尽量帮你补齐时间。',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: isZzz
+                    ? zzzGreenLight
+                    : theme.colorScheme.onSurfaceVariant,
               ),
             ),
             if (state.isRecognizing) ...[
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(999),
-                child: const LinearProgressIndicator(minHeight: 3),
+                child: LinearProgressIndicator(
+                  minHeight: 3,
+                  color: isZzz ? zzzGreen : null,
+                ),
               ),
             ],
             if (state.recognizedText != null &&
@@ -505,7 +603,7 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
               Text(
                 '识别到：${state.recognizedText}',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.primary,
+                  color: isZzz ? zzzGreen : theme.colorScheme.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -515,7 +613,9 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
               Text(
                 state.errorMessage!,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
+                  color: isZzz
+                      ? const Color(_zzzRed)
+                      : theme.colorScheme.error,
                 ),
               ),
             ],
@@ -526,14 +626,81 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
   }
 }
 
+class _ZzzConfirmButton extends StatelessWidget {
+  const _ZzzConfirmButton({
+    required this.isZzz,
+    required this.canInteract,
+    required this.isSubmitting,
+    required this.onPressed,
+  });
+
+  final bool isZzz;
+  final bool canInteract;
+  final bool isSubmitting;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final zzzGreen = const Color(_zzzGreen);
+    final button = FilledButton.icon(
+      onPressed: canInteract ? onPressed : null,
+      style: isZzz
+          ? FilledButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: zzzGreen,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            )
+          : null,
+      icon: isSubmitting
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.arrow_upward_rounded, size: 18),
+      label: const Text('确认'),
+    );
+
+    if (!isZzz) return button;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          colors: [
+            zzzGreen,
+            zzzGreen.withValues(alpha: 0.65),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: zzzGreen.withValues(alpha: 0.35),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: button,
+    );
+  }
+}
+
 class _SheetListeningIndicator extends StatelessWidget {
   const _SheetListeningIndicator({
     required this.partialText,
     required this.onStop,
+    this.isZzz = false,
   });
 
   final String? partialText;
   final VoidCallback onStop;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -551,11 +718,16 @@ class _SheetListeningIndicator extends StatelessWidget {
                     : '正在录音，说完点一下停止，系统会自动识别并写入速记。',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: partialText != null && partialText!.trim().isNotEmpty
-                      ? theme.colorScheme.onSurface
-                      : theme.colorScheme.onSurfaceVariant,
-                  fontStyle: partialText != null && partialText!.trim().isNotEmpty
-                      ? FontStyle.normal
-                      : FontStyle.italic,
+                      ? (isZzz
+                          ? const Color(_zzzGreenLight)
+                          : theme.colorScheme.onSurface)
+                      : (isZzz
+                          ? const Color(_zzzGreenLight)
+                          : theme.colorScheme.onSurfaceVariant),
+                  fontStyle:
+                      partialText != null && partialText!.trim().isNotEmpty
+                          ? FontStyle.normal
+                          : FontStyle.italic,
                 ),
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
@@ -569,8 +741,12 @@ class _SheetListeningIndicator extends StatelessWidget {
         IconButton.filled(
           tooltip: '停止录音',
           style: IconButton.styleFrom(
-            backgroundColor: theme.colorScheme.error,
-            foregroundColor: theme.colorScheme.onError,
+            backgroundColor: isZzz
+                ? const Color(_zzzGreen)
+                : theme.colorScheme.error,
+            foregroundColor: isZzz
+                ? const Color(_zzzBgColor)
+                : theme.colorScheme.onError,
           ),
           onPressed: onStop,
           icon: const Icon(Icons.stop_rounded),
@@ -633,4 +809,3 @@ class _SheetAudioWaveformState extends State<_SheetAudioWaveform>
     );
   }
 }
-
