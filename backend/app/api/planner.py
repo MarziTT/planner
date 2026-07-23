@@ -22,6 +22,7 @@ def _event_to_dict(event: Event):
         "repeatRule": event.repeat_rule,
         "status": event.status,
         "tagId": event.tag_id,
+        "tagIds": [event.tag_id] if event.tag_id is not None else [],
     }
 
 
@@ -100,6 +101,9 @@ def update_event(event_id: int):
         event.status = payload["status"] or "planned"
     if "tagId" in payload:
         event.tag_id = payload["tagId"]
+    elif "tagIds" in payload and payload["tagIds"] is not None:
+        ids = [int(x) for x in payload["tagIds"] if x is not None]
+        event.tag_id = ids[0] if ids else None
     db.session.commit()
     return success({"item": _event_to_dict(event)})
 

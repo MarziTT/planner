@@ -13,12 +13,21 @@ class PlannerRepository {
 
   final Dio _dio;
 
+  /// 写操作缓存：保存最近一次写操作返回的 tagIds，用于读操作兜底恢复。
+  final Map<int, List<int>> _tagIdsCache = {};
+
   Future<List<PlannerEvent>> fetchEvents() async {
     final response = await _dio.get('/events');
     final items = (response.data['data']['items'] as List<dynamic>? ?? [])
         .map((item) => Map<String, dynamic>.from(item as Map))
         .toList();
-    return items.map(PlannerEvent.fromJson).toList();
+    return items.map((item) {
+      final event = PlannerEvent.fromJson(item);
+      if (event.tagIds.isEmpty && _tagIdsCache.containsKey(event.id)) {
+        return _ensureTagIds(event, _tagIdsCache[event.id]!);
+      }
+      return event;
+    }).toList();
   }
 
   Future<List<PlannerTodo>> fetchTodos() async {
@@ -74,7 +83,12 @@ class PlannerRepository {
       Map<String, dynamic>.from(response.data['data']['item'] as Map),
     );
     if (tagId != null && !result.tagIds.contains(tagId)) {
-      return _ensureTagIds(result, [tagId]);
+      final restored = _ensureTagIds(result, [tagId]);
+      _tagIdsCache[restored.id] = restored.tagIds;
+      return restored;
+    }
+    if (result.tagIds.isNotEmpty) {
+      _tagIdsCache[result.id] = result.tagIds;
     }
     return result;
   }
