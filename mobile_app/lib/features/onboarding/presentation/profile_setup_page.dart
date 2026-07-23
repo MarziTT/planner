@@ -390,7 +390,7 @@ class _IdentityPicker extends StatelessWidget {
                 Text(
                   item.caption,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant,
                     height: 1.25,
                   ),
                 ),

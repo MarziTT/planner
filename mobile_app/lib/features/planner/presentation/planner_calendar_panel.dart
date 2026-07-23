@@ -100,15 +100,15 @@ class PlannerCalendarPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          const Row(
+          Row(
             children: [
-              _WeekdayLabel('一'),
-              _WeekdayLabel('二'),
-              _WeekdayLabel('三'),
-              _WeekdayLabel('四'),
-              _WeekdayLabel('五'),
-              _WeekdayLabel('六', weekend: true),
-              _WeekdayLabel('日', weekend: true),
+              _WeekdayLabel('一', isZzz: isZzz),
+              _WeekdayLabel('二', isZzz: isZzz),
+              _WeekdayLabel('三', isZzz: isZzz),
+              _WeekdayLabel('四', isZzz: isZzz),
+              _WeekdayLabel('五', isZzz: isZzz),
+              _WeekdayLabel('六', weekend: true, isZzz: isZzz),
+              _WeekdayLabel('日', weekend: true, isZzz: isZzz),
             ],
           ),
           const SizedBox(height: 8),
@@ -153,10 +153,11 @@ class PlannerCalendarPanel extends StatelessWidget {
 }
 
 class _WeekdayLabel extends StatelessWidget {
-  const _WeekdayLabel(this.label, {this.weekend = false});
+  const _WeekdayLabel(this.label, {this.weekend = false, this.isZzz = false});
 
   final String label;
   final bool weekend;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +169,7 @@ class _WeekdayLabel extends StatelessWidget {
           style: theme.textTheme.labelSmall?.copyWith(
             color: weekend
                 ? theme.colorScheme.error.withValues(alpha: 0.88)
-                : theme.colorScheme.onSurfaceVariant,
+                : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -217,7 +218,7 @@ class _CalendarDayCell extends StatelessWidget {
         ? (isZzz ? _zzzBgColor.withValues(alpha: 0.88) : theme.colorScheme.onPrimary.withValues(alpha: 0.88))
         : holidayLabel != null
             ? primaryColor
-            : theme.colorScheme.onSurfaceVariant;
+            : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant);
     final selectedBg = isZzz ? _zzzGreen : theme.colorScheme.primary;
     final todayBg = isZzz ? _zzzGreen.withValues(alpha: 0.18) : theme.colorScheme.primaryContainer.withValues(alpha: 0.72);
 

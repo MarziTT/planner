@@ -137,6 +137,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             caption: _isSameDay(effectiveSelectedDay, normalizedToday)
                 ? '日程和待办混在一条时间线里，顶部速记就是新增入口。'
                 : '这一天的日程集中显示，避免在页面里重复分栏。',
+            isZzz: isZzzTheme,
           ),
           const SizedBox(height: 14),
           PlannerCalendarPanel(

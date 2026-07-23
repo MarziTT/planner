@@ -57,6 +57,7 @@ Future<void> showCaptureAmbiguitySheet(
   VoidCallback? onMissingAfternoon,
   VoidCallback? onMissingEvening,
   VoidCallback? onMissingAllDay,
+  bool isZzz = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -139,6 +140,7 @@ Future<void> showLowConfidenceSheet(
   required ParsedScheduleDraft draft,
   required ValueChanged<ParsedScheduleDraft> onConfirm,
   required VoidCallback onCancel,
+  bool isZzz = false,
 }) {
   final titleController = TextEditingController(text: draft.title);
   CaptureEventType selectedEventType = draft.eventType;
@@ -170,7 +172,9 @@ Future<void> showLowConfidenceSheet(
                     Text(
                       _lowConfidenceHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: isZzz
+                                ? const Color(0xFFA0A0B8)
+                                : Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
                     const SizedBox(height: 16),
@@ -256,6 +260,7 @@ Future<void> showLowConfidenceSheet(
                           child: _InfoChip(
                             label: '时间',
                             value: timeStr,
+                            isZzz: isZzz,
                           ),
                         ),
                       ],
@@ -330,10 +335,11 @@ Future<void> showLowConfidenceSheet(
 }
 
 class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.label, required this.value});
+  const _InfoChip({required this.label, required this.value, this.isZzz = false});
 
   final String label;
   final String value;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -350,7 +356,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 2),
@@ -391,7 +397,9 @@ class _PeriodChoiceTile extends StatelessWidget {
 }
 
 class QuickCaptureBar extends ConsumerStatefulWidget {
-  const QuickCaptureBar({super.key});
+  const QuickCaptureBar({super.key, this.isZzz = false});
+
+  final bool isZzz;
 
   @override
   ConsumerState<QuickCaptureBar> createState() => _QuickCaptureBarState();
@@ -641,7 +649,9 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
                                 : _ambiguousHint
                         : _defaultHint,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: widget.isZzz
+                  ? const Color(0xFFA0A0B8)
+                  : theme.colorScheme.onSurfaceVariant,
             ),
           ),
           if (state.isRecognizing) ...[
@@ -681,10 +691,12 @@ class _ListeningIndicator extends StatelessWidget {
   const _ListeningIndicator({
     required this.partialText,
     required this.onStop,
+    this.isZzz = false,
   });
 
   final String? partialText;
   final VoidCallback onStop;
+  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
@@ -703,7 +715,9 @@ class _ListeningIndicator extends StatelessWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: partialText != null && partialText!.trim().isNotEmpty
                       ? theme.colorScheme.onSurface
-                      : theme.colorScheme.onSurfaceVariant,
+                      : (isZzz
+                          ? const Color(0xFFA0A0B8)
+                          : theme.colorScheme.onSurfaceVariant),
                   fontStyle: partialText != null && partialText!.trim().isNotEmpty
                       ? FontStyle.normal
                       : FontStyle.italic,

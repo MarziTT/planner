@@ -245,7 +245,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           Column(
             children: [
               const UpdateBanner(),
-              if (currentIndex == 0) const QuickCaptureBar(),
+              if (currentIndex == 0) QuickCaptureBar(isZzz: isZzz),
               Expanded(child: pages[currentIndex]),
             ],
           ),
