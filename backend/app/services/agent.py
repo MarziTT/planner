@@ -42,6 +42,7 @@ Rules:
 8. person: extract the person name after 跟/和/与/同; omit if none.
 9. location: extract the place name after 在/去/到; omit if none.
 10. event_name: a concise summary of what the event is (remove person/location/time parts).
+11. Time disambiguation: when the user says an hour (e.g. "十点") without specifying AM/PM (上午/下午/晚上), and the hour in 24h is ≤ the current hour ({current_time}) with a gap < 12 hours, add 12 to the hour (assume PM/night). If the adjusted time is still in the past, push to tomorrow.
 
 Output schema:
 {{
@@ -79,6 +80,9 @@ Output: {{"intent":"create_event","event_name":"写论文","person":null,"locati
 
 User: 明天上午10点半跟李总在星巴克谈合作
 Output: {{"intent":"create_event","event_name":"谈合作","person":"李总","location":"星巴克","datetime_range":{{"start":"{tomorrow}T10:30:00","end":"{tomorrow}T11:30:00"}},"is_fuzzy":false,"confidence":0.95}}
+
+User: 十点去吃饭
+Output: {{"intent":"create_event","event_name":"去吃饭","person":null,"location":null,"datetime_range":{{"start":"{today}T22:00:00","end":"{today}T23:00:00"}},"is_fuzzy":false,"confidence":0.9}}
 """
 
 # -- Helpers ------------------------------------------------------------------
@@ -94,7 +98,11 @@ _TODAY_SLOTS = {
 
 
 def _build_system_prompt() -> str:
-    return FEW_SHOT_SYSTEM_PROMPT.format(**_TODAY_SLOTS)
+    now = datetime.now(TZ)
+    slots = dict(_TODAY_SLOTS)
+    slots["current_time"] = f"{now.hour:02d}:{now.minute:02d}"
+    slots["current_hour"] = now.hour
+    return FEW_SHOT_SYSTEM_PROMPT.format(**slots)
 
 
 def _call_openai(text: str, config: dict) -> dict | None:
@@ -239,6 +247,12 @@ def _resolve_time(text: str) -> tuple[int | None, int | None, int | None, int | 
         if 0 <= h <= 23 and 0 <= minute <= 59:
             if tod_modifier and h < 12:
                 h += tod_modifier
+            elif tod_modifier == 0 and h < 12:
+                # Time disambiguation: no AM/PM modifier, compare with current time.
+                # If the stated hour has already passed today, assume PM (+12).
+                now = datetime.now(TZ)
+                if h <= now.hour and (now.hour - h) < 12:
+                    h += 12
             end_h = h + 1 if h < 23 else h
             return h, minute, end_h, minute, False
 
@@ -257,6 +271,12 @@ def _resolve_time(text: str) -> tuple[int | None, int | None, int | None, int | 
                 minute = 0
             if tod_modifier and h < 12:
                 h += tod_modifier
+            elif tod_modifier == 0 and h < 12:
+                # Time disambiguation: no AM/PM modifier, compare with current time.
+                # If the stated hour has already passed today, assume PM (+12).
+                now = datetime.now(TZ)
+                if h <= now.hour and (now.hour - h) < 12:
+                    h += 12
             end_h = h + 1 if h < 23 else h
             return h, minute, end_h, minute, False
 
@@ -271,6 +291,7 @@ def _resolve_time(text: str) -> tuple[int | None, int | None, int | None, int | 
 def _build_datetime_range(text: str) -> tuple[dict | None, bool]:
     """Build ISO8601 datetime_range and is_fuzzy flag."""
     resolved_date = _resolve_date(text)
+    date_was_explicit = resolved_date is not None
     sh, sm, eh, em, is_fuzzy = _resolve_time(text)
 
     if resolved_date is None:
@@ -285,6 +306,11 @@ def _build_datetime_range(text: str) -> tuple[dict | None, bool]:
                             sh, sm or 0, 0, tzinfo=TZ)
         end_dt = datetime(resolved_date.year, resolved_date.month, resolved_date.day,
                           eh or (sh + 1), em or 0, 0, tzinfo=TZ)
+        # If the resolved time is already past and date wasn't explicitly specified,
+        # push to tomorrow (e.g. user says "十点" at 23:00 → tomorrow 10:00).
+        if start_dt <= datetime.now(TZ) and not date_was_explicit:
+            start_dt += timedelta(days=1)
+            end_dt += timedelta(days=1)
         return {
             "start": start_dt.isoformat(),
             "end": end_dt.isoformat(),
