@@ -115,6 +115,27 @@ class PlannerController extends StateNotifier<PlannerState> {
     required DateTime endsAt,
     int? tagId,
   }) async {
+    final previousState = state;
+
+    // 乐观更新：标签变更时立即更新本地 state，消除等待延迟。
+    if (tagId != null) {
+      final optimisticEvents = state.events.map((item) {
+        if (item.id == event.id) {
+          return PlannerEvent(
+            id: item.id,
+            title: item.title,
+            startsAt: item.startsAt,
+            endsAt: item.endsAt,
+            status: item.status,
+            tagIds: [tagId],
+          );
+        }
+        return item;
+      }).toList()
+        ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+      state = state.copyWith(events: optimisticEvents, clearError: true);
+    }
+
     try {
       final updated = await _repository.updateEvent(
         event: event,
@@ -129,7 +150,7 @@ class PlannerController extends StateNotifier<PlannerState> {
         ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
       state = state.copyWith(events: events, clearError: true);
     } catch (error) {
-      state = state.copyWith(
+      state = previousState.copyWith(
         errorMessage: _plannerErrorMessage(error, fallback: '编辑行程失败'),
       );
     }
