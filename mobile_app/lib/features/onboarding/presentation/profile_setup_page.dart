@@ -365,7 +365,7 @@ class _IdentityPicker extends StatelessWidget {
               border: Border.all(
                 color: selected
                     ? (isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary)
-                    : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.outlineVariant),
+                    : (isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.outlineVariant),
               ),
               boxShadow: selected && isZzz
                   ? const [
@@ -390,7 +390,7 @@ class _IdentityPicker extends StatelessWidget {
                 Text(
                   item.caption,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant,
+                    color: isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.onSurfaceVariant,
                     height: 1.25,
                   ),
                 ),
@@ -525,7 +525,7 @@ class _ThemePicker extends StatelessWidget {
               border: Border.all(
                 color: isSelected
                     ? (isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary)
-                    : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.outlineVariant),
+                    : (isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.outlineVariant),
                 width: isSelected ? 2 : 1,
               ),
               boxShadow: isSelected && isZzz

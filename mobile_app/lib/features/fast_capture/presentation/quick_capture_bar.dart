@@ -173,7 +173,7 @@ Future<void> showLowConfidenceSheet(
                       _lowConfidenceHint,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: isZzz
-                                ? const Color(0xFFA0A0B8)
+                                ? const Color(0xFFC8C8D8)
                                 : Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                     ),
@@ -356,7 +356,7 @@ class _InfoChip extends StatelessWidget {
           Text(
             label,
             style: theme.textTheme.labelSmall?.copyWith(
-              color: isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant,
+              color: isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 2),
@@ -650,7 +650,7 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
                         : _defaultHint,
             style: theme.textTheme.bodySmall?.copyWith(
               color: widget.isZzz
-                  ? const Color(0xFFA0A0B8)
+                  ? const Color(0xFFC8C8D8)
                   : theme.colorScheme.onSurfaceVariant,
             ),
           ),
@@ -716,7 +716,7 @@ class _ListeningIndicator extends StatelessWidget {
                   color: partialText != null && partialText!.trim().isNotEmpty
                       ? theme.colorScheme.onSurface
                       : (isZzz
-                          ? const Color(0xFFA0A0B8)
+                          ? const Color(0xFFC8C8D8)
                           : theme.colorScheme.onSurfaceVariant),
                   fontStyle: partialText != null && partialText!.trim().isNotEmpty
                       ? FontStyle.normal

@@ -39,7 +39,7 @@ class FitnessPanel extends ConsumerWidget {
     final accentColor = isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary;
     final textColor = isZzz ? const Color(0xFFE0F0E0) : null;
     final dimTextColor = isZzz
-        ? const Color(0xFFA0A0B8)
+        ? const Color(0xFFC8C8D8)
         : theme.colorScheme.onSurfaceVariant;
     final surfaceColor = isZzz
         ? const Color(0xFF0A0A0F)

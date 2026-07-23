@@ -422,7 +422,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                   decoration: isZzz
                       ? const InputDecoration(
                           labelText: '\u6807\u9898',
-                          labelStyle: TextStyle(color: Color(0xFFA0A0B8)),
+                          labelStyle: TextStyle(color: Color(0xFFC8C8D8)),
                           border: OutlineInputBorder(
                             borderSide: BorderSide(color: Color(0xFF00FF41)),
                           ),
@@ -479,7 +479,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
                                 const SizedBox(width: 6),
                                 Icon(Icons.repeat, size: 14,
                                     color: isZzz
-                                        ? const Color(0xFFA0A0B8)
+                                        ? const Color(0xFFC8C8D8)
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurfaceVariant),

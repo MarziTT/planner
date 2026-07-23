@@ -225,7 +225,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   subtitle: Text(
                       '只有你确认自己有健身安排时，首页才展示训练入口。',
                       style: isZzz
-                          ? const TextStyle(color: Color(0xFFA0A0B8))
+                          ? const TextStyle(color: Color(0xFFC8C8D8))
                           : null),
                   value: _wantsFitness,
                   activeColor: isZzz

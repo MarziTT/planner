@@ -47,6 +47,9 @@ class AppThemeBuilder {
     required Color surfaceMuted,
   }) {
     final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+    final isDark = brightness == Brightness.dark;
+    final popupBg = isDark ? const Color(0xFF15151F) : null;
+    final popupSurface = isDark ? const Color(0xFF1A1A2E) : null;
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
@@ -71,6 +74,36 @@ class AppThemeBuilder {
           borderSide: BorderSide.none,
         ),
       ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(popupBg ?? scheme.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          elevation: const WidgetStatePropertyAll(8),
+          padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+      ),
+      dialogTheme: isDark
+          ? DialogThemeData(
+              backgroundColor: popupSurface,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            )
+          : null,
+      datePickerTheme: isDark
+          ? DatePickerThemeData(
+              backgroundColor: popupSurface,
+              headerBackgroundColor: popupBg,
+            )
+          : null,
+      timePickerTheme: isDark
+          ? TimePickerThemeData(
+              backgroundColor: popupSurface,
+              dialBackgroundColor: popupBg,
+            )
+          : null,
       extensions: [
         PlannerPalette(
           surfaceMuted: surfaceMuted,

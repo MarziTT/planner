@@ -12,7 +12,7 @@ const _zzzBgColor = 0xFF0A0A0F;
 const _zzzSurfaceColor = 0xFF0D0B12;
 const _zzzGreen = 0xFF00FF41;
 const _zzzRed = 0xFFFF1744;
-const _zzzSilver = 0xFFA0A0B8;
+const _zzzSilver = 0xFFC8C8D8;
 const _zzzGreenLight = 0xFFE0F0E0;
 
 class TagsPage extends ConsumerWidget {

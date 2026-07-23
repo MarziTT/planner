@@ -8,7 +8,7 @@ const zzzSurfaceColor = Color(0xFF0D0B12);
 const zzzRed = Color(0xFFFF1744);
 const zzzGreen = Color(0xFF00FF41);
 const zzzTextColor = Color(0xFFE0F0E0);
-const zzzSilver = Color(0xFFA0A0B8);
+const zzzSilver = Color(0xFFC8C8D8);
 
 // --- ZZZ GIF Spec ---
 class ZzzGifSpec {

@@ -82,7 +82,7 @@ class PlannerCalendarPanel extends StatelessWidget {
                       '点日期直接看当天，节假日和有安排的日子会标出来。',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isZzz
-                            ? const Color(0xFFA0A0B8).withValues(alpha: 0.7)
+                            ? const Color(0xFFC8C8D8).withValues(alpha: 0.7)
                             : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -169,7 +169,7 @@ class _WeekdayLabel extends StatelessWidget {
           style: theme.textTheme.labelSmall?.copyWith(
             color: weekend
                 ? theme.colorScheme.error.withValues(alpha: 0.88)
-                : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant),
+                : (isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.onSurfaceVariant),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -212,13 +212,13 @@ class _CalendarDayCell extends StatelessWidget {
             ? red.withValues(alpha: inMonth ? 0.92 : 0.52)
             : inMonth
                 ? (isZzz ? const Color(0xFFE0E0E0) : theme.colorScheme.onSurface)
-                : (isZzz ? const Color(0xFFA0A0B8).withValues(alpha: 0.55) : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55));
+                : (isZzz ? const Color(0xFFC8C8D8).withValues(alpha: 0.55) : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55));
     final markerLabel = holidayLabel ?? (isToday ? '\u4eca' : null);
     final markerColor = isSelected
         ? (isZzz ? _zzzBgColor.withValues(alpha: 0.88) : theme.colorScheme.onPrimary.withValues(alpha: 0.88))
         : holidayLabel != null
             ? primaryColor
-            : (isZzz ? const Color(0xFFA0A0B8) : theme.colorScheme.onSurfaceVariant);
+            : (isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.onSurfaceVariant);
     final selectedBg = isZzz ? _zzzGreen : theme.colorScheme.primary;
     final todayBg = isZzz ? _zzzGreen.withValues(alpha: 0.18) : theme.colorScheme.primaryContainer.withValues(alpha: 0.72);
 

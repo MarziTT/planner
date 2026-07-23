@@ -246,7 +246,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             : null),
                     subtitle: Text(_notifySubtitle,
                         style: isZzz
-                            ? const TextStyle(color: Color(0xFFA0A0B8))
+                            ? const TextStyle(color: Color(0xFFC8C8D8))
                             : null),
                   ),
                   const SizedBox(height: 8),
@@ -362,7 +362,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         .bodySmall
                         ?.copyWith(
                           color: isZzz
-                              ? const Color(0xFFA0A0B8)
+                              ? const Color(0xFFC8C8D8)
                               : null,
                         ),
                   ),
