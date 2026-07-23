@@ -123,7 +123,7 @@ class _SystemBubble extends StatelessWidget {
                           height: 14,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: theme.colorScheme.onSurfaceVariant,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                         const SizedBox(width: 10),

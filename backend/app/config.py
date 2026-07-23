@@ -55,6 +55,10 @@ class BaseConfig:
     TENCENT_ASR_ENGINE_TYPE = os.getenv("TENCENT_ASR_ENGINE_TYPE", "16k_zh")
     TENCENT_ASR_VOICE_FORMAT = os.getenv("TENCENT_ASR_VOICE_FORMAT", "wav")
 
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True

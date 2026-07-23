@@ -1,6 +1,7 @@
 from flask import Flask
 from sqlalchemy import inspect, text
 
+from .api.agent import agent_bp
 from .api.auth import auth_bp
 from .api.planner import planner_bp
 from .api.profile import profile_bp
@@ -33,6 +34,7 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
     app.register_blueprint(voice_bp, url_prefix="/api/v1/voice")
     app.register_blueprint(updates_bp, url_prefix="/api/v1/app")
     app.register_blueprint(weather_bp, url_prefix="/api/v1/weather")
+    app.register_blueprint(agent_bp, url_prefix="/api/v1/agent")
 
     @app.get("/healthz")
     def healthcheck():

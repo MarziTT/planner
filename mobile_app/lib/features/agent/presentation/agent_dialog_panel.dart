@@ -131,8 +131,22 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 8),
-                    itemCount: agentState.messages.length,
+                    itemCount: agentState.messages.length +
+                        (agentState.status == AgentStatus.parsing ? 1 : 0),
                     itemBuilder: (context, index) {
+                      if (index == agentState.messages.length &&
+                          agentState.status == AgentStatus.parsing) {
+                        return ChatBubble(
+                          message: ChatMessage(
+                            id: '_parsing_placeholder',
+                            type: ChatMessageType.system,
+                            text: '正在解析...',
+                            isParsing: true,
+                          ),
+                          isZzz: isZzz,
+                        );
+                      }
+
                       final msg = agentState.messages[index];
                       final isLastConfirm =
                           msg.type == ChatMessageType.confirmCard &&
