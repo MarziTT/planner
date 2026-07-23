@@ -12,7 +12,6 @@ import '../../updates/presentation/hot_update_image.dart';
 import '../../weather/presentation/weather_card.dart';
 import '../../weather/state/weather_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
-import '../../agent/presentation/agent_dialog_panel.dart';
 import 'planner_calendar_panel.dart';
 import '../domain/planner_models.dart';
 import '../state/planner_controller.dart';
@@ -106,14 +105,12 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
       includeTodos: false,
     );
 
-    return Stack(
-      children: [
-        RefreshIndicator(
-          onRefresh: () async {
-            await ref.read(plannerControllerProvider.notifier).loadDashboard();
-            await ref.read(profileControllerProvider.notifier).load();
-          },
-          child: ListView(
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(plannerControllerProvider.notifier).loadDashboard();
+        await ref.read(profileControllerProvider.notifier).load();
+      },
+      child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
           if (isZzzTheme)
@@ -277,31 +274,7 @@ class _PlannerDashboardState extends ConsumerState<PlannerDashboard>
             ),
           ],
         ],
-          ),
-        ),
-        Positioned(
-          right: 16,
-          bottom: 16,
-          child: FloatingActionButton(
-            heroTag: 'agent_mic_fab',
-            onPressed: () => _showAgentPanel(context),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            shape: const CircleBorder(),
-            tooltip: '贾维斯管家',
-            child: const Icon(Icons.mic),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _showAgentPanel(BuildContext context) async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AgentDialogPanel(),
+      ),
     );
   }
 

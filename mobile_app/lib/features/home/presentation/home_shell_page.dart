@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../agent/presentation/agent_dialog_panel.dart';
 import '../../auth/state/auth_controller.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../fast_capture/domain/capture_enums.dart';
@@ -251,16 +252,25 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           ),
         ],
       ),
-      floatingActionButton: GestureDetector(
-        onLongPress: () => _onFabLongPress(),
-        child: FloatingActionButton(
-          onPressed: () => _showQuickCaptureSheet(context),
-          tooltip: '快速速记',
-          backgroundColor: isZzz ? zzzGreen : theme.colorScheme.primary,
-          foregroundColor: isZzz ? zzzBg : theme.colorScheme.onPrimary,
-          child: const Icon(Icons.bolt),
-        ),
-      ),
+      floatingActionButton: currentIndex == 0
+          ? FloatingActionButton(
+              onPressed: () => _showAgentPanel(context),
+              tooltip: '贾维斯管家',
+              backgroundColor: isZzz ? zzzGreen : theme.colorScheme.primary,
+              foregroundColor: isZzz ? zzzBg : theme.colorScheme.onPrimary,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.mic),
+            )
+          : GestureDetector(
+              onLongPress: () => _onFabLongPress(),
+              child: FloatingActionButton(
+                onPressed: () => _showQuickCaptureSheet(context),
+                tooltip: '快速速记',
+                backgroundColor: isZzz ? zzzGreen : theme.colorScheme.primary,
+                foregroundColor: isZzz ? zzzBg : theme.colorScheme.onPrimary,
+                child: const Icon(Icons.bolt),
+              ),
+            ),
       bottomNavigationBar: _buildNavBar(isZzz, theme, zzzGreen, zzzSilver,
           zzzSurface),
     );
@@ -349,6 +359,15 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       backgroundColor:
           isZzz ? const Color(_zzzSurfaceColor) : null,
       builder: (context) => const _QuickCaptureSheet(),
+    );
+  }
+
+  Future<void> _showAgentPanel(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AgentDialogPanel(),
     );
   }
 }
