@@ -265,33 +265,119 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     );
   }
 
+  Future<void> _handleQuickCommand(String text) async {
+    final state = ref.read(agentControllerProvider);
+    if (state.status == AgentStatus.recognizing ||
+        state.status == AgentStatus.parsing ||
+        state.status == AgentStatus.confirming) {
+      return;
+    }
+    await ref.read(agentControllerProvider.notifier).submitText(text);
+    _scrollToBottom();
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 6) return '夜深了';
+    if (hour < 9) return '早上好';
+    if (hour < 12) return '上午好';
+    if (hour < 14) return '中午好';
+    if (hour < 18) return '下午好';
+    return '晚上好';
+  }
+
   Widget _buildEmptyState(bool isZzz, ThemeData theme) {
     final colorScheme = theme.colorScheme;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.mic_none_rounded,
-            size: 48,
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '对我说一句话，日程就安排好了',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+    final primary = isZzz ? colorScheme.primary : colorScheme.primary;
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+      children: [
+        const SizedBox(height: 8),
+        Center(
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: [
+                  primary.withValues(alpha: 0.18),
+                  primary.withValues(alpha: 0.06),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              border: Border.all(color: primary.withValues(alpha: 0.3)),
             ),
+            child: Icon(Icons.psychology_outlined, size: 36, color: primary),
           ),
-          const SizedBox(height: 4),
-          Text(
-            '比如："明天下午三点跟老王开会"',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${_greeting()}，我是贾维斯',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '日程、饮食、运动、作息、提醒，一句话交给我。',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: [
+            _QuickCommandChip(
+              icon: Icons.calendar_month_outlined,
+              label: '明天有什么安排',
+              onTap: () => _handleQuickCommand('明天有什么安排'),
             ),
+            _QuickCommandChip(
+              icon: Icons.restaurant_outlined,
+              label: '记录早餐',
+              onTap: () => _handleQuickCommand('记录早餐'),
+            ),
+            _QuickCommandChip(
+              icon: Icons.fitness_center_outlined,
+              label: '记一笔运动',
+              onTap: () => _handleQuickCommand('记一笔运动'),
+            ),
+            _QuickCommandChip(
+              icon: Icons.bedtime_outlined,
+              label: '昨晚睡了多久',
+              onTap: () => _handleQuickCommand('记录昨晚作息'),
+            ),
+            _QuickCommandChip(
+              icon: Icons.notifications_outlined,
+              label: '提醒我喝水',
+              onTap: () => _handleQuickCommand('每小时提醒我喝水'),
+            ),
+            _QuickCommandChip(
+              icon: Icons.add_task_outlined,
+              label: '安排个日程',
+              onTap: () => _handleQuickCommand('明天下午三点开会'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '点一下快捷指令，或直接用语音告诉我',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            fontSize: 11,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -439,6 +525,49 @@ class _MicButton extends StatelessWidget {
             ? colorScheme.onError
             : colorScheme.onPrimary,
         minimumSize: const Size(48, 48),
+      ),
+    );
+  }
+}
+
+class _QuickCommandChip extends StatelessWidget {
+  const _QuickCommandChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      color: colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 15, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

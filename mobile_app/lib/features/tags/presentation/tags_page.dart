@@ -36,9 +36,9 @@ class TagsPage extends ConsumerWidget {
                     ? zzzGreen.withValues(alpha: 0.08)
                     : null,
               ),
-            RefreshIndicator(
+          Expanded(
+            child: RefreshIndicator(
               onRefresh: () => ref.read(tagsControllerProvider.notifier).load(),
-              child: Expanded(
               child: Container(
                 color: isZzz ? zzzBgColor : null,
                 child: state.loading && state.tags.isEmpty
@@ -213,8 +213,8 @@ class TagsPage extends ConsumerWidget {
                 ], // ListView children
               ), // ListView / Center
             ), // Container
-          ), // Expanded
           ), // RefreshIndicator
+        ), // Expanded
         ], // Column children
       ), // Column
       if (isZzz)
