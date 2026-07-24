@@ -1,1 +1,1 @@
-﻿web: python backend/ensure_tables.py && gunicorn --bind 0.0.0.0:$PORT backend.wsgi:app
+web: python backend/ensure_tables.py && gunicorn --bind 0.0.0.0:$PORT backend.wsgi:app
