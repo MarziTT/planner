@@ -1,15 +1,48 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from datetime import datetime
+import logging
+from datetime import date, datetime
 
-from flask import Blueprint, g, request
+from flask import Blueprint, current_app, g, request
 
 from ..extensions import db
 from ..models import Event, Profile, Tag, Todo
 from .common import auth_required, failure, success
 
+logger = logging.getLogger(__name__)
 
 planner_bp = Blueprint("planner", __name__)
+
+MAX_TITLE_LENGTH = 200
+
+
+def _parse_iso_datetime(value: str) -> datetime | None:
+    """Safely parse an ISO datetime string; returns None on failure."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _parse_iso_date(value: str) -> date | None:
+    """Safely parse an ISO date string; returns None on failure."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value).date()
+    except (ValueError, TypeError):
+        return None
+
+
+def _validate_title(title: str) -> str | None:
+    """Return error message if title is invalid, None if valid."""
+    if not title or not title.strip():
+        return "title is required"
+    if len(title) > MAX_TITLE_LENGTH:
+        return f"title must not exceed {MAX_TITLE_LENGTH} characters"
+    return None
 
 
 def _event_to_dict(event: Event):
@@ -48,6 +81,19 @@ def _tag_to_dict(tag: Tag):
     }
 
 
+def _paginate_args() -> tuple[int, int]:
+    """Extract common pagination params from request.args."""
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except (ValueError, TypeError):
+        page = 1
+    try:
+        per_page = max(1, min(200, int(request.args.get("perPage", "50"))))
+    except (ValueError, TypeError):
+        per_page = 50
+    return page, per_page
+
+
 @planner_bp.get("/events")
 @auth_required
 def list_events():
@@ -55,22 +101,36 @@ def list_events():
     status = request.args.get("status", "").strip()
     if status:
         query = query.filter_by(status=status)
-    items = query.order_by(Event.starts_at.asc()).all()
-    return success({"items": [_event_to_dict(item) for item in items]})
+    page, per_page = _paginate_args()
+    pagination = query.order_by(Event.starts_at.asc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    return success({
+        "items": [_event_to_dict(item) for item in pagination.items],
+        "page": pagination.page,
+        "perPage": pagination.per_page,
+        "total": pagination.total,
+        "pages": pagination.pages,
+    })
 
 
 @planner_bp.post("/events")
 @auth_required
 def create_event():
     payload = request.get_json(silent=True) or {}
-    if not payload.get("title") or not payload.get("startsAt") or not payload.get("endsAt"):
-        return failure("validation_error", "title, startsAt and endsAt are required", status=422)
+    title_err = _validate_title(payload.get("title", ""))
+    if title_err:
+        return failure("validation_error", title_err, status=422)
+    starts_at = _parse_iso_datetime(payload.get("startsAt", ""))
+    ends_at = _parse_iso_datetime(payload.get("endsAt", ""))
+    if not starts_at or not ends_at:
+        return failure("validation_error", "startsAt and endsAt must be valid ISO datetime strings", status=422)
     event = Event(
         user_id=g.current_user.id,
         title=payload["title"].strip(),
         note=(payload.get("note") or "").strip(),
-        starts_at=datetime.fromisoformat(payload["startsAt"]),
-        ends_at=datetime.fromisoformat(payload["endsAt"]),
+        starts_at=starts_at,
+        ends_at=ends_at,
         repeat_rule=payload.get("repeatRule") or "",
         status=payload.get("status") or "planned",
         tag_id=payload.get("tagId"),
@@ -88,13 +148,22 @@ def update_event(event_id: int):
         return failure("not_found", "Event not found", status=404)
     payload = request.get_json(silent=True) or {}
     if "title" in payload:
+        title_err = _validate_title(payload["title"])
+        if title_err:
+            return failure("validation_error", title_err, status=422)
         event.title = payload["title"].strip()
     if "note" in payload:
         event.note = (payload["note"] or "").strip()
     if "startsAt" in payload:
-        event.starts_at = datetime.fromisoformat(payload["startsAt"])
+        val = _parse_iso_datetime(payload["startsAt"])
+        if val is None:
+            return failure("validation_error", "startsAt must be a valid ISO datetime", status=422)
+        event.starts_at = val
     if "endsAt" in payload:
-        event.ends_at = datetime.fromisoformat(payload["endsAt"])
+        val = _parse_iso_datetime(payload["endsAt"])
+        if val is None:
+            return failure("validation_error", "endsAt must be a valid ISO datetime", status=422)
+        event.ends_at = val
     if "repeatRule" in payload:
         event.repeat_rule = payload["repeatRule"] or ""
     if "status" in payload:
@@ -102,7 +171,10 @@ def update_event(event_id: int):
     if "tagId" in payload:
         event.tag_id = payload["tagId"]
     elif "tagIds" in payload and payload["tagIds"] is not None:
-        ids = [int(x) for x in payload["tagIds"] if x is not None]
+        try:
+            ids = [int(x) for x in payload["tagIds"] if x is not None]
+        except (ValueError, TypeError):
+            return failure("validation_error", "tagIds must be a list of integers", status=422)
         event.tag_id = ids[0] if ids else None
     db.session.commit()
     return success({"item": _event_to_dict(event)})
@@ -126,21 +198,36 @@ def list_todos():
     completed = request.args.get("completed", "")
     if completed in {"true", "false"}:
         query = query.filter_by(completed=(completed == "true"))
-    items = query.order_by(Todo.created_at.desc()).all()
-    return success({"items": [_todo_to_dict(item) for item in items]})
+    page, per_page = _paginate_args()
+    pagination = query.order_by(Todo.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    return success({
+        "items": [_todo_to_dict(item) for item in pagination.items],
+        "page": pagination.page,
+        "perPage": pagination.per_page,
+        "total": pagination.total,
+        "pages": pagination.pages,
+    })
 
 
 @planner_bp.post("/todos")
 @auth_required
 def create_todo():
     payload = request.get_json(silent=True) or {}
-    if not payload.get("title"):
-        return failure("validation_error", "title is required", status=422)
+    title_err = _validate_title(payload.get("title", ""))
+    if title_err:
+        return failure("validation_error", title_err, status=422)
+    due_date = None
+    if payload.get("dueDate"):
+        due_date = _parse_iso_date(payload["dueDate"])
+        if due_date is None:
+            return failure("validation_error", "dueDate must be a valid ISO date string", status=422)
     todo = Todo(
         user_id=g.current_user.id,
         title=payload["title"].strip(),
         note=(payload.get("note") or "").strip(),
-        due_date=datetime.fromisoformat(payload["dueDate"]).date() if payload.get("dueDate") else None,
+        due_date=due_date,
         due_time=payload.get("dueTime") or "",
         repeat_rule=payload.get("repeatRule") or "",
         completed=bool(payload.get("completed", False)),
@@ -157,11 +244,15 @@ def update_todo(todo_id: int):
     if not todo:
         return failure("not_found", "Todo not found", status=404)
     payload = request.get_json(silent=True) or {}
+    if "title" in payload:
+        title_err = _validate_title(payload["title"])
+        if title_err:
+            return failure("validation_error", title_err, status=422)
     for field, attr in [("title", "title"), ("note", "note"), ("dueTime", "due_time"), ("repeatRule", "repeat_rule")]:
         if field in payload:
             setattr(todo, attr, (payload[field] or "").strip() if isinstance(payload[field], str) else payload[field])
     if "dueDate" in payload:
-        todo.due_date = datetime.fromisoformat(payload["dueDate"]).date() if payload["dueDate"] else None
+        todo.due_date = _parse_iso_date(payload["dueDate"]) if payload["dueDate"] else None
     if "completed" in payload:
         todo.completed = bool(payload["completed"])
     db.session.commit()
@@ -294,13 +385,17 @@ def import_data():
     for event_data in events:
         if not event_data.get("title") or not event_data.get("startsAt") or not event_data.get("endsAt"):
             continue
+        starts_at = _parse_iso_datetime(event_data["startsAt"])
+        ends_at = _parse_iso_datetime(event_data["endsAt"])
+        if not starts_at or not ends_at:
+            continue
         db.session.add(
             Event(
                 user_id=g.current_user.id,
                 title=event_data["title"].strip(),
                 note=(event_data.get("note") or "").strip(),
-                starts_at=datetime.fromisoformat(event_data["startsAt"]),
-                ends_at=datetime.fromisoformat(event_data["endsAt"]),
+                starts_at=starts_at,
+                ends_at=ends_at,
                 repeat_rule=event_data.get("repeatRule") or "",
                 status=event_data.get("status") or "planned",
             )
@@ -314,7 +409,7 @@ def import_data():
                 user_id=g.current_user.id,
                 title=todo_data["title"].strip(),
                 note=(todo_data.get("note") or "").strip(),
-                due_date=datetime.fromisoformat(todo_data["dueDate"]).date() if todo_data.get("dueDate") else None,
+                due_date=_parse_iso_date(todo_data.get("dueDate")),
                 due_time=todo_data.get("dueTime") or "",
                 repeat_rule=todo_data.get("repeatRule") or "",
                 completed=bool(todo_data.get("completed", False)),

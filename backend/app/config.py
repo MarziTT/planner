@@ -20,6 +20,7 @@ def _normalize_database_url(raw_url: str | None) -> str:
 
 class BaseConfig:
     SECRET_KEY = os.getenv("PIXEL_SECRET_KEY", "pixel-planner-dev-secret")
+    JWT_SECRET_KEY = os.getenv("PIXEL_JWT_SECRET") or os.getenv("PIXEL_SECRET_KEY", "pixel-planner-jwt-dev-secret")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JSON_AS_ASCII = False
 
@@ -29,6 +30,8 @@ class BaseConfig:
     JWT_ISSUER = os.getenv("JWT_ISSUER", "pixel-planner")
     JWT_ACCESS_TTL_SECONDS = int(os.getenv("JWT_ACCESS_TTL_SECONDS", "604800"))
     JWT_REFRESH_TTL_SECONDS = int(os.getenv("JWT_REFRESH_TTL_SECONDS", "31536000"))
+
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
 
     UPDATE_MANIFEST_PATH = os.getenv(
         "UPDATE_MANIFEST_PATH",
@@ -59,6 +62,10 @@ class BaseConfig:
     OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
+    # Phase 2 — habits engine
+    HABITS_WINDOW_DAYS = int(os.getenv("HABITS_WINDOW_DAYS", "30"))
+    HABITS_MIN_SAMPLES = int(os.getenv("HABITS_MIN_SAMPLES", "3"))
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
@@ -71,6 +78,22 @@ class TestingConfig(BaseConfig):
 
 class ProductionConfig(BaseConfig):
     DEBUG = False
+
+    def __init__(self):
+        super().__init__()
+        if self.SECRET_KEY == "pixel-planner-dev-secret":
+            raise RuntimeError(
+                "PIXEL_SECRET_KEY must be set in production environment"
+            )
+        if self.JWT_SECRET_KEY == "pixel-planner-jwt-dev-secret":
+            raise RuntimeError(
+                "PIXEL_JWT_SECRET must be set in production environment"
+            )
+        if self.BACKDOOR_PHONE == "13800000001" or self.BACKDOOR_CODE == "888888":
+            raise RuntimeError(
+                "BACKDOOR_PHONE and BACKDOOR_CODE must be overridden in production. "
+                "Default backdoor credentials are insecure."
+            )
 
 
 def get_config(config_name: str | None = None):

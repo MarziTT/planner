@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../../core/network/api_client.dart';
 import '../data/weather_repository.dart';
+import '../domain/weather_models.dart';
 
 // ============================================================
 // 状态定义

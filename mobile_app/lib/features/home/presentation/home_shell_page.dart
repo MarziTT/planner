@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/presentation/agent_dialog_panel.dart';
 import '../../auth/state/auth_controller.dart';
+import '../../../core/cache/local_cache_service.dart';
+import '../../../core/network/connectivity_service.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../fast_capture/domain/capture_enums.dart';
 import '../../fast_capture/presentation/quick_capture_bar.dart';
@@ -12,21 +14,19 @@ import '../../fast_capture/state/fast_capture_controller.dart';
 import '../../notifications/data/reminder_gateway.dart';
 import '../../notifications/domain/notification_tap_event.dart';
 import '../../planner/presentation/planner_dashboard.dart';
+import '../../habits/views/habits_dashboard.dart';
 import '../../planner/state/planner_controller.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../settings/domain/settings_model.dart';
 import '../../settings/presentation/settings_page.dart';
 import '../../settings/state/settings_controller.dart';
 import '../../tags/presentation/tags_page.dart';
+import '../../meals/views/meal_page.dart';
+import '../../exercise/views/exercise_page.dart';
+import '../../transit/views/transit_page.dart';
 import '../../updates/presentation/update_banner.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
-
-const _zzzBgColor = 0xFF0A0A0F;
-const _zzzSurfaceColor = 0xFF0D0B12;
-const _zzzGreen = 0xFF00FF41;
-const _zzzRed = 0xFFFF1744;
-const _zzzSilver = 0xFFC8C8D8;
-const _zzzGreenLight = 0xFFE0F0E0;
+import '../../widgets/widget_service.dart';
 
 class HomeShellPage extends ConsumerStatefulWidget {
   const HomeShellPage({super.key});
@@ -101,6 +101,8 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     if (authState.session == null || authState.restoring) return;
     _initialDashboardLoadRequested = true;
     ref.read(plannerControllerProvider.notifier).loadDashboard();
+    // Refresh widget after login
+    ref.read(widgetServiceProvider).refreshWidget();
   }
 
   @override
@@ -111,10 +113,12 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       if (previousSession == null && nextSession != null) {
         _initialDashboardLoadRequested = true;
         ref.read(plannerControllerProvider.notifier).loadDashboard();
+        ref.read(widgetServiceProvider).refreshWidget();
       }
       if (previousSession != null && nextSession == null) {
         _initialDashboardLoadRequested = false;
         ref.read(plannerControllerProvider.notifier).markLoggedOut();
+        ref.read(widgetServiceProvider).clearWidget();
       }
     });
 
@@ -193,7 +197,10 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     });
 
     const pages = [
-      PlannerDashboard(),
+      HabitsDashboard(),
+      TransitPage(),
+      MealPage(),
+      ExercisePage(),
       TagsPage(),
       ProfilePage(),
       SettingsPage(),
@@ -202,11 +209,8 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     final theme = Theme.of(context);
     final isZzz = ref.watch(themeControllerProvider).preset ==
         PlannerThemePreset.kamenRiderZzz;
-    final zzzGreen = const Color(_zzzGreen);
-    final zzzGreenLight = const Color(_zzzGreenLight);
-    final zzzSurface = const Color(_zzzSurfaceColor);
-    final zzzSilver = const Color(_zzzSilver);
-    final zzzBg = const Color(_zzzBgColor);
+    final zzzSurface = zzzSurfaceColor;
+    final zzzBg = zzzBgColor;
 
     PreferredSizeWidget appBar = AppBar(
       backgroundColor: isZzz ? zzzBg : null,
@@ -232,20 +236,20 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       appBar: appBar,
       body: Stack(
         children: [
-          // TODO: 暂时隐藏 ZZZ 角标
-          // if (isZzz)
-          //   Positioned(
-          //     right: 0,
-          //     bottom: 0,
-          //     child: ZzzCornerArt(
-          //       spec: zzzSpecFromSeed(DateTime.now().day + 2),
-          //       size: 80,
-          //       opacity: 0.22,
-          //     ),
-          //   ),
+          if (isZzz)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: ZzzCornerArt(
+                spec: zzzSpecFromSeed(DateTime.now().day + 2),
+                size: 80,
+                opacity: 0.22,
+              ),
+            ),
           Column(
             children: [
               const UpdateBanner(),
+              _OfflineBanner(),
               if (currentIndex == 0) QuickCaptureBar(isZzz: isZzz),
               Expanded(child: pages[currentIndex]),
             ],
@@ -280,7 +284,13 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       Color zzzSilver, Color zzzSurface) {
     final nav = NavigationBar(
       selectedIndex: currentIndex,
-      onDestinationSelected: (value) => setState(() => currentIndex = value),
+      onDestinationSelected: (value) {
+        setState(() => currentIndex = value);
+        // Refresh widget when navigating to dashboard (after potential changes)
+        if (value == 0) {
+          ref.read(widgetServiceProvider).refreshWidget();
+        }
+      },
       backgroundColor: isZzz ? zzzSurface : null,
       indicatorColor:
           isZzz ? zzzGreen.withValues(alpha: 0.22) : null,
@@ -288,8 +298,20 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           isZzz ? zzzGreen.withValues(alpha: 0.06) : null,
       destinations: const [
         NavigationDestination(
-          icon: Icon(Icons.calendar_today_outlined),
-          label: '计划',
+          icon: Icon(Icons.dashboard_outlined),
+          label: '仪表盘',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.directions_subway_outlined),
+          label: '出行',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.restaurant_outlined),
+          label: '饮食',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.fitness_center_outlined),
+          label: '运动',
         ),
         NavigationDestination(
           icon: Icon(Icons.sell_outlined),
@@ -357,7 +379,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor:
-          isZzz ? const Color(_zzzSurfaceColor) : null,
+          isZzz ? zzzSurfaceColor : null,
       builder: (context) => const _QuickCaptureSheet(),
     );
   }
@@ -464,9 +486,7 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
         !state.isRecognizing &&
         state.pendingDraft == null;
 
-    final zzzGreen = const Color(_zzzGreen);
-    final zzzGreenLight = const Color(_zzzGreenLight);
-    final zzzBg = const Color(_zzzBgColor);
+    final zzzBg = zzzBgColor;
 
     return SafeArea(
       child: Padding(
@@ -649,7 +669,7 @@ class _QuickCaptureSheetState extends ConsumerState<_QuickCaptureSheet> {
                 state.errorMessage!,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: isZzz
-                      ? const Color(_zzzRed)
+                      ? zzzRed
                       : theme.colorScheme.error,
                 ),
               ),
@@ -676,7 +696,6 @@ class _ZzzConfirmButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zzzGreen = const Color(_zzzGreen);
     final button = FilledButton.icon(
       onPressed: canInteract ? onPressed : null,
       style: isZzz
@@ -754,10 +773,10 @@ class _SheetListeningIndicator extends StatelessWidget {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: partialText != null && partialText!.trim().isNotEmpty
                       ? (isZzz
-                          ? const Color(_zzzGreenLight)
+                          ? zzzGreenLight
                           : theme.colorScheme.onSurface)
                       : (isZzz
-                          ? const Color(_zzzGreenLight)
+                          ? zzzGreenLight
                           : theme.colorScheme.onSurfaceVariant),
                   fontStyle:
                       partialText != null && partialText!.trim().isNotEmpty
@@ -777,10 +796,10 @@ class _SheetListeningIndicator extends StatelessWidget {
           tooltip: '停止录音',
           style: IconButton.styleFrom(
             backgroundColor: isZzz
-                ? const Color(_zzzGreen)
+                ? zzzGreen
                 : theme.colorScheme.error,
             foregroundColor: isZzz
-                ? const Color(_zzzBgColor)
+                ? zzzBgColor
                 : theme.colorScheme.onError,
           ),
           onPressed: onStop,
@@ -841,6 +860,45 @@ class _SheetAudioWaveformState extends State<_SheetAudioWaveform>
           }),
         );
       },
+    );
+  }
+}
+
+/// Slim bar showing "offline mode" at the top of the screen.
+///
+/// Watches [isOfflineProvider]; auto-hides when connectivity returns.
+class _OfflineBanner extends ConsumerWidget {
+  // ignore: unused_element – used in build() via Column
+  const _OfflineBanner(); // ignore: unused_element
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isOffline = ref.watch(isOfflineProvider);
+    if (!isOffline) return const SizedBox.shrink();
+
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      color: Colors.orange.shade700,
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            Icon(Icons.cloud_off, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '离线模式 · 数据可能不是最新',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

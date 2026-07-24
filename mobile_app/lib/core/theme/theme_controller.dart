@@ -30,20 +30,20 @@ class ThemeState {
 }
 
 class ThemeController extends StateNotifier<ThemeState> {
-  ThemeController(this._prefs) : super(_buildDefault()) {
-    if (_prefs != null) {
-      _restore();
-    }
-  }
+  ThemeController(this._prefs) : super(_buildInitial(_prefs));
 
   final SharedPreferences? _prefs;
 
-  static ThemeState _buildDefault() {
-    return _buildState(
-      PlannerThemePreset.forest,
-      ThemeMode.dark,
-      _defaultAvailable(),
-    );
+  static ThemeState _buildInitial(SharedPreferences? prefs) {
+    final savedPreset = prefs?.getString('theme_preset');
+    final savedMode = prefs?.getString('theme_mode');
+    final preset = savedPreset != null
+        ? _presetFromName(savedPreset)
+        : PlannerThemePreset.forest;
+    final mode = savedMode != null
+        ? _modeFromName(savedMode)
+        : ThemeMode.system;
+    return _buildState(preset, mode, _defaultAvailable());
   }
 
   static List<PlannerThemePreset> _defaultAvailable() {
@@ -69,20 +69,6 @@ class ThemeController extends StateNotifier<ThemeState> {
       darkTheme: state.darkTheme,
       availablePresets: presets,
     );
-  }
-
-  void _restore() {
-    final prefs = _prefs;
-    if (prefs == null) return;
-    final savedPreset = prefs.getString('theme_preset');
-    final savedMode = prefs.getString('theme_mode');
-    final preset = savedPreset != null
-        ? _presetFromName(savedPreset)
-        : PlannerThemePreset.forest;
-    final mode = savedMode != null
-        ? _modeFromName(savedMode)
-        : ThemeMode.dark;
-    state = _buildState(preset, mode, _defaultAvailable());
   }
 
   void switchPreset(PlannerThemePreset preset) {

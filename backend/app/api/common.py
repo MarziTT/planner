@@ -40,7 +40,7 @@ def auth_required(handler):
         try:
             payload = decode_token(
                 token=token,
-                secret=current_app.config["SECRET_KEY"],
+                secret=current_app.config["JWT_SECRET_KEY"],
                 issuer=current_app.config["JWT_ISSUER"],
             )
         except Exception:

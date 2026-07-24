@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../scheduler/data/scheduler_repository.dart';
+import '../../scheduler/domain/scheduler_models.dart';
 import '../domain/parse_result.dart';
 import '../state/agent_notifier.dart';
 import 'confirm_card.dart';
@@ -34,6 +37,12 @@ class ChatBubble extends StatelessWidget {
           result: onConfirmResult ?? message.parseResult,
           isZzz: isZzz,
           onConfirm: onConfirm,
+        );
+      case ChatMessageType.answerCard:
+        return _AnswerCardBubble(
+          result: onConfirmResult ?? message.parseResult,
+          text: message.text,
+          isZzz: isZzz,
         );
       case ChatMessageType.error:
         return _ErrorBubble(text: message.text, isZzz: isZzz);
@@ -149,7 +158,7 @@ class _SystemBubble extends StatelessWidget {
   }
 }
 
-class _ConfirmCardBubble extends StatelessWidget {
+class _ConfirmCardBubble extends ConsumerStatefulWidget {
   const _ConfirmCardBubble({
     required this.result,
     this.isZzz = false,
@@ -161,7 +170,91 @@ class _ConfirmCardBubble extends StatelessWidget {
   final VoidCallback? onConfirm;
 
   @override
+  ConsumerState<_ConfirmCardBubble> createState() => _ConfirmCardBubbleState();
+}
+
+class _ConfirmCardBubbleState extends ConsumerState<_ConfirmCardBubble> {
+  ConflictCheck? _conflicts;
+  List<TimeSuggestion>? _suggestions;
+  bool _isChecking = false;
+  bool _checked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConflicts();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConfirmCardBubble oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.result != widget.result) {
+      _conflicts = null;
+      _suggestions = null;
+      _checked = false;
+      _checkConflicts();
+    }
+  }
+
+  Future<void> _checkConflicts() async {
+    final result = widget.result;
+    if (result == null ||
+        result.intent != 'create_event' ||
+        result.datetimeStart == null ||
+        result.datetimeEnd == null ||
+        _checked) {
+      return;
+    }
+    _checked = true;
+
+    if (!mounted) return;
+    setState(() => _isChecking = true);
+
+    try {
+      final repo = ref.read(schedulerRepositoryProvider);
+
+      // Check conflicts for the parsed time range
+      final conflicts = await repo.checkConflicts(
+        startsAt: result.datetimeStart!.toIso8601String(),
+        endsAt: result.datetimeEnd!.toIso8601String(),
+      );
+
+      if (!mounted) return;
+
+      // If conflicts found, also get suggestions
+      List<TimeSuggestion>? suggestions;
+      if (conflicts.hasConflicts) {
+        final duration =
+            result.datetimeEnd!.difference(result.datetimeStart!).inMinutes;
+        try {
+          final suggestion = await repo.suggest(
+            date: _dateStr(result.datetimeStart!),
+            durationMinutes: duration.clamp(15, 480),
+          );
+          suggestions = suggestion.suggestions;
+        } catch (_) {
+          // Suggestions are best-effort
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _conflicts = conflicts;
+        _suggestions = suggestions;
+        _isChecking = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isChecking = false);
+    }
+  }
+
+  String _dateStr(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+
+  @override
   Widget build(BuildContext context) {
+    final result = widget.result;
     if (result == null) return const SizedBox.shrink();
 
     return Padding(
@@ -170,9 +263,70 @@ class _ConfirmCardBubble extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           ConfirmCard(
-            result: result!,
-            isZzz: isZzz,
-            onConfirm: onConfirm ?? () {},
+            result: result,
+            isZzz: widget.isZzz,
+            onConfirm: widget.onConfirm ?? () {},
+            conflicts: _conflicts,
+            suggestions: _suggestions,
+            isCheckingConflicts: _isChecking,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AnswerCardBubble extends StatelessWidget {
+  const _AnswerCardBubble({
+    required this.result,
+    required this.text,
+    this.isZzz = false,
+  });
+
+  final ParseResult? result;
+  final String text;
+  final bool isZzz;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Flexible(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 300),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: colorScheme.primary.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [
+                    Icon(Icons.lightbulb_outline,
+                        size: 18, color: colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Text('管家回复',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(text,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: colorScheme.onSurface)),
+                ],
+              ),
+            ),
           ),
         ],
       ),

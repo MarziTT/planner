@@ -3,19 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../main.dart';
 import '../../../core/storage/secure_token_storage.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/auth_controller.dart';
 
-const _savedPhoneKey = 'login_phone';
-
-const _zzzBgColor = 0xFF0A0A0F;
-const _zzzSurfaceColor = 0xFF0D0B12;
-const _zzzGreen = 0xFF00FF41;
-const _zzzRed = 0xFFFF1744;
-const _zzzGreenLight = 0xFFE0F0E0;
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -38,19 +30,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   Future<void> _loadSavedPhone() async {
-    final prefs = ref.read(sharedPreferencesProvider);
-    var phone = prefs.getString(_savedPhoneKey);
-    if (phone == null || phone.isEmpty) {
-      final storage = ref.read(tokenStorageProvider);
-      phone = await storage.getPhoneNumber();
-    }
+    final storage = ref.read(tokenStorageProvider);
+    final phone = await storage.getPhoneNumber();
     if (phone != null && phone.isNotEmpty) {
       _phoneController.text = phone;
     }
   }
 
   Future<void> _savePhone(String phone) async {
-    await ref.read(sharedPreferencesProvider).setString(_savedPhoneKey, phone);
     await ref.read(tokenStorageProvider).savePhoneNumber(phone);
   }
 
@@ -117,12 +104,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final canSendCode =
         _countdown == 0 && _phoneController.text.trim().isNotEmpty;
 
-    final zzzGreen = const Color(_zzzGreen);
-    final zzzGreenLight = const Color(_zzzGreenLight);
-    final zzzSurface = const Color(_zzzSurfaceColor);
+    final zzzSurface = zzzSurfaceColor;
 
     return Scaffold(
-      backgroundColor: isZzz ? const Color(_zzzBgColor) : colorScheme.surface,
+      backgroundColor: isZzz ? zzzBgColor : colorScheme.surface,
       body: Stack(
         children: [
           SafeArea(
@@ -289,17 +274,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
             ),
           ),
-          // TODO: 暂时隐藏 ZZZ 角标
-          // if (isZzz)
-          //   Positioned(
-          //     right: 0,
-          //     bottom: 0,
-          //     child: ZzzCornerArt(
-          //       spec: zzzSpecFromSeed(DateTime.now().day + 1),
-          //       size: 72,
-          //       opacity: 0.3,
-          //     ),
-          //   ),
+          if (isZzz)
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: ZzzCornerArt(
+                spec: zzzSpecFromSeed(DateTime.now().day + 1),
+                size: 72,
+                opacity: 0.3,
+              ),
+            ),
         ],
       ),
     );
@@ -319,7 +303,6 @@ class _LoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zzzGreen = const Color(_zzzGreen);
     final button = FilledButton.icon(
       onPressed: loading ? null : onPressed,
       style: isZzz
@@ -379,8 +362,6 @@ class _BrandHeader extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isZzz = _readIsZzz(context);
-    final zzzGreen = const Color(_zzzGreen);
-    final zzzGreenLight = const Color(_zzzGreenLight);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,7 +387,7 @@ class _BrandHeader extends StatelessWidget {
               child: Icon(
                 Icons.auto_awesome_motion_rounded,
                 color:
-                    isZzz ? const Color(_zzzBgColor) : colorScheme.onPrimary,
+                    isZzz ? zzzBgColor : colorScheme.onPrimary,
               ),
             ),
             const SizedBox(width: 12),
@@ -466,7 +447,6 @@ class _ErrorNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final zzzRed = const Color(_zzzRed);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

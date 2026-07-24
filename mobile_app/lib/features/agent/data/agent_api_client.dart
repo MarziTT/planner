@@ -9,7 +9,7 @@ class AgentApiClient {
   final Dio _dio;
 
   Future<ParseResult> parse(String text) async {
-    final response = await _dio.post('/api/v1/agent/parse', data: {
+    final response = await _dio.post('/agent/parse', data: {
       'text': text,
     });
     final data = response.data;
@@ -22,7 +22,33 @@ class AgentApiClient {
     return ParseResult.fromJson(data['data'] as Map<String, dynamic>);
   }
 
+  /// Phase 4: multi-intent NLU — classifies ANY natural-language request.
+  Future<ParseResult> parseMulti(String text) async {
+    final response = await _dio.post('/agent/parse-multi', data: {
+      'text': text,
+    });
+    final data = response.data;
+    if (data is! Map || data['data'] is! Map) {
+      throw DioException(
+        requestOptions: response.requestOptions,
+        message: 'Invalid parse-multi response',
+      );
+    }
+    return ParseResult.fromJson(data['data'] as Map<String, dynamic>);
+  }
+
+  /// Phase 4: execute a parsed intent — creates the actual record.
+  Future<ParseResult> execute(ParseResult parsed) async {
+    final response = await _dio.post('/agent/execute', data: parsed.toJson());
+    final data = response.data;
+    final result = data['data'] as Map<String, dynamic>? ?? {};
+    return ParseResult(
+      intent: 'done',
+      answer: result['summary'] as String? ?? result['answer'] as String?,
+    );
+  }
+
   Future<void> schedule(ScheduleRequest request) async {
-    await _dio.post('/api/v1/agent/schedule', data: request.toJson());
+    await _dio.post('/agent/schedule', data: request.toJson());
   }
 }

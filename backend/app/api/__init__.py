@@ -1,1 +1,1 @@
-﻿# API blueprint package.
+# API blueprint package.

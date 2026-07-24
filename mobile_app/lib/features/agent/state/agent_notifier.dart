@@ -14,9 +14,9 @@ final speechCaptureGatewayProvider = Provider<SpeechCaptureGateway>((ref) {
   );
 });
 
-enum AgentStatus { idle, listening, parsing, confirming, done, error }
+enum AgentStatus { idle, listening, recognizing, parsing, confirming, done, error }
 
-enum ChatMessageType { user, system, confirmCard, error }
+enum ChatMessageType { user, system, confirmCard, answerCard, error }
 
 class ChatMessage {
   const ChatMessage({
@@ -82,8 +82,6 @@ class AgentNotifier extends StateNotifier<AgentState> {
       status: AgentStatus.listening,
       errorMessage: null,
     );
-    // Kick off the recording; the returned future completes when
-    // stopListening() finalizes the capture, so we don't await it here.
     // ignore: unawaited_futures
     gateway.startListening();
   }
@@ -92,7 +90,7 @@ class AgentNotifier extends StateNotifier<AgentState> {
     final gateway = _speechGateway;
     if (gateway == null) return;
 
-    state = state.copyWith(status: AgentStatus.parsing);
+    state = state.copyWith(status: AgentStatus.recognizing);
 
     final text = await gateway.stopListening();
     final trimmed = text.trim();
@@ -139,13 +137,20 @@ class AgentNotifier extends StateNotifier<AgentState> {
 
   Future<void> _parseText(String text) async {
     try {
-      final result = await _repository.parse(text);
+      final result = await _repository.parseMulti(text);
 
-      if (result.confidence < 0.5 || result.eventName == null) {
+      // Query intent — auto-execute and show answer immediately
+      if (result.intent == 'query') {
+        await _handleQuery(result);
+        return;
+      }
+
+      // Unknown / low confidence — ask user to rephrase
+      if (result.intent == 'unknown' || result.confidence < 0.4) {
         final systemMsg = ChatMessage(
           id: _generateId(),
           type: ChatMessageType.system,
-          text: '没太理解，请补充时间信息。你说的是"$text"',
+          text: '没太理解，试试说得更具体些？比如"我吃了一碗面"或"今天有什么安排"',
           isParsing: false,
         );
         state = state.copyWith(
@@ -156,10 +161,11 @@ class AgentNotifier extends StateNotifier<AgentState> {
         return;
       }
 
+      // All other intents — show confirm card
       final confirmMsg = ChatMessage(
         id: _generateId(),
         type: ChatMessageType.confirmCard,
-        text: '确认安排',
+        text: _confirmCardLabel(result),
         parseResult: result,
       );
       state = state.copyWith(
@@ -189,6 +195,75 @@ class AgentNotifier extends StateNotifier<AgentState> {
         status: AgentStatus.error,
         errorMessage: e.toString(),
       );
+    }
+  }
+
+  /// Handle query intent — execute immediately and show answer.
+  Future<void> _handleQuery(ParseResult parsed) async {
+    try {
+      final result = await _repository.execute(parsed);
+      final answer = result.answer ?? '查询完成';
+
+      final answerMsg = ChatMessage(
+        id: _generateId(),
+        type: ChatMessageType.answerCard,
+        text: answer,
+        parseResult: parsed,
+      );
+      state = state.copyWith(
+        messages: [...state.messages, answerMsg],
+        status: AgentStatus.done,
+        errorMessage: null,
+      );
+    } on DioException {
+      final errorMsg = ChatMessage(
+        id: _generateId(),
+        type: ChatMessageType.error,
+        text: '查询失败，请稍后重试。',
+      );
+      state = state.copyWith(
+        messages: [...state.messages, errorMsg],
+        status: AgentStatus.error,
+        errorMessage: '查询失败',
+      );
+    }
+  }
+
+  /// Confirm and execute the parsed action (meal/exercise/routine/reminder/event).
+  Future<bool> confirmAction(ParseResult parsed) async {
+    try {
+      // For create_event, use the legacy schedule endpoint (backward compat)
+      if (parsed.intent == 'create_event') {
+        return confirmSchedule(parsed);
+      }
+
+      final result = await _repository.execute(parsed);
+      final summary = result.answer ?? '已完成';
+
+      final systemMsg = ChatMessage(
+        id: _generateId(),
+        type: ChatMessageType.system,
+        text: summary,
+        isParsing: false,
+      );
+      state = state.copyWith(
+        messages: [...state.messages, systemMsg],
+        status: AgentStatus.done,
+        errorMessage: null,
+      );
+      return true;
+    } on DioException {
+      final errorMsg = ChatMessage(
+        id: _generateId(),
+        type: ChatMessageType.error,
+        text: '执行失败，请重试。',
+      );
+      state = state.copyWith(
+        messages: [...state.messages, errorMsg],
+        status: AgentStatus.error,
+        errorMessage: '执行失败，请重试',
+      );
+      return false;
     }
   }
 
@@ -249,6 +324,22 @@ class AgentNotifier extends StateNotifier<AgentState> {
 
   void reset() {
     state = const AgentState();
+  }
+
+  /// Human-readable label for the confirm card based on intent.
+  String _confirmCardLabel(ParseResult r) {
+    switch (r.intent) {
+      case 'log_meal':
+        return '记录饮食';
+      case 'log_exercise':
+        return '记录运动';
+      case 'log_routine':
+        return '记录作息';
+      case 'create_reminder':
+        return '创建提醒';
+      default:
+        return '确认安排';
+    }
   }
 }
 

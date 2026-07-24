@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
-import '../data/weather_repository.dart';
+import '../domain/weather_models.dart';
 import '../state/weather_controller.dart';
 
-/// 天气状况 code → 图标映射（与后端 condition.code 对齐）
+/// Weather condition code → icon mapping (aligned with backend condition.code)
 IconData _iconForCode(int code) {
   if (code >= 200 && code < 300) return Icons.thunderstorm;
   if (code >= 300 && code < 400) return Icons.grain;
@@ -17,30 +17,75 @@ IconData _iconForCode(int code) {
   return Icons.wb_cloudy;
 }
 
-/// 根据 condition.code 选择氛围渐变（深 → 浅）
-List<Color> _gradientForCode(int code) {
+/// Gradient stop for a weather condition code, indexed by brightness.
+///
+/// Dark mode: deep saturated atmospheres. Light mode: airy pastel moods.
+List<Color> _gradientForCode(int code, Brightness brightness) {
+  final isDark = brightness == Brightness.dark;
+
   if (code >= 200 && code < 300) {
-    // 雷暴：深紫到暗蓝
-    return [const Color(0xFF2A1B4D), const Color(0xFF1A2A4D)];
+    // Thunderstorm
+    return isDark
+        ? [const Color(0xFF2A1B4D), const Color(0xFF1A2A4D)]
+        : [const Color(0xFFE8DFF5), const Color(0xFFD0E0F5)];
   }
   if (code >= 300 && code < 600) {
-    // 雨：冷蓝到暗青
-    return [const Color(0xFF1E3A5F), const Color(0xFF0F3A3A)];
+    // Rain
+    return isDark
+        ? [const Color(0xFF1E3A5F), const Color(0xFF0F3A3A)]
+        : [const Color(0xFFD5E8F5), const Color(0xFFC8EBE8)];
   }
   if (code >= 600 && code < 700) {
-    // 雪：冰青到白灰
-    return [const Color(0xFF5A7A8A), const Color(0xFFB8C4CC)];
+    // Snow
+    return isDark
+        ? [const Color(0xFF5A7A8A), const Color(0xFFB8C4CC)]
+        : [const Color(0xFFD8E8F0), const Color(0xFFE8F0F5)];
   }
   if (code >= 700 && code < 800) {
-    // 雾：灰白到暗灰
-    return [const Color(0xFF8A8A8A), const Color(0xFF4A4A4A)];
+    // Fog
+    return isDark
+        ? [const Color(0xFF8A8A8A), const Color(0xFF4A4A4A)]
+        : [const Color(0xFFE0E0E0), const Color(0xFFC8C8C8)];
   }
   if (code == 800) {
-    // 晴：暖橙到浅金
-    return [const Color(0xFFE8893B), const Color(0xFFF4C95D)];
+    // Clear
+    return isDark
+        ? [const Color(0xFFE8893B), const Color(0xFFF4C95D)]
+        : [const Color(0xFFFDEBD0), const Color(0xFFF9E4B7)];
   }
-  // > 800 多云：灰青到暗蓝
-  return [const Color(0xFF4A5A6A), const Color(0xFF1E2A3A)];
+  // Cloudy (> 800 or default)
+  return isDark
+      ? [const Color(0xFF4A5A6A), const Color(0xFF1E2A3A)]
+      : [const Color(0xFFD8E0E8), const Color(0xFFC0D0E0)];
+}
+
+/// Text colors for content rendered on top of the weather gradient.
+///
+/// Dark gradient → light text; light gradient → dark text.
+class _GradientTextColors {
+  final Color primary;
+  final Color secondary;
+  final Color icon;
+
+  const _GradientTextColors({
+    required this.primary,
+    required this.secondary,
+    required this.icon,
+  });
+}
+
+_GradientTextColors _textColorsForGradient(Brightness brightness) {
+  return brightness == Brightness.dark
+      ? const _GradientTextColors(
+          primary: Colors.white,
+          secondary: Colors.white70,
+          icon: Colors.white,
+        )
+      : const _GradientTextColors(
+          primary: Color(0xFF2D2D2D),
+          secondary: Color(0xFF5A5A5A),
+          icon: Color(0xFF404040),
+        );
 }
 
 class WeatherCard extends ConsumerWidget {
@@ -52,10 +97,13 @@ class WeatherCard extends ConsumerWidget {
     final controller = ref.read(weatherControllerProvider.notifier);
     final themeState = ref.watch(themeControllerProvider);
     final isZzz = themeState.preset == PlannerThemePreset.kamenRiderZzz;
+    final brightness = Theme.of(context).brightness;
 
     final gradient = state.data != null
-        ? _gradientForCode(state.data!.current.condition.code)
-        : [const Color(0xFF3A4A5A), const Color(0xFF1E2A3A)];
+        ? _gradientForCode(state.data!.current.condition.code, brightness)
+        : _gradientForCode(999, brightness);
+
+    final textColors = _textColorsForGradient(brightness);
 
     return Container(
       decoration: BoxDecoration(
@@ -78,7 +126,7 @@ class WeatherCard extends ConsumerWidget {
         ),
       ),
       padding: const EdgeInsets.all(16),
-      child: _buildBody(context, state, controller),
+      child: _buildBody(context, state, controller, textColors),
     );
   }
 
@@ -86,15 +134,17 @@ class WeatherCard extends ConsumerWidget {
     BuildContext context,
     WeatherState state,
     WeatherController controller,
+    _GradientTextColors textColors,
   ) {
     if (state.loading && state.data == null) {
-      return const _WeatherSkeleton();
+      return _WeatherSkeleton(textColors: textColors);
     }
 
     if (state.error != null && state.data == null) {
       return _WeatherError(
         message: state.error!,
         onRetry: () => controller.manualRefresh(),
+        textColors: textColors,
       );
     }
 
@@ -107,6 +157,7 @@ class WeatherCard extends ConsumerWidget {
       lastFetchedAt: state.lastFetchedAt,
       onRefresh: () => controller.manualRefresh(),
       isRefreshing: state.loading,
+      textColors: textColors,
     );
   }
 }
@@ -116,12 +167,14 @@ class _WeatherContent extends StatelessWidget {
   final DateTime? lastFetchedAt;
   final VoidCallback onRefresh;
   final bool isRefreshing;
+  final _GradientTextColors textColors;
 
   const _WeatherContent({
     required this.data,
     required this.lastFetchedAt,
     required this.onRefresh,
     required this.isRefreshing,
+    required this.textColors,
   });
 
   String _lastUpdatedText() {
@@ -145,13 +198,13 @@ class _WeatherContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 顶部行：位置 + 更新时间 + 刷新按钮
+        // Top row: location + last update + refresh
         Row(
           children: [
-            const Text(
+            Text(
               '当前位置',
               style: TextStyle(
-                color: Colors.white,
+                color: textColors.primary,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -162,24 +215,24 @@ class _WeatherContent extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 8),
                 child: Text(
                   _lastUpdatedText(),
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: textColors.secondary,
                     fontSize: 11,
                   ),
                 ),
               ),
             isRefreshing
-                ? const SizedBox(
+                ? SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(textColors.icon),
                     ),
                   )
                 : IconButton(
                     onPressed: onRefresh,
-                    icon: const Icon(Icons.refresh, color: Colors.white),
+                    icon: Icon(Icons.refresh, color: textColors.icon),
                     iconSize: 20,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -187,14 +240,14 @@ class _WeatherContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // 主角区：大温度 + 图标 + 状况
+        // Hero: large temp + icon + condition
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
               '${current.temp.round()}°',
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: textColors.primary,
                 fontSize: 56,
                 fontWeight: FontWeight.bold,
                 height: 1,
@@ -204,14 +257,14 @@ class _WeatherContent extends StatelessWidget {
             Icon(
               _iconForCode(current.condition.code),
               size: 32,
-              color: Colors.white,
+              color: textColors.icon,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 current.condition.text,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textColors.primary,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -221,23 +274,23 @@ class _WeatherContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        // 次级信息行：体感 · 湿度 · 风速
+        // Secondary: feels like · humidity · wind
         Text(
           '体感 ${current.feelsLike.round()}° · 湿度 ${current.humidity}% · 风速 ${current.windSpeed.toStringAsFixed(1)}m/s',
-          style: const TextStyle(
-            color: Colors.white70,
+          style: TextStyle(
+            color: textColors.secondary,
             fontSize: 13,
           ),
         ),
         const SizedBox(height: 16),
-        // 底部行：今日高低温 + 未来 3 小时趋势
+        // Bottom: today H/L + next 3h forecast
         Row(
           children: [
             if (todayHigh != null && todayLow != null)
               Text(
                 'H:${todayHigh.round()}° L:${todayLow.round()}°',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textColors.primary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -257,20 +310,20 @@ class _WeatherContent extends StatelessWidget {
                           Icon(
                             _iconForCode(h.condition.code),
                             size: 18,
-                            color: Colors.white,
+                            color: textColors.icon,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${h.temp.round()}°',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: textColors.primary,
                               fontSize: 12,
                             ),
                           ),
                           Text(
                             '${h.time.hour}:00',
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: textColors.secondary,
                               fontSize: 10,
                             ),
                           ),
@@ -288,11 +341,13 @@ class _WeatherContent extends StatelessWidget {
 }
 
 class _WeatherSkeleton extends StatelessWidget {
-  const _WeatherSkeleton();
+  final _GradientTextColors textColors;
+
+  const _WeatherSkeleton({required this.textColors});
 
   @override
   Widget build(BuildContext context) {
-    final base = Colors.white.withValues(alpha: 0.18);
+    final base = textColors.primary.withValues(alpha: 0.18);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -378,24 +433,29 @@ class _WeatherSkeleton extends StatelessWidget {
 class _WeatherError extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
+  final _GradientTextColors textColors;
 
-  const _WeatherError({required this.message, this.onRetry});
+  const _WeatherError({
+    required this.message,
+    this.onRetry,
+    required this.textColors,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(
+        Icon(
           Icons.cloud_off,
           size: 20,
-          color: Colors.white,
+          color: textColors.icon,
         ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             message,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: textColors.primary,
               fontSize: 13,
             ),
           ),
@@ -403,9 +463,9 @@ class _WeatherError extends StatelessWidget {
         if (onRetry != null)
           TextButton(
             onPressed: onRetry,
-            child: const Text(
+            child: Text(
               '重试',
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: textColors.primary),
             ),
           ),
       ],

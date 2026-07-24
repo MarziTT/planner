@@ -1,35 +1,21 @@
-﻿from app import create_app
+"""Test planner endpoints for create, update, list, export and tag-import."""
+
 from app.extensions import db
 
 
-def make_client():
-    app = create_app("testing")
-    with app.app_context():
-        db.create_all()
-    return app, app.test_client()
-
-
-def register_and_login(client):
-    client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": "planner@pixelplanner.app",
-            "password": "12345678",
-            "nickname": "Planner",
-        },
-    )
+def _register_and_login(client):
     response = client.post(
-        "/api/v1/auth/login",
-        json={"email": "planner@pixelplanner.app", "password": "12345678"},
+        "/api/v1/auth/phone-login",
+        json={"phone": "13800000001", "code": "888888"},
     )
     payload = response.get_json()["data"]
     return {"Authorization": f"Bearer {payload['tokens']['accessToken']}"}
 
 
-def test_create_and_list_event_and_todo():
-    app, client = make_client()
+def test_create_and_list_event_and_todo(app_client):
+    app, client = app_client
     try:
-        headers = register_and_login(client)
+        headers = _register_and_login(client)
 
         event_response = client.post(
             "/api/v1/events",
@@ -80,10 +66,10 @@ def test_create_and_list_event_and_todo():
             db.drop_all()
 
 
-def test_tags_export_and_import_snapshot():
-    app, client = make_client()
+def test_tags_export_and_import_snapshot(app_client):
+    app, client = app_client
     try:
-        headers = register_and_login(client)
+        headers = _register_and_login(client)
         tag_response = client.post(
             "/api/v1/tags",
             headers=headers,

@@ -11,7 +11,8 @@ from typing import Any
 import requests
 from flask import Blueprint, current_app, request
 
-from .common import failure, success
+from ..extensions import limiter
+from .common import auth_required, failure, success
 
 
 voice_bp = Blueprint("voice", __name__)
@@ -42,6 +43,8 @@ def _load_tencent_config() -> TencentAsrConfig:
 
 
 @voice_bp.post("/asr")
+@auth_required
+@limiter.limit("10 per minute; 100 per hour")
 def recognize_audio():
     payload = request.get_json(silent=True) or {}
     transcript = (payload.get("textMock") or "").strip()

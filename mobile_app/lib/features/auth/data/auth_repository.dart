@@ -127,8 +127,4 @@ class AuthRepository {
     );
   }
 
-  bool _isAuthRejection(DioException error) {
-    final statusCode = error.response?.statusCode;
-    return statusCode == 400 || statusCode == 401 || statusCode == 403;
-  }
 }

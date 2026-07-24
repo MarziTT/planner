@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../storage/secure_token_storage.dart';
 
 const _defaultApiBaseUrl = 'https://planner-production-d1ee.up.railway.app/api/v1';
+const defaultApiBaseUrl = _defaultApiBaseUrl;
 const _skipAuthRefreshKey = 'skipAuthRefresh';
 
 final apiClientProvider = Provider<Dio>((ref) {

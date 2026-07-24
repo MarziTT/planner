@@ -87,7 +87,7 @@ class ResourceCache {
 
       try {
         final targetFile =
-            File('${root.path}\\${_resourceFileName(resource.id)}');
+            File('${root.path}/${_resourceFileName(resource.id)}');
         if (await targetFile.exists()) {
           final existingHash = await _hashFile(targetFile);
           if (existingHash.toUpperCase() == resource.sha256.toUpperCase()) {
@@ -125,7 +125,7 @@ class ResourceCache {
 
   Future<File?> resolveFile(String resourceId) async {
     final root = await _ensureRootDirectory();
-    final file = File('${root.path}\\${_resourceFileName(resourceId)}');
+    final file = File('${root.path}/${_resourceFileName(resourceId)}');
     if (await file.exists()) {
       return file;
     }
@@ -134,7 +134,7 @@ class ResourceCache {
 
   Future<Directory> _ensureRootDirectory() async {
     final baseDirectory = await _rootDirectoryProvider();
-    final root = Directory('${baseDirectory.path}\\resource_cache');
+    final root = Directory('${baseDirectory.path}/resource_cache');
     if (!await root.exists()) {
       await root.create(recursive: true);
     }

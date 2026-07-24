@@ -46,6 +46,7 @@ class TagsController extends StateNotifier<TagsState> {
   }
 
   Future<void> create(String name, String color, {bool isRecurring = false, String recurrenceRule = ''}) async {
+    state = state.copyWith(loading: true, clearError: true);
     try {
       final tag = await _repository.createTag(
         name: name,
@@ -53,13 +54,14 @@ class TagsController extends StateNotifier<TagsState> {
         isRecurring: isRecurring,
         recurrenceRule: recurrenceRule,
       );
-      state = state.copyWith(tags: [...state.tags, tag], clearError: true);
+      state = state.copyWith(tags: [...state.tags, tag], loading: false);
     } catch (_) {
-      state = state.copyWith(errorMessage: '新增标签失败');
+      state = state.copyWith(loading: false, errorMessage: '新增标签失败');
     }
   }
 
   Future<void> update(PlannerTag tag, String name, String color, {bool? isRecurring, String? recurrenceRule}) async {
+    state = state.copyWith(loading: true, clearError: true);
     try {
       final updated = await _repository.updateTag(
         tag,
@@ -70,19 +72,20 @@ class TagsController extends StateNotifier<TagsState> {
       );
       state = state.copyWith(
         tags: state.tags.map((item) => item.id == updated.id ? updated : item).toList(),
-        clearError: true,
+        loading: false,
       );
     } catch (_) {
-      state = state.copyWith(errorMessage: '编辑标签失败');
+      state = state.copyWith(loading: false, errorMessage: '编辑标签失败');
     }
   }
 
   Future<void> remove(int id) async {
+    state = state.copyWith(loading: true, clearError: true);
     try {
       await _repository.deleteTag(id);
-      state = state.copyWith(tags: state.tags.where((item) => item.id != id).toList(), clearError: true);
+      state = state.copyWith(tags: state.tags.where((item) => item.id != id).toList(), loading: false);
     } catch (_) {
-      state = state.copyWith(errorMessage: '删除标签失败');
+      state = state.copyWith(loading: false, errorMessage: '删除标签失败');
     }
   }
 }

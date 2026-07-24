@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../../habits/notify_manager.dart';
 import '../../planner/domain/planner_models.dart';
 import '../../settings/domain/settings_model.dart';
 import '../domain/notification_tap_event.dart';
@@ -57,6 +58,12 @@ class LocalReminderGateway implements ReminderGateway {
   static const _quickCaptureActionId = 'open_quick_capture';
   static const _openEventActionId = 'open_event';
 
+  static bool _isNotifyManagerAction(String actionId) {
+    return actionId == NotifyActionId.complete ||
+        actionId == NotifyActionId.postpone ||
+        actionId == NotifyActionId.skip;
+  }
+
   @override
   Stream<NotificationTapEvent> get taps => _tapController.stream;
 
@@ -75,6 +82,13 @@ class LocalReminderGateway implements ReminderGateway {
     await _plugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (response) {
+        // Phase 2: 快捷操作统一转发到 NotifyManager
+        final actionId = response.actionId;
+        if (actionId != null && _isNotifyManagerAction(actionId)) {
+          NotifyManager.handleAction(actionId, response.payload);
+          return;
+        }
+
         final event = response.actionId == _quickCaptureActionId
             ? const NotificationTapEvent.quickCapture()
             : NotificationTapEvent.fromPayload(response.payload);
@@ -105,45 +119,11 @@ class LocalReminderGateway implements ReminderGateway {
     return NotificationTapEvent.fromPayload(response?.payload);
   }
 
-  AndroidNotificationDetails _buildAndroidNotificationDetails(ReminderSchedule schedule) {
-    return AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDescription,
-      importance: Importance.max,
-      priority: Priority.max,
-      category: AndroidNotificationCategory.reminder,
-      visibility: NotificationVisibility.public,
-      color: Color(0xFF2F6BFF),
-      showWhen: true,
-      when: schedule.startsAt.millisecondsSinceEpoch,
-      usesChronometer: true,
-      chronometerCountDown: true,
-      showProgress: true,
-      maxProgress: schedule.leadMinutes,
-      progress: 0,
-      styleInformation: BigTextStyleInformation(
-        _expandedReminderText(schedule),
-        contentTitle: schedule.title,
-        summaryText: 'FlowDay 日程',
-      ),
-      ticker: schedule.title,
-      subText: _timeLabel(schedule.startsAt),
-      actions: const <AndroidNotificationAction>[
-        AndroidNotificationAction(
-          _openEventActionId,
-          '查看',
-          showsUserInterface: true,
-          cancelNotification: true,
-        ),
-        AndroidNotificationAction(
-          _quickCaptureActionId,
-          '新增行程',
-          showsUserInterface: true,
-          cancelNotification: false,
-        ),
-      ],
-    );
+  /// 日程通知优先级：临近开始（<=30 分钟）视为紧急，否则为重要。
+  NotifyPriority _schedulePriority(ReminderSchedule schedule) {
+    return schedule.leadMinutes <= 30
+        ? NotifyPriority.urgent
+        : NotifyPriority.important;
   }
 
   @override
@@ -156,21 +136,40 @@ class LocalReminderGateway implements ReminderGateway {
 
     await _plugin.cancelAll();
     for (final schedule in schedules) {
-      await _plugin.zonedSchedule(
-        schedule.eventId,
-        schedule.title,
-        schedule.body,
-        tz.TZDateTime.from(schedule.triggerAt.toUtc(), tz.UTC),
-        NotificationDetails(
-          android: _buildAndroidNotificationDetails(schedule),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
+      await NotifyManager.show(
+        channel: NotifyChannel.schedule,
+        title: schedule.title,
+        body: schedule.body,
+        priority: _schedulePriority(schedule),
+        payload: NotifyPayload(
+          eventType: 'schedule',
+          eventId: schedule.eventId,
+          scheduleId: schedule.eventId,
+          channelId: NotifyChannel.schedule.id,
         ),
-        payload: NotificationTapEvent.toPayload(schedule.eventId),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        scheduledDate: schedule.triggerAt,
+        notificationId: schedule.eventId,
+        styleInformation: BigTextStyleInformation(
+          _expandedReminderText(schedule),
+          contentTitle: schedule.title,
+          summaryText: 'FlowDay 日程',
+        ),
+        subText: _timeLabel(schedule.startsAt),
+        when: schedule.startsAt,
+        extraActions: const <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            _openEventActionId,
+            '查看',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            _quickCaptureActionId,
+            '新增行程',
+            showsUserInterface: true,
+            cancelNotification: false,
+          ),
+        ],
       );
     }
   }

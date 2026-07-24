@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime, timezone
 
@@ -30,6 +30,9 @@ class User(TimestampMixin, db.Model):
     avatar_url = db.Column(db.String(255))
     timezone = db.Column(db.String(64), default="Asia/Shanghai", nullable=False)
     onboarding_done = db.Column(db.Boolean, default=False, nullable=False)
+    # Phase 2 — exercise dual-mode (spec §9.1)
+    exercise_mode = db.Column(db.String(20), default="self", nullable=False)
+    trainer_end_date = db.Column(db.Date)
 
 
 class SmsCode(db.Model):
@@ -121,4 +124,4 @@ class AppSetting(TimestampMixin, db.Model):
 
 
 def register_models() -> None:
-    return None
+    from . import models_habits  # noqa: F401 — ensure Phase 2 tables are known to SQLAlchemy

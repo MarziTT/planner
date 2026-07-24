@@ -1,41 +1,77 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/cache/local_cache_service.dart';
 import '../../../core/network/api_client.dart';
 import '../domain/planner_models.dart';
 
 final plannerRepositoryProvider = Provider<PlannerRepository>((ref) {
-  return PlannerRepository(ref.watch(apiClientProvider));
+  return PlannerRepository(
+    ref.watch(apiClientProvider),
+    cache: ref.watch(localCacheProvider),
+  );
 });
 
 class PlannerRepository {
-  PlannerRepository(this._dio);
+  PlannerRepository(this._dio, {LocalCacheService? cache}) : _cache = cache;
 
   final Dio _dio;
+  final LocalCacheService? _cache;
 
   /// 写操作缓存：保存最近一次写操作返回的 tagIds，用于读操作兜底恢复。
   final Map<int, List<int>> _tagIdsCache = {};
 
   Future<List<PlannerEvent>> fetchEvents() async {
-    final response = await _dio.get('/events');
-    final items = (response.data['data']['items'] as List<dynamic>? ?? [])
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
-    return items.map((item) {
-      final event = PlannerEvent.fromJson(item);
-      if (event.tagIds.isEmpty && _tagIdsCache.containsKey(event.id)) {
-        return _ensureTagIds(event, _tagIdsCache[event.id]!);
-      }
-      return event;
-    }).toList();
+    try {
+      final response = await _dio.get('/events');
+      final items = (response.data['data']['items'] as List<dynamic>? ?? [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      final events = items.map((item) {
+        final event = PlannerEvent.fromJson(item);
+        if (event.tagIds.isEmpty && _tagIdsCache.containsKey(event.id)) {
+          return _ensureTagIds(event, _tagIdsCache[event.id]!);
+        }
+        return event;
+      }).toList();
+      // write-through cache
+      _cache?.writeList(
+        key: CacheKeys.plannerEvents,
+        items: events,
+        toJson: _eventToJson,
+      );
+      return events;
+    } on DioException {
+      final cached = _cache?.readList<PlannerEvent>(
+        key: CacheKeys.plannerEvents,
+        fromJson: PlannerEvent.fromJson,
+      );
+      if (cached != null) return cached;
+      rethrow;
+    }
   }
 
   Future<List<PlannerTodo>> fetchTodos() async {
-    final response = await _dio.get('/todos');
-    final items = (response.data['data']['items'] as List<dynamic>? ?? [])
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
-    return items.map(PlannerTodo.fromJson).toList();
+    try {
+      final response = await _dio.get('/todos');
+      final items = (response.data['data']['items'] as List<dynamic>? ?? [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      final todos = items.map(PlannerTodo.fromJson).toList();
+      _cache?.writeList(
+        key: CacheKeys.plannerTodos,
+        items: todos,
+        toJson: _todoToJson,
+      );
+      return todos;
+    } on DioException {
+      final cached = _cache?.readList<PlannerTodo>(
+        key: CacheKeys.plannerTodos,
+        fromJson: PlannerTodo.fromJson,
+      );
+      if (cached != null) return cached;
+      rethrow;
+    }
   }
 
   Future<PlannerEvent> createEvent({
@@ -157,3 +193,22 @@ class PlannerRepository {
     return result;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Cache serialization helpers (private)
+// ---------------------------------------------------------------------------
+
+Map<String, dynamic> _eventToJson(PlannerEvent e) => {
+      'id': e.id,
+      'title': e.title,
+      'startsAt': e.startsAt.toIso8601String(),
+      'endsAt': e.endsAt.toIso8601String(),
+      'status': e.status,
+      'tagIds': e.tagIds,
+    };
+
+Map<String, dynamic> _todoToJson(PlannerTodo t) => {
+      'id': t.id,
+      'title': t.title,
+      'completed': t.completed,
+    };

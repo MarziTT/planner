@@ -64,8 +64,24 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
     return Stack(
       children: [
-        Container(
-          color: isZzz ? const Color(0xFF0A0A0F) : null,
+        Column(
+          children: [
+            // 保存加载指示器
+            if (settingsState.loading)
+              LinearProgressIndicator(
+                minHeight: 2,
+                valueColor: AlwaysStoppedAnimation(
+                  isZzz
+                      ? const Color(0xFF00FF41)
+                      : Theme.of(context).colorScheme.primary,
+                ),
+                backgroundColor: isZzz
+                    ? const Color(0xFF00FF41).withValues(alpha: 0.08)
+                    : null,
+              ),
+            Expanded(
+              child: Container(
+                color: isZzz ? const Color(0xFF0A0A0F) : null,
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -390,41 +406,53 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           if (settingsState.errorMessage != null) ...[
             const SizedBox(height: 12),
             Container(
-              decoration: isZzz
-                  ? BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF1744)
-                              .withValues(alpha: 0.15),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    )
-                  : null,
-              child: Text(
-                settingsState.errorMessage!,
-                style: TextStyle(
-                    color: isZzz
-                        ? const Color(0xFFFF1744)
-                        : Theme.of(context).colorScheme.error),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, size: 18,
+                    color: Theme.of(context).colorScheme.onErrorContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      settingsState.errorMessage!,
+                      style: TextStyle(
+                        color: isZzz
+                            ? const Color(0xFFFF1744)
+                            : Theme.of(context).colorScheme.error),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => ref.read(settingsControllerProvider.notifier).load(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('重试'),
+                  ),
+                ],
               ),
             ),
           ],
         ],
-      ),
-      ),
-      // TODO: 暂时隐藏 ZZZ 角标
-      // if (isZzz)
-      //   Positioned(
-      //     right: 0,
-      //     bottom: 0,
-      //     child: ZzzCornerArt(
-      //       spec: zzzSpecFromSeed(DateTime.now().day + 3),
-      //       size: 68,
-      //       opacity: 0.28,
-      //     ),
-      //   ),
+        ), // ListView
+      ), // Container
+    ), // Expanded
+  ], // Column children
+        ), // Column
+      if (isZzz)
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: ZzzCornerArt(
+            spec: zzzSpecFromSeed(DateTime.now().day + 3),
+            size: 68,
+            opacity: 0.28,
+          ),
+        ),
     ]);
   }
 

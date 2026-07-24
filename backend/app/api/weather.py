@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 
 from flask import Blueprint, current_app, request
@@ -46,65 +47,61 @@ def weather_now():
     try:
         result = get_weather(lat, lon)
     except Exception as exc:
-        import logging
-        import traceback
-        logging.getLogger(__name__).error(
-            "Weather fetch failed (lat=%s, lon=%s): %s\n%s",
-            lat, lon, exc, traceback.format_exc(),
+        logger = logging.getLogger(__name__)
+        logger.error(
+            "Weather fetch failed (lat=%s, lon=%s): %s",
+            lat, lon, exc,
         )
-        result = {
-            "current": {
-                "temp": -999,
-                "feels_like": -999,
-                "condition": {"code": -999, "text": "--"},
-                "humidity": -999,
-                "wind_speed": -999,
-            },
-            "daily": [],
-            "hourly": [],
-        }
+        return failure(
+            "weather_unavailable",
+            "Weather service is temporarily unavailable",
+            status=502,
+        )
 
     _cache[key] = (now, result)
     return success(result)
 
 
 @weather_bp.get("/debug")
+@auth_required
 def weather_debug():
-    """诊断和风天气连接状态，不要求登录。"""
-    import traceback as tb_module
-    result = {
-        "kid": QWEATHER_KID,
-        "project_id": QWEATHER_PROJECT_ID,
-        "private_key_len": len(QWEATHER_PRIVATE_KEY),
-        "private_key_starts": QWEATHER_PRIVATE_KEY[:30] if QWEATHER_PRIVATE_KEY else "(empty)",
-    }
-    try:
-        from ..services.weather import _generate_jwt, _request, _get_location_id
-        jwt_token = _generate_jwt()
-        result["jwt_ok"] = True
-        result["jwt_preview"] = jwt_token[:20] + "..."
-    except Exception as e:
-        result["jwt_ok"] = False
-        result["jwt_error"] = str(e)
-        result["jwt_traceback"] = tb_module.format_exc()
+    """诊断和风天气连接状态（需登录，仅返回连接健康信息）。"""
+    import logging as _logging
+    _logger = _logging.getLogger(__name__)
 
+    result = {
+        "configured": bool(QWEATHER_PRIVATE_KEY and QWEATHER_KID),
+    }
+
+    # JWT generation check — only report success/failure, no key preview
+    try:
+        from ..services.weather import _generate_jwt
+        _generate_jwt()
+        result["jwt_ok"] = True
+    except Exception:
+        result["jwt_ok"] = False
+        _logger.exception("Weather debug: JWT generation failed")
+
+    # API connectivity check — only report status code, no response body
     try:
         from ..services.weather import _auth_headers
         headers = _auth_headers()
         import httpx
-        import os
+
         def _test():
             with httpx.Client(timeout=10.0) as c:
-                r = c.get("https://mp5u9xx3e3.re.qweatherapi.com/v7/weather/now", params={"location": "116.41,39.91"}, headers=headers or None)
+                r = c.get(
+                    "https://mp5u9xx3e3.re.qweatherapi.com/v7/weather/now",
+                    params={"location": "116.41,39.91"},
+                    headers=headers or None,
+                )
                 return r
+
         resp = _test()
         result["api_status"] = resp.status_code
-        result["api_body"] = resp.text[:500]
         result["api_ok"] = resp.status_code < 400
-        result["api_code"] = resp.json().get("code", "N/A") if resp.text else "empty"
-    except Exception as e:
+    except Exception:
         result["api_ok"] = False
-        result["api_error"] = str(e)
-        result["api_error_type"] = type(e).__name__
+        _logger.exception("Weather debug: API connectivity test failed")
 
     return success(result)

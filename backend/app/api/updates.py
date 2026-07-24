@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from flask import Blueprint, abort, current_app, send_from_directory, url_for
+from flask import Blueprint, current_app, send_from_directory, url_for
 
-from .common import success
+from .common import failure, success
 
 
 updates_bp = Blueprint("updates", __name__)
@@ -90,7 +90,7 @@ def get_update_manifest():
 @updates_bp.get("/resources/<path:filename>")
 def get_resource(filename: str):
     if filename not in _ALLOWED_RESOURCE_FILES.values():
-        abort(404)
+        return failure("not_found", "Resource not found", status=404)
 
     manifest = _public_manifest()
     declared_files = {
@@ -99,12 +99,12 @@ def get_resource(filename: str):
         if item.get("id") in _ALLOWED_RESOURCE_FILES
     }
     if filename not in declared_files:
-        abort(404)
+        return failure("not_found", "Resource not found", status=404)
 
     resource_dir = Path(current_app.config["UPDATE_RESOURCE_DIR"])
     resource_path = resource_dir / filename
     if not resource_path.is_file():
-        abort(404)
+        return failure("not_found", "Resource file missing", status=404)
 
     return send_from_directory(
         resource_dir,

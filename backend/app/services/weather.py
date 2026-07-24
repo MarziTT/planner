@@ -11,10 +11,13 @@ API 文档：https://dev.qweather.com/docs/api/
 
 import os
 import time
+import logging
 import httpx
 from typing import Any
 
 import jwt
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 常量
@@ -121,6 +124,7 @@ def get_weather(lat: float, lon: float) -> dict:
 
     Returns:
         {
+            "city": str,
             "current":  {
                 "temp": float, "feels_like": float,
                 "condition": {"code": int, "text": str},
@@ -137,9 +141,10 @@ def get_weather(lat: float, lon: float) -> dict:
         }
     """
 
-    # ---- 1. 获取城市 ID ---------------------------------------------------
+    # ---- 1. 获取城市 ID 和名称 --------------------------------------------
+    city_name = ""
     try:
-        location_id = _get_location_id(lat, lon)
+        location_id, city_name = _get_location_id(lat, lon)
     except Exception:
         import logging
         logging.getLogger(__name__).warning(
@@ -147,6 +152,7 @@ def get_weather(lat: float, lon: float) -> dict:
         )
         # 降级：直接用经纬度作为 location 参数（QWeather 支持）
         location_id = f"{lon:.2f},{lat:.2f}"
+        city_name = ""
 
     # ---- 2. 并行拉取三类天气数据 -------------------------------------------
     auth_hdrs = _auth_headers()
@@ -161,19 +167,19 @@ def get_weather(lat: float, lon: float) -> dict:
     try:
         now_data = _request(f"{WEATHER_API_BASE}/now", base_params, auth_hdrs or None)
     except Exception:
-        pass
+        logger.warning("Weather API /now request failed")
 
     try:
         day_resp = _request(f"{WEATHER_API_BASE}/7d", base_params, auth_hdrs or None)
         day_data = _safe_get(day_resp, "daily", default=[]) or []
     except Exception:
-        pass
+        logger.warning("Weather API /7d request failed")
 
     try:
         hour_resp = _request(f"{WEATHER_API_BASE}/24h", base_params, auth_hdrs or None)
         hour_data = _safe_get(hour_resp, "hourly", default=[]) or []
     except Exception:
-        pass
+        logger.warning("Weather API /24h request failed")
 
     # ---- 3. 组装 current --------------------------------------------------
     now = _safe_get(now_data, "now", default={}) or {}
@@ -233,6 +239,7 @@ def get_weather(lat: float, lon: float) -> dict:
         })
 
     return {
+        "city": city_name,
         "current": current,
         "daily": daily,
         "hourly": hourly,
@@ -243,9 +250,12 @@ def get_weather(lat: float, lon: float) -> dict:
 # 城市查询
 # ---------------------------------------------------------------------------
 
-def _get_location_id(lat: float, lon: float) -> str:
+def _get_location_id(lat: float, lon: float) -> tuple[str, str]:
     """
-    根据经纬度查询和风天气城市 ID。
+    根据经纬度查询和风天气城市 ID 和名称。
+
+    Returns:
+        (location_id, city_name)
 
     Raises:
         RuntimeError: 城市查询完全失败时抛出，调用方应捕获并降级处理。
@@ -261,9 +271,11 @@ def _get_location_id(lat: float, lon: float) -> str:
         data = _request(GEO_API_BASE, params, auth_hdrs or None)
         locations = _safe_get(data, "location", default=[]) or []
         if locations:
-            loc_id = locations[0].get("id")
+            loc = locations[0]
+            loc_id = loc.get("id")
+            loc_name = loc.get("name", "")
             if loc_id:
-                return str(loc_id)
+                return str(loc_id), str(loc_name)
     except Exception as exc:
         raise RuntimeError(f"城市查询失败 (lat={lat}, lon={lon}): {exc}") from exc
 

@@ -226,7 +226,7 @@ def _resolve_date(text: str) -> date | None:
         try:
             return dateutil_parse(text, fuzzy=True, default=datetime(now.year, 1, 1)).date()
         except Exception:
-            pass
+            logger.debug("dateutil parse failed for text: %s", text)
 
     return None
 
@@ -435,3 +435,423 @@ def parse_schedule(text: str, config: dict | None = None) -> dict:
     # Fallback to regex
     logger.info("Falling back to regex parser for: %s", text)
     return _parse_with_regex(text)
+
+
+# ============================================================================
+# Phase 4: Multi-intent NLU (voice butler)
+# ============================================================================
+
+MULTI_INTENT_SYSTEM_PROMPT = """You are a butler assistant for a personal lifestyle app. Your job is to classify natural-language Chinese user requests into ONE of these intents and extract structured fields.
+
+Intents:
+- **create_event**: scheduling a meeting/appointment/task (existing)
+- **log_meal**: user ate/drank something, wants to log a meal record
+- **log_exercise**: user exercised/did sports, wants to log exercise
+- **log_routine**: user reports wake time, sleep time, or standing
+- **query**: user asks about their own data (calories, exercise, schedule, health)
+- **create_reminder**: user wants a reminder/todo for something non-scheduled
+- **unknown**: none of the above
+
+Rules:
+1. Output ONLY the JSON object. No markdown fences, no explanation.
+2. timezone is UTC+8 (Asia/Shanghai). Today is {today}.
+3. For create_event: follow the same schema as before (event_name, person, location, datetime_range, is_fuzzy).
+4. For log_meal: extract meal_type (早餐/午餐/晚餐/加餐/零食), food_name (what they ate), estimated calories.
+5. For log_exercise: extract exercise_type (跑步/游泳/健身/骑行/散步 etc.), duration_minutes (integer), intensity (轻/中/高).
+6. For log_routine: extract routine_type (wake/sleep/standing), time_value (HH:MM format for wake/sleep, or just "done" for standing).
+7. For query: extract query_type (calories_today/exercise_today/schedule_today/health_summary/general), query_text (the verbatim question).
+8. For create_reminder: extract reminder_text (what to remind about), and optionally datetime_range for when.
+9. confidence: 1.0 for clear requests, lower for ambiguous ones.
+
+Output schema (pick the intent that matches, include only relevant fields):
+{{
+  "intent": "create_event | log_meal | log_exercise | log_routine | query | create_reminder | unknown",
+
+  "event_name": "str or null",
+  "person": "str or null",
+  "location": "str or null",
+  "datetime_range": {{"start":"ISO8601","end":"ISO8601"}} or null,
+  "is_fuzzy": true/false,
+
+  "meal_type": "str or null",
+  "food_name": "str or null",
+  "calories_estimate": int or null,
+
+  "exercise_type": "str or null",
+  "duration_minutes": int or null,
+  "intensity": "str or null",
+
+  "routine_type": "str or null",
+  "routine_value": "str or null",
+
+  "query_type": "str or null",
+  "query_text": "str or null",
+
+  "reminder_text": "str or null",
+
+  "confidence": 0.0-1.0
+}}
+
+Few-shot examples:
+
+User: 我吃了一碗牛肉面
+Output: {{"intent":"log_meal","meal_type":"午餐","food_name":"牛肉面","calories_estimate":550,"confidence":0.9}}
+
+User: 早上喝了一杯豆浆和两个包子
+Output: {{"intent":"log_meal","meal_type":"早餐","food_name":"豆浆加包子","calories_estimate":400,"confidence":0.85}}
+
+User: 晚上吃了沙拉
+Output: {{"intent":"log_meal","meal_type":"晚餐","food_name":"沙拉","calories_estimate":200,"confidence":0.9}}
+
+User: 我跑了30分钟
+Output: {{"intent":"log_exercise","exercise_type":"跑步","duration_minutes":30,"intensity":"中","confidence":0.95}}
+
+User: 游泳游了1个小时
+Output: {{"intent":"log_exercise","exercise_type":"游泳","duration_minutes":60,"intensity":"高","confidence":0.95}}
+
+User: 散步走了5000步
+Output: {{"intent":"log_exercise","exercise_type":"散步","duration_minutes":40,"intensity":"轻","confidence":0.85}}
+
+User: 我今天7点起的床
+Output: {{"intent":"log_routine","routine_type":"wake","routine_value":"07:00","confidence":0.95}}
+
+User: 晚上11点睡的
+Output: {{"intent":"log_routine","routine_type":"sleep","routine_value":"23:00","confidence":0.95}}
+
+User: 站了一会儿
+Output: {{"intent":"log_routine","routine_type":"standing","routine_value":"done","confidence":0.85}}
+
+User: 我今天吃了多少卡路里
+Output: {{"intent":"query","query_type":"calories_today","query_text":"我今天吃了多少卡路里","confidence":0.95}}
+
+User: 今天运动达标了吗
+Output: {{"intent":"query","query_type":"exercise_today","query_text":"今天运动达标了吗","confidence":0.9}}
+
+User: 我今天有什么安排
+Output: {{"intent":"query","query_type":"schedule_today","query_text":"我今天有什么安排","confidence":0.95}}
+
+User: 我今天的健康状态怎么样
+Output: {{"intent":"query","query_type":"health_summary","query_text":"健康状态","confidence":0.85}}
+
+User: 记得提醒我晚上买牛奶
+Output: {{"intent":"create_reminder","reminder_text":"买牛奶","datetime_range":{{"start":"{today}T20:00:00","end":"{today}T21:00:00"}},"confidence":0.85}}
+
+User: 提醒我明天交报告
+Output: {{"intent":"create_reminder","reminder_text":"交报告","datetime_range":{{"start":"{tomorrow}T10:00:00","end":"{tomorrow}T12:00:00"}},"confidence":0.85}}
+
+User: 明天下午3点跟老张开项目会
+Output: {{"intent":"create_event","event_name":"开项目会","person":"老张","location":null,"datetime_range":{{"start":"{tomorrow}T15:00:00","end":"{tomorrow}T16:00:00"}},"is_fuzzy":false,"confidence":0.95}}
+
+User: 你好
+Output: {{"intent":"unknown","confidence":0.0}}
+"""
+
+
+def _build_multi_intent_prompt() -> str:
+    now = datetime.now(TZ)
+    slots = dict(_TODAY_SLOTS)
+    slots["current_time"] = f"{now.hour:02d}:{now.minute:02d}"
+    slots["current_hour"] = now.hour
+    return MULTI_INTENT_SYSTEM_PROMPT.format(**slots)
+
+
+def _call_openai_multi(text: str, config: dict) -> dict | None:
+    """Call LLM with multi-intent prompt; return parsed JSON or None."""
+    api_key = config.get("OPENAI_API_KEY", "")
+    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    model = config.get("OPENAI_MODEL", "gpt-4o-mini")
+
+    if not api_key:
+        logger.warning("OPENAI_API_KEY not configured, skipping LLM call")
+        return None
+
+    url = f"{base_url.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": _build_multi_intent_prompt()},
+            {"role": "user", "content": text},
+        ],
+        "temperature": 0.0,
+        "max_tokens": 500,
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=15)
+        resp.raise_for_status()
+        body = resp.json()
+        raw = body["choices"][0]["message"]["content"].strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+        return json.loads(raw)
+    except Exception as exc:
+        logger.warning("Multi-intent LLM call failed: %s", exc)
+        return None
+
+
+# -- Multi-intent regex fallback ------------------------------------------------
+
+# Keywords for intent detection in regex fallback
+_MEAL_KEYWORDS = ["吃了", "喝", "早餐", "午饭", "午餐", "晚饭", "晚餐", "加餐", "零食", "饭", "菜", "面", "包子",
+                   "饺子", "沙拉", "水果", "鸡", "鱼", "牛", "猪", "虾", "蛋", "奶", "豆浆", "咖啡", "茶"]
+_EXERCISE_KEYWORDS = ["跑", "游泳", "健身", "锻炼", "运动", "骑", "散步", "走", "步", "瑜伽", "跳绳", "举铁", "打球"]
+_ROUTINE_KEYWORDS = ["起床", "起", "醒来", "睡", "入睡", "站"]
+_QUERY_KEYWORDS = ["多少", "怎么样", "如何", "什么", "状态", "达标", "安排", "计划", "卡路里", "热量", "健康"]
+_REMINDER_KEYWORDS = ["提醒", "记得", "别忘了", "别忘了", "帮我记"]
+
+_FOOD_PATTERN = re.compile(r"(?:吃了?|喝了?)(.+?)(?:[，,。.]|$)")
+_MEAL_TYPE_PATTERN = re.compile(r"(早餐|午饭|午餐|晚饭|晚餐|加餐|零食)")
+_DURATION_PATTERN = re.compile(r"(\d+)\s*(分钟|小时|个?小时)?")
+_STEPS_PATTERN = re.compile(r"(\d+)\s*步")
+_EXERCISE_TYPE_PATTERN = re.compile(r"(跑步|游泳|健身|骑行|散步|瑜伽|跳绳|打球|举铁)")
+_CALORIE_QUERY = re.compile(r"(?:多少|几个|几).*(?:卡路里|热量|大卡|千卡)")
+_EXERCISE_QUERY = re.compile(r"运动.*(?:怎么样|达标|多少|够)")
+_SCHEDULE_QUERY = re.compile(r"(?:今天|今日|明天).*(?:安排|计划|日程|行程|做什么)")
+_TIME_PATTERN = re.compile(r"(\d{1,2})[点:：](\d{2})?")
+
+
+def _detect_intent_regex(text: str) -> str:
+    """Quick keyword-based intent detection for regex fallback."""
+    # Query patterns (check first - can overlap with others)
+    if _CALORIE_QUERY.search(text):
+        return "query"
+    if _EXERCISE_QUERY.search(text):
+        return "query"
+    if _SCHEDULE_QUERY.search(text):
+        return "query"
+    if any(kw in text for kw in _QUERY_KEYWORDS) and (
+        "?" in text or "？" in text or "吗" in text or "了" not in text[:4]
+    ):
+        return "query"
+
+    # Reminder
+    if any(kw in text for kw in _REMINDER_KEYWORDS):
+        return "create_reminder"
+
+    # Meal
+    if any(kw in text for kw in _MEAL_KEYWORDS):
+        return "log_meal"
+
+    # Exercise
+    if any(kw in text for kw in _EXERCISE_KEYWORDS):
+        return "log_exercise"
+
+    # Routine
+    if any(kw in text for kw in _ROUTINE_KEYWORDS):
+        return "log_routine"
+
+    # Fallback: treat as schedule if it has time info, else unknown
+    has_time = bool(_TIME_PATTERN.search(text)) or any(
+        w in text for w in ["今天", "明天", "后天", "上午", "下午", "晚上", "周"]
+    )
+    return "create_event" if has_time else "unknown"
+
+
+def _parse_meal_regex(text: str) -> dict:
+    """Regex fallback for log_meal intent."""
+    meal_type = None
+    mt = _MEAL_TYPE_PATTERN.search(text)
+    if mt:
+        meal_type = mt.group(1)
+    else:
+        # Infer meal type by time of day
+        now = datetime.now(TZ)
+        if now.hour < 10:
+            meal_type = "早餐"
+        elif now.hour < 14:
+            meal_type = "午餐"
+        else:
+            meal_type = "晚餐"
+
+    food_name = ""
+    fm = _FOOD_PATTERN.search(text)
+    if fm:
+        food_name = fm.group(1).strip()
+    else:
+        # Use the whole text minus known prefixes
+        food_name = text
+        for prefix in ["我", "刚刚", "刚才", "中午", "早上", "晚上"]:
+            food_name = food_name.replace(prefix, "", 1)
+        food_name = food_name.strip()
+
+    # Rough calorie estimate based on food keywords
+    calories = 300  # default
+    high_cal = ["牛", "猪", "鸡腿", "炸", "炒", "红烧", "油", "肉", "面", "饭"]
+    low_cal = ["沙拉", "水果", "蔬菜", "水", "茶", "咖啡"]
+    if any(kw in text for kw in high_cal):
+        calories = 600
+    if any(kw in text for kw in low_cal):
+        calories = 200
+
+    return {
+        "intent": "log_meal",
+        "meal_type": meal_type,
+        "food_name": food_name if food_name else text,
+        "calories_estimate": calories,
+        "confidence": 0.6,
+    }
+
+
+def _parse_exercise_regex(text: str) -> dict:
+    """Regex fallback for log_exercise intent."""
+    exercise_type = "运动"
+    et = _EXERCISE_TYPE_PATTERN.search(text)
+    if et:
+        exercise_type = et.group(1)
+
+    duration = 30
+    dm = _DURATION_PATTERN.search(text)
+    if dm:
+        val = int(dm.group(1))
+        unit = dm.group(2) or ""
+        if "小时" in unit:
+            duration = val * 60
+        else:
+            duration = val
+
+    sm = _STEPS_PATTERN.search(text)
+    if sm:
+        steps = int(sm.group(1))
+        duration = max(steps // 100, 20)
+
+    # Intensity heuristic
+    if "散步" in text or "走" in text:
+        intensity = "轻"
+    elif "跑" in text or "游泳" in text:
+        intensity = "高"
+    else:
+        intensity = "中"
+
+    return {
+        "intent": "log_exercise",
+        "exercise_type": exercise_type,
+        "duration_minutes": duration,
+        "intensity": intensity,
+        "confidence": 0.65,
+    }
+
+
+def _parse_routine_regex(text: str) -> dict:
+    """Regex fallback for log_routine intent."""
+    routine_type = "wake"
+    routine_value = None
+
+    if "睡" in text or "入睡" in text:
+        routine_type = "sleep"
+    elif "��" in text:
+        routine_type = "standing"
+        routine_value = "done"
+    else:
+        routine_type = "wake"
+
+    if routine_type in ("wake", "sleep"):
+        tm = _TIME_PATTERN.search(text)
+        if tm:
+            h = int(tm.group(1))
+            m = int(tm.group(2)) if tm.group(2) else 0
+            routine_value = f"{h:02d}:{m:02d}"
+
+    return {
+        "intent": "log_routine",
+        "routine_type": routine_type,
+        "routine_value": routine_value,
+        "confidence": 0.6,
+    }
+
+
+def _parse_query_regex(text: str) -> dict:
+    """Regex fallback for query intent."""
+    if _CALORIE_QUERY.search(text):
+        query_type = "calories_today"
+    elif _EXERCISE_QUERY.search(text):
+        query_type = "exercise_today"
+    elif _SCHEDULE_QUERY.search(text):
+        query_type = "schedule_today"
+    else:
+        query_type = "general"
+
+    return {
+        "intent": "query",
+        "query_type": query_type,
+        "query_text": text,
+        "confidence": 0.55,
+    }
+
+
+def _parse_reminder_regex(text: str) -> dict:
+    """Regex fallback for create_reminder intent."""
+    # Strip reminder keywords to get the actual reminder text
+    reminder_text = text
+    for kw in ["提醒我", "提醒", "记得", "别忘了", "别忘了", "帮我记"]:
+        reminder_text = reminder_text.replace(kw, "", 1)
+    reminder_text = reminder_text.strip()
+
+    datetime_range, _ = _build_datetime_range(text)
+
+    return {
+        "intent": "create_reminder",
+        "reminder_text": reminder_text,
+        "datetime_range": datetime_range,
+        "confidence": 0.55,
+    }
+
+
+def _parse_multi_regex(text: str) -> dict:
+    """Regex fallback for all intents."""
+    intent = _detect_intent_regex(text)
+
+    if intent == "log_meal":
+        return _parse_meal_regex(text)
+    if intent == "log_exercise":
+        return _parse_exercise_regex(text)
+    if intent == "log_routine":
+        return _parse_routine_regex(text)
+    if intent == "query":
+        return _parse_query_regex(text)
+    if intent == "create_reminder":
+        return _parse_reminder_regex(text)
+    if intent == "create_event":
+        return _parse_with_regex(text)
+
+    return {"intent": "unknown", "confidence": 0.0}
+
+
+# -- Public API: multi-intent ------------------------------------------------
+
+def parse_text(text: str, config: dict | None = None) -> dict:
+    """Parse natural-language Chinese text with multi-intent NLU.
+
+    Supports: create_event, log_meal, log_exercise, log_routine, query, create_reminder.
+
+    Primary: call OpenAI-compatible LLM with multi-intent Few-shot prompt.
+    Fallback: keyword-based regex intent detection + entity extraction.
+
+    Returns a dict with at minimum:
+        {"intent": "...", "confidence": 0.0-1.0}
+    plus intent-specific fields.
+    """
+    if config is None:
+        config = {
+            "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", ""),
+            "OPENAI_BASE_URL": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        }
+
+    # Try LLM first with multi-intent prompt
+    if config.get("OPENAI_API_KEY"):
+        result = _call_openai_multi(text, config)
+        if result is not None:
+            if "intent" not in result:
+                result["intent"] = "unknown"
+            if "confidence" not in result:
+                result["confidence"] = 0.5
+            return result
+
+    # Fallback to regex
+    logger.info("Falling back to multi-intent regex parser for: %s", text)
+    return _parse_multi_regex(text)

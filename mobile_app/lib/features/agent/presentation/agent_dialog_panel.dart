@@ -18,6 +18,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
+  bool _confirming = false;
 
   @override
   void dispose() {
@@ -25,6 +26,20 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  bool _isLoadingStatus(AgentStatus status) {
+    return status == AgentStatus.recognizing || status == AgentStatus.parsing;
+  }
+
+  String _loadingText(AgentStatus status) {
+    switch (status) {
+      case AgentStatus.recognizing:
+        return '正在识别语音...';
+      case AgentStatus.parsing:
+      default:
+        return '正在解析...';
+    }
   }
 
   void _scrollToBottom() {
@@ -44,7 +59,8 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     if (text.isEmpty) return;
 
     final state = ref.read(agentControllerProvider);
-    if (state.status == AgentStatus.parsing ||
+    if (state.status == AgentStatus.recognizing ||
+        state.status == AgentStatus.parsing ||
         state.status == AgentStatus.confirming) {
       return;
     }
@@ -56,7 +72,8 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
 
   Future<void> _handleMicPress() async {
     final currentState = ref.read(agentControllerProvider);
-    if (currentState.status == AgentStatus.parsing ||
+    if (currentState.status == AgentStatus.recognizing ||
+        currentState.status == AgentStatus.parsing ||
         currentState.status == AgentStatus.confirming) {
       return;
     }
@@ -71,7 +88,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
 
   Future<void> _handleConfirm() async {
     final state = ref.read(agentControllerProvider);
-    if (state.status != AgentStatus.confirming) return;
+    if (state.status != AgentStatus.confirming || _confirming) return;
 
     final messages = state.messages;
     ParseResult? lastResult;
@@ -84,19 +101,52 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
 
     if (lastResult == null) return;
 
-    final success = await ref
-        .read(agentControllerProvider.notifier)
-        .confirmSchedule(lastResult);
-    _scrollToBottom();
+    setState(() => _confirming = true);
+    try {
+      final success = await ref
+          .read(agentControllerProvider.notifier)
+          .confirmAction(lastResult);
+      _scrollToBottom();
 
-    if (success) {
-      await ref.read(plannerControllerProvider.notifier).loadDashboard();
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已安排')),
-        );
+      if (success) {
+        // Refresh relevant data based on intent
+        await _refreshAfterConfirm(lastResult);
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(_confirmSnackBarText(lastResult))),
+          );
+        }
       }
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
+
+  Future<void> _refreshAfterConfirm(ParseResult result) async {
+    final plannerCtrl = ref.read(plannerControllerProvider.notifier);
+    switch (result.intent) {
+      case 'create_event':
+      case 'create_reminder':
+        await plannerCtrl.loadDashboard();
+      default:
+        // meal/exercise/routine don't need dashboard refresh
+        break;
+    }
+  }
+
+  String _confirmSnackBarText(ParseResult r) {
+    switch (r.intent) {
+      case 'log_meal':
+        return '已记录饮食';
+      case 'log_exercise':
+        return '已记录运动';
+      case 'log_routine':
+        return '已记录作息';
+      case 'create_reminder':
+        return '已创建提醒';
+      default:
+        return '已安排';
     }
   }
 
@@ -125,22 +175,23 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
         children: [
           _buildTopBar(isZzz, colorScheme, theme),
           Expanded(
-            child: agentState.messages.isEmpty
+            child: agentState.messages.isEmpty &&
+                    !_isLoadingStatus(agentState.status)
                 ? _buildEmptyState(isZzz, theme)
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 8),
                     itemCount: agentState.messages.length +
-                        (agentState.status == AgentStatus.parsing ? 1 : 0),
+                        (_isLoadingStatus(agentState.status) ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == agentState.messages.length &&
-                          agentState.status == AgentStatus.parsing) {
+                          _isLoadingStatus(agentState.status)) {
                         return ChatBubble(
                           message: ChatMessage(
-                            id: '_parsing_placeholder',
+                            id: '_loading_placeholder',
                             type: ChatMessageType.system,
-                            text: '正在解析...',
+                            text: _loadingText(agentState.status),
                             isParsing: true,
                           ),
                           isZzz: isZzz,
@@ -251,9 +302,10 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     ColorScheme colorScheme,
   ) {
     final isListening = agentState.status == AgentStatus.listening;
+    final isRecognizing = agentState.status == AgentStatus.recognizing;
     final isParsing = agentState.status == AgentStatus.parsing;
     final isConfirming = agentState.status == AgentStatus.confirming;
-    final canInteract = !isParsing && !isConfirming;
+    final canInteract = !isRecognizing && !isParsing && !isConfirming;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -282,7 +334,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
                 style: TextStyle(color: colorScheme.onSurface),
                 onSubmitted: (_) => _handleSubmitText(),
                 decoration: InputDecoration(
-                  hintText: '输入日程描述...',
+                  hintText: '打字输入你想做的...',
                   hintStyle: TextStyle(
                     color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),

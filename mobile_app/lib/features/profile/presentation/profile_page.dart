@@ -53,6 +53,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Widget build(BuildContext context) {
     final state = ref.watch(profileControllerProvider);
     final profile = state.profile;
+
+    // 初次加载中 — 显示骨架屏
+    if (state.loading && profile == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('个人设置')),
+        body: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 36,
+                height: 36,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              SizedBox(height: 16),
+              Text('加载中...', style: TextStyle(fontSize: 14, color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (profile != null) _seedFromProfile(profile);
 
     final effectiveProfile = profile ??
@@ -75,7 +97,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       children: [
         Container(
           color: isZzz ? const Color(0xFF0A0A0F) : null,
-          child: ListView(
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(profileControllerProvider.notifier).load(),
+            child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
               Row(
@@ -323,6 +347,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             color: scheme.onErrorContainer,
                             fontSize: 13)),
                   ),
+                  TextButton(
+                    onPressed: () => ref.read(profileControllerProvider.notifier).load(),
+                    style: TextButton.styleFrom(
+                      foregroundColor: scheme.onErrorContainer,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('重试'),
+                  ),
                 ],
               ),
             ),
@@ -364,18 +396,18 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
         ],
       ),
-      ),
-      // TODO: 暂时隐藏 ZZZ 角标
-      // if (isZzz)
-      //   Positioned(
-      //     right: 0,
-      //     bottom: 0,
-      //     child: ZzzCornerArt(
-      //       spec: zzzSpecFromSeed(DateTime.now().day + 4),
-      //       size: 70,
-      //       opacity: 0.26,
-      //     ),
-      //   ),
+      ),  // RefreshIndicator
+      ),  // Container
+      if (isZzz)
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: ZzzCornerArt(
+            spec: zzzSpecFromSeed(DateTime.now().day + 4),
+            size: 70,
+            opacity: 0.26,
+          ),
+        ),
     ]);
   }
 }

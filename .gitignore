@@ -22,3 +22,4 @@ backend/.env
 .workbuddy/
 mobile_app/android/build/
 *.apk.idsig
+mobile_app/nul

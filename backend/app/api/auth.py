@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, current_app, request
 
-from ..extensions import db
+from ..extensions import db, limiter
 from ..models import AppSetting, Profile, RefreshToken, SmsCode, User
 from ..services.auth import create_token_pair, decode_token
 from .common import failure, parse_json, success
@@ -39,6 +39,7 @@ def _validate_phone(phone: str) -> str | None:
 
 
 @auth_bp.post("/send-code")
+@limiter.limit("5 per minute; 20 per hour")
 def send_code():
     payload, error = parse_json(["phone"])
     if error:
@@ -58,12 +59,10 @@ def send_code():
     db.session.commit()
 
     if current_app.config["SMS_PROVIDER"] == "console":
-        print(f"\n{'='*50}")
-        print(f"  SMS Verification Code")
-        print(f"  Phone : {phone}")
-        print(f"  Code  : {code}")
-        print(f"  Expires in {expire_seconds} seconds")
-        print(f"{'='*50}\n")
+        current_app.logger.info(
+            "SMS code sent | phone=%s code_len=%d expires=%ds",
+            phone, len(code), expire_seconds,
+        )
 
     return success({"message": "验证码已发送"})
 
@@ -121,7 +120,7 @@ def phone_login():
 
     tokens = create_token_pair(
         user_id=user.id,
-        secret=current_app.config["SECRET_KEY"],
+        secret=current_app.config["JWT_SECRET_KEY"],
         issuer=current_app.config["JWT_ISSUER"],
         access_ttl_seconds=current_app.config["JWT_ACCESS_TTL_SECONDS"],
         refresh_ttl_seconds=current_app.config["JWT_REFRESH_TTL_SECONDS"],
@@ -158,7 +157,7 @@ def refresh():
     try:
         refresh_payload = decode_token(
             token=payload["refreshToken"],
-            secret=current_app.config["SECRET_KEY"],
+            secret=current_app.config["JWT_SECRET_KEY"],
             issuer=current_app.config["JWT_ISSUER"],
         )
     except Exception:
@@ -166,7 +165,7 @@ def refresh():
 
     tokens = create_token_pair(
         user_id=refresh_payload["sub"],
-        secret=current_app.config["SECRET_KEY"],
+        secret=current_app.config["JWT_SECRET_KEY"],
         issuer=current_app.config["JWT_ISSUER"],
         access_ttl_seconds=current_app.config["JWT_ACCESS_TTL_SECONDS"],
         refresh_ttl_seconds=current_app.config["JWT_REFRESH_TTL_SECONDS"],

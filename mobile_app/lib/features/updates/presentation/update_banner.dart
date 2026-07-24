@@ -18,6 +18,8 @@ class UpdateBanner extends ConsumerStatefulWidget {
 class _UpdateBannerState extends ConsumerState<UpdateBanner> {
   AppLifecycleListener? _lifecycleListener;
   bool _dialogOpen = false;
+  bool _checkingUpdate = false;
+  bool _applyingResource = false;
 
   @override
   void initState() {
@@ -98,7 +100,13 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
   }
 
   Future<void> _checkForUpdates() async {
-    await ref.read(updateControllerProvider.notifier).check();
+    if (_checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
+    try {
+      await ref.read(updateControllerProvider.notifier).check();
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
   }
 
   UpdateDecision _evaluate(UpdateInfo info) {
@@ -163,11 +171,16 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
               child: const Text('稍后'),
             ),
           FilledButton(
-            onPressed: () async {
+            onPressed: _applyingResource ? null : () async {
               if (decision.kind == UpdateDecisionKind.resourceOnly) {
-                await ref
-                    .read(updateControllerProvider.notifier)
-                    .applyResourceUpdateNow();
+                setState(() => _applyingResource = true);
+                try {
+                  await ref
+                      .read(updateControllerProvider.notifier)
+                      .applyResourceUpdateNow();
+                } finally {
+                  if (mounted) setState(() => _applyingResource = false);
+                }
               } else if (info.downloadUrl.isNotEmpty) {
                 final opened = await _openDownloadUrl(info.downloadUrl);
                 if (!opened) {
@@ -188,9 +201,15 @@ class _UpdateBannerState extends ConsumerState<UpdateBanner> {
               }
               Navigator.of(dialogContext).pop();
             },
-            child: Text(
-              decision.kind == UpdateDecisionKind.resourceOnly ? '知道了' : '下载更新',
-            ),
+            child: _applyingResource
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Text(
+                    decision.kind == UpdateDecisionKind.resourceOnly ? '知道了' : '下载更新',
+                  ),
           ),
         ],
       ),
