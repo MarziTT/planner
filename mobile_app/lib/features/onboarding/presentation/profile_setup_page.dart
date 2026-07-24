@@ -105,7 +105,7 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
         children: [
           Text(
-            '先选一个最接近你的身份，FlowDay 会用它来调整首页、标签和上班模式。',
+            '先选一个最接近你的身份，管家会用它来调整首页、标签和上班模式。',
             style: theme.textTheme.titleMedium?.copyWith(
               height: 1.35,
               color: isZzz ? const Color(0xFFE0F0E0) : null,

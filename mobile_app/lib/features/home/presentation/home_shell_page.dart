@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../agent/presentation/agent_dialog_panel.dart';
 import '../../auth/state/auth_controller.dart';
+import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/network/connectivity_service.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../fast_capture/domain/capture_enums.dart';
@@ -208,14 +209,42 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         PlannerThemePreset.kamenRiderZzz;
     final zzzSurface = zzzSurfaceColor;
     final zzzBg = zzzBgColor;
+    final butlerName = ref.watch(butlerNameProvider);
 
     PreferredSizeWidget appBar = AppBar(
       backgroundColor: isZzz ? zzzBg : null,
-      title: Text(
-        'FlowDay 日程',
-        style: isZzz
-            ? TextStyle(color: zzzGreenLight)
-            : null,
+      title: Row(
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: isZzz
+                    ? [zzzGreen, zzzGreen.withValues(alpha: 0.6)]
+                    : [
+                        theme.colorScheme.primary,
+                        theme.colorScheme.primary.withValues(alpha: 0.6),
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Icon(
+              Icons.workspace_premium_outlined,
+              size: 17,
+              color: isZzz ? zzzBg : theme.colorScheme.onPrimary,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'DD · $butlerName',
+            style: isZzz
+                ? TextStyle(color: zzzGreenLight)
+                : null,
+          ),
+        ],
       ),
       actions: [
         IconButton(
@@ -255,7 +284,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAgentPanel(context),
-        tooltip: '贾维斯管家',
+        tooltip: '$butlerName 管家',
         backgroundColor: isZzz ? zzzGreen : theme.colorScheme.primary,
         foregroundColor: isZzz ? zzzBg : theme.colorScheme.onPrimary,
         shape: const CircleBorder(),

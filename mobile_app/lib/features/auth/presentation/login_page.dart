@@ -396,7 +396,7 @@ class _BrandHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'FlowDay 日程',
+                    'DD',
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
                       height: 1.05,
@@ -405,7 +405,7 @@ class _BrandHeader extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '一句话记录，按时提醒',
+                    '你的专属私人管家',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: isZzz
                           ? zzzGreenLight
@@ -419,7 +419,7 @@ class _BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          '说一句"明天七点健身"，FlowDay 会帮你放到正确日期。',
+          '衣食住行、日程提醒，一句话交给管家搞定。',
           style: theme.textTheme.bodyLarge?.copyWith(
             color:
                 isZzz ? zzzGreenLight : colorScheme.onSurfaceVariant,

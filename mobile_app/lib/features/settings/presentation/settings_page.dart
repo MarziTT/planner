@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../updates/state/update_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
@@ -12,7 +13,7 @@ const _zzzPreviewAssets = <String>[
   'assets/themes/zzz/equipment.gif',
   'assets/themes/zzz/flight.gif',
 ];
-const _pageTitle = '主题与更新';
+const _pageTitle = '管家与设置';
 const _presetLabel = '主题预设';
 const _modeSystem = '跟随系统';
 const _modeLight = '浅色';
@@ -91,6 +92,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   color: isZzz ? const Color(0xFFE0F0E0) : null,
                 ),
           ),
+          const SizedBox(height: 12),
+          const _ButlerNameCard(),
           const SizedBox(height: 12),
           Card(
             color: isZzz ? const Color(0xFF0D0B12) : null,
@@ -550,6 +553,132 @@ class _ZzzThemePreview extends StatelessWidget {
             }).toList(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 管家名字设置卡片 — 给管家起名字，全局即时生效。
+class _ButlerNameCard extends ConsumerStatefulWidget {
+  const _ButlerNameCard();
+
+  @override
+  ConsumerState<_ButlerNameCard> createState() => _ButlerNameCardState();
+}
+
+class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: ref.read(butlerNameProvider));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _controller.text.trim();
+    if (name.isEmpty || _saving) return;
+    setState(() => _saving = true);
+    await ref.read(butlerNameProvider.notifier).setName(name);
+    if (mounted) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('管家已改名为「$name」')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isZzz = ref.watch(themeControllerProvider).preset ==
+        PlannerThemePreset.kamenRiderZzz;
+    final currentName = ref.watch(butlerNameProvider);
+
+    return Card(
+      color: isZzz ? const Color(0xFF0D0B12) : null,
+      shape: isZzz
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF00FF41)),
+            )
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.workspace_premium_outlined,
+                    size: 20,
+                    color: isZzz
+                        ? const Color(0xFF00FF41)
+                        : theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('我的管家',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: isZzz ? const Color(0xFFE0F0E0) : null,
+                    )),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '给管家起个名字，它会出现在对话面板、问候语和提醒里。',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: isZzz
+                    ? const Color(0xFF00FF41)
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    maxLength: 12,
+                    style: isZzz
+                        ? const TextStyle(color: Color(0xFFE0F0E0))
+                        : null,
+                    decoration: InputDecoration(
+                      labelText: '管家名字',
+                      hintText: '比如：贾维斯、阿福、小D',
+                      counterText: '',
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                    ),
+                    onSubmitted: (_) => _save(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                FilledButton(
+                  onPressed: (_saving ||
+                          _controller.text.trim() == currentName ||
+                          _controller.text.trim().isEmpty)
+                      ? null
+                      : _save,
+                  child: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('保存'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

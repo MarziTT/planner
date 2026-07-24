@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../planner/state/planner_controller.dart';
 import '../domain/parse_result.dart';
@@ -243,7 +244,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
           ),
           const SizedBox(width: 8),
           Text(
-            '贾维斯管家',
+            '${ref.watch(butlerNameProvider)} 管家',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
@@ -289,6 +290,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
   Widget _buildEmptyState(bool isZzz, ThemeData theme) {
     final colorScheme = theme.colorScheme;
     final primary = isZzz ? colorScheme.primary : colorScheme.primary;
+    final butlerName = ref.watch(butlerNameProvider);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -315,7 +317,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
         ),
         const SizedBox(height: 16),
         Text(
-          '${_greeting()}，我是贾维斯',
+          '${_greeting()}，我是$butlerName',
           textAlign: TextAlign.center,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,

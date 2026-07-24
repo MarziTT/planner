@@ -66,7 +66,7 @@ class JarvisWidgetProvider : AppWidgetProvider() {
                 views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
 
             } catch (e: Exception) {
-                views.setTextViewText(R.id.header_date, "FlowDay 日程")
+                views.setTextViewText(R.id.header_date, "DD 管家")
                 views.setTextViewText(R.id.header_greeting, "")
                 views.setTextViewText(R.id.meals_summary, e.localizedMessage ?: "数据加载失败")
                 views.setTextViewText(R.id.exercise_summary, "")
@@ -81,7 +81,7 @@ class JarvisWidgetProvider : AppWidgetProvider() {
 
         private fun applyHeader(views: RemoteViews, header: JSONObject?) {
             if (header == null) {
-                views.setTextViewText(R.id.header_date, "FlowDay")
+                views.setTextViewText(R.id.header_date, "DD")
                 views.setTextViewText(R.id.header_greeting, "")
                 return
             }

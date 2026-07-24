@@ -152,7 +152,7 @@ class LocalReminderGateway implements ReminderGateway {
         styleInformation: BigTextStyleInformation(
           _expandedReminderText(schedule),
           contentTitle: schedule.title,
-          summaryText: 'FlowDay 日程',
+          summaryText: 'DD 管家',
         ),
         subText: _timeLabel(schedule.startsAt),
         when: schedule.startsAt,
