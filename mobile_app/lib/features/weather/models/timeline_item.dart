@@ -48,5 +48,5 @@ class TimelineItem {
 
   /// Whether weather conditions in this slot are extreme.
   bool get isExtremeWeather =>
-      weather.feelsLike > 38.0 || weather.precipitation > 50.0;
+      (weather.feelsLike ?? 0) > 38.0 || weather.precipitation > 50.0;
 }

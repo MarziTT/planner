@@ -29,7 +29,7 @@ CURRENT_FIELDS = (
     "temperature_2m,apparent_temperature,precipitation_probability,"
     "weather_code,wind_speed_10m,relative_humidity_2m,uv_index"
 )
-HOURLY_FIELDS = "precipitation_probability,temperature_2m,weather_code"
+HOURLY_FIELDS = "precipitation_probability,temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,uv_index"
 DAILY_FIELDS = (
     "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code"
 )
@@ -124,6 +124,7 @@ def fetch_forecast(lat: float, lon: float) -> dict:
                 "time": str, "temp": float,
                 "precipitation_probability": int,
                 "weather_code": int, "weather_text": str,
+                "wind_speed": float, "humidity": int, "uv_index": float,
             }],
             "daily": [{
                 "date": str, "temp_max": float, "temp_min": float,
@@ -172,6 +173,9 @@ def fetch_forecast(lat: float, lon: float) -> dict:
             "precipitation_probability": _pick(hourly_raw.get("precipitation_probability"), i),
             "weather_code": code,
             "weather_text": weather_code_text(code),
+            "wind_speed": _pick(hourly_raw.get("wind_speed_10m"), i),
+            "humidity": _pick(hourly_raw.get("relative_humidity_2m"), i),
+            "uv_index": _pick(hourly_raw.get("uv_index"), i),
         })
 
     # ---- daily ------------------------------------------------------------

@@ -367,7 +367,7 @@ class WeatherTimelineCard extends ConsumerWidget {
   String _weatherBrief(TimelineItem item) {
     final w = item.weather;
     final buf = StringBuffer();
-    buf.write('${w.temp.round()}° 体感${w.feelsLike.round()}°');
+    buf.write('${w.temp.round()}°${w.feelsLike != null ? ' 体感${w.feelsLike!.round()}°' : ''}');
     buf.write(' · ${w.condition}');
     if (w.precipitation > 0) {
       buf.write(' · 降水${w.precipitation.toStringAsFixed(0)}%');

@@ -389,7 +389,7 @@ def _parse_advisory(text: str) -> dict[str, str]:
         if len(parts) >= 3:
             time_slot = parts[0].lstrip("[").strip() if parts[0].startswith("[") else ""
             event = parts[1].lstrip("[").strip()
-            advisory = parts[2].strip()
+            advisory = parts[2].lstrip("[").strip()
             if event:
                 result[event] = advisory
         else:

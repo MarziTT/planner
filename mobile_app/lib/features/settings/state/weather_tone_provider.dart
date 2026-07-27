@@ -76,7 +76,7 @@ class WeatherToneController extends StateNotifier<WeatherToneState> {
     try {
       final response = await _dio.get('/settings/weather-tone');
       final data = response.data;
-      final tone = data['data']?['tone'] as String? ?? '';
+      final tone = data['data']?['weather_tone'] as String? ?? '';
       state = WeatherToneState(tone: tone, loading: false);
     } catch (e) {
       state = state.copyWith(loading: false, error: e.toString());
@@ -88,7 +88,7 @@ class WeatherToneController extends StateNotifier<WeatherToneState> {
     if (state.saving) return false;
     state = state.copyWith(saving: true, clearError: true);
     try {
-      await _dio.put('/settings/weather-tone', data: {'tone': tone});
+      await _dio.put('/settings/weather-tone', data: {'weather_tone': tone});
       state = WeatherToneState(tone: tone, saving: false);
       return true;
     } catch (_) {
@@ -102,7 +102,7 @@ class WeatherToneController extends StateNotifier<WeatherToneState> {
     if (state.saving) return false;
     state = state.copyWith(saving: true, clearError: true);
     try {
-      await _dio.put('/settings/weather-tone', data: {'tone': ''});
+      await _dio.put('/settings/weather-tone', data: {'weather_tone': ''});
       state = const WeatherToneState(tone: '', saving: false);
       return true;
     } catch (_) {

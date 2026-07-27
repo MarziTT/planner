@@ -87,7 +87,6 @@ class SmartAdvisoryController extends StateNotifier<SmartAdvisoryState> {
   }
 
   Future<void> _doLoad({bool forceRefresh = false}) async {
-    if (state.loading) return;
     state = state.copyWith(loading: true, clearError: true);
 
     try {

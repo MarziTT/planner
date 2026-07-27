@@ -53,6 +53,7 @@ class ThemeController extends StateNotifier<ThemeState> {
       PlannerThemePreset.forest,
       PlannerThemePreset.desertDusk,
       PlannerThemePreset.aurora,
+      PlannerThemePreset.kamenRiderZzz,
     ];
   }
 
