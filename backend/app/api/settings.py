@@ -14,6 +14,16 @@ _BASE_THEMES = ["sakuraSeason", "ocean", "forest", "desertDusk", "aurora"]
 _ZZZ_THEME = "kamenRiderZzz"
 
 
+def _get_or_create_settings() -> AppSetting:
+    """获取当前用户的设置记录，不存在时自动创建默认记录。"""
+    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    if settings is None:
+        settings = AppSetting(user_id=g.current_user.id)
+        db.session.add(settings)
+        db.session.flush()
+    return settings
+
+
 def _settings_to_dict(settings: AppSetting):
     available = list(_BASE_THEMES)
     if settings.zzz_enabled:
@@ -32,14 +42,14 @@ def _settings_to_dict(settings: AppSetting):
 @settings_bp.get("/settings")
 @auth_required
 def get_settings():
-    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    settings = _get_or_create_settings()
     return success({"item": _settings_to_dict(settings)})
 
 
 @settings_bp.put("/settings")
 @auth_required
 def update_settings():
-    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    settings = _get_or_create_settings()
     payload = request.get_json(silent=True) or {}
     if "theme" in payload:
         settings.theme = payload["theme"] or settings.theme
@@ -60,14 +70,14 @@ def update_settings():
 @settings_bp.get("/settings/weather-tone")
 @auth_required
 def get_weather_tone():
-    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    settings = _get_or_create_settings()
     return success({"weather_tone": settings.weather_tone})
 
 
 @settings_bp.put("/settings/weather-tone")
 @auth_required
 def update_weather_tone():
-    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    settings = _get_or_create_settings()
     payload = request.get_json(silent=True) or {}
     tone = payload.get("weather_tone")
     if tone is not None:
