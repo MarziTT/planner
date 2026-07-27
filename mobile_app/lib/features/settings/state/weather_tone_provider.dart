@@ -78,9 +78,8 @@ class WeatherToneController extends StateNotifier<WeatherToneState> {
       final data = response.data;
       final tone = data['data']?['tone'] as String? ?? '';
       state = WeatherToneState(tone: tone, loading: false);
-    } catch (_) {
-      // 加载失败不视为错误——可能是首次使用，保持空值
-      state = state.copyWith(loading: false);
+    } catch (e) {
+      state = state.copyWith(loading: false, error: e.toString());
     }
   }
 

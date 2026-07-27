@@ -247,7 +247,10 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
           const SizedBox(height: 8),
 
           // 预设模板卡片
-          ...weatherTonePresets.map(
+          // Zero 模板仅 ZZZ 主题可见
+          ...weatherTonePresets
+              .where((p) => isZzz || p.name == '温暖管家')
+              .map(
             (preset) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _PresetCard(

@@ -30,7 +30,7 @@ class SmartAdvisory {
   Map<String, dynamic> toJson() => {
         'timeline': timeline.map((e) => e.toJson()).toList(),
         'summary': summary,
-        if (generatedAt != null) 'generated_at': generatedAt.toIso8601String(),
+        if (generatedAt != null) 'generated_at': generatedAt?.toIso8601String(),
       };
 
   /// Top 3-4 timeline items for widget/card preview.

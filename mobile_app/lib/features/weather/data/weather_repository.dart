@@ -51,8 +51,8 @@ class WeatherRepository {
   /// Smart Advisory API (天气智能管家)
   /// ===============================================================
 
-  static const _advisoryCacheKey = 'cache:weather:smart_advisory';
-  static const _advisoryCacheTsKey = 'cache:weather:smart_advisory:ts';
+  static const _advisoryCacheKey = 'cache:weather:smart_advisory_v2';
+  static const _advisoryCacheTsKey = 'cache:weather:smart_advisory_v2:ts';
   static const _cacheTtlSeconds = 30 * 60; // 30 分钟
 
   /// 调用 GET /api/v1/weather/smart-advisory
@@ -89,7 +89,9 @@ class WeatherRepository {
         throw Exception('Smart advisory API returned null');
       }
 
-      final advisory = SmartAdvisory.fromJson(response.data!);
+      final data = response.data!;
+      final advisory =
+          SmartAdvisory.fromJson(data['data'] as Map<String, dynamic>);
       _writeCachedAdvisory(advisory);
       return advisory;
     } on DioException catch (e) {
