@@ -4,84 +4,64 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
-import '../../../core/cache/local_cache_service.dart';
-import '../../../core/network/api_client.dart';
-import '../data/weather_repository.dart';
-import '../domain/weather_models.dart';
+import 'data/weather_repository.dart';
+import 'models/smart_advisory.dart';
+import 'state/weather_controller.dart';
 
 // ============================================================
-// 状态定义
+// SmartAdvisoryState
 // ============================================================
 
-class WeatherState {
-  final WeatherData? data;
+class SmartAdvisoryState {
+  final SmartAdvisory? data;
   final bool loading;
   final String? error;
   final DateTime? lastFetchedAt;
 
-  const WeatherState({
+  const SmartAdvisoryState({
     this.data,
     this.loading = false,
     this.error,
     this.lastFetchedAt,
   });
 
-  WeatherState copyWith({
-    WeatherData? data,
+  SmartAdvisoryState copyWith({
+    SmartAdvisory? data,
     bool? loading,
     String? error,
     bool clearError = false,
     bool clearData = false,
     DateTime? lastFetchedAt,
-    bool clearLastFetchedAt = false,
   }) {
-    return WeatherState(
+    return SmartAdvisoryState(
       data: clearData ? null : (data ?? this.data),
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
-      lastFetchedAt: clearLastFetchedAt
-          ? null
-          : (lastFetchedAt ?? this.lastFetchedAt),
+      lastFetchedAt: lastFetchedAt ?? this.lastFetchedAt,
     );
   }
 
-  /// 距今 >= 1 小时视为过期
+  /// 数据超过 30 分钟视为过期
   bool get isStale {
     if (lastFetchedAt == null) return true;
     return DateTime.now().difference(lastFetchedAt!) >=
-        const Duration(hours: 1);
+        const Duration(minutes: 30);
   }
 }
 
 // ============================================================
-// Provider
+// SmartAdvisoryController
 // ============================================================
 
-final weatherRepositoryProvider = Provider<WeatherRepository>((ref) {
-  final dio = ref.watch(apiClientProvider);
-  final cache = ref.watch(localCacheProvider);
-  return WeatherRepository(dio, cache: cache);
-});
-
-final weatherControllerProvider =
-    StateNotifierProvider<WeatherController, WeatherState>((ref) {
-  final repository = ref.watch(weatherRepositoryProvider);
-  return WeatherController(repository);
-});
-
-// ============================================================
-// Controller
-// ============================================================
-
-class WeatherController extends StateNotifier<WeatherState> {
+class SmartAdvisoryController extends StateNotifier<SmartAdvisoryState> {
   final WeatherRepository _repository;
   Timer? _refreshTimer;
 
-  WeatherController(this._repository) : super(const WeatherState()) {
-    // 1 小时自动刷新
+  SmartAdvisoryController(this._repository)
+      : super(const SmartAdvisoryState()) {
     _refreshTimer = Timer.periodic(
-      const Duration(hours: 1),
-      (_) => loadWeather(),
+      const Duration(minutes: 30),
+      (_) => loadAdvisory(),
     );
   }
 
@@ -92,29 +72,26 @@ class WeatherController extends StateNotifier<WeatherState> {
     super.dispose();
   }
 
-  /// 入口：带缓存判断。若数据未过期（< 1 小时）则直接跳过请求。
-  Future<void> loadWeather() async {
+  /// 入口：带缓存判断。若数据未过期则跳过。
+  Future<void> loadAdvisory() async {
     if (state.loading) return;
     if (state.lastFetchedAt != null && !state.isStale) return;
-
     await _doLoad();
   }
 
-  /// 手动刷新：绕过缓存判断，强制重新拉取。
+  /// 手动刷新：强制拉取最新数据。
   Future<void> manualRefresh() async {
     if (state.loading) return;
     state = state.copyWith(loading: true, clearError: true);
-    await _doLoad();
+    await _doLoad(forceRefresh: true);
   }
 
-  /// 核心加载逻辑（缓存判断之外的真实请求流程）。
-  Future<void> _doLoad() async {
+  Future<void> _doLoad({bool forceRefresh = false}) async {
     if (state.loading) return;
-
     state = state.copyWith(loading: true, clearError: true);
 
     try {
-      // 1. 获取位置权限
+      // 1. 位置权限
       final permission = await Geolocator.checkPermission();
       LocationPermission finalPermission = permission;
       if (permission == LocationPermission.denied) {
@@ -123,7 +100,7 @@ class WeatherController extends StateNotifier<WeatherState> {
       if (finalPermission == LocationPermission.denied) {
         state = state.copyWith(
           loading: false,
-          error: '需要位置权限才能获取天气信息',
+          error: '需要位置权限才能获取天气管家建议',
         );
         return;
       }
@@ -135,15 +112,14 @@ class WeatherController extends StateNotifier<WeatherState> {
         return;
       }
 
-      // 2. 获取经纬度
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.low,
       );
 
-      // 3. 调用 repository
-      final data = await _repository.fetchWeather(
+      final data = await _repository.fetchSmartAdvisory(
         lat: position.latitude,
         lon: position.longitude,
+        forceRefresh: forceRefresh,
       );
 
       state = state.copyWith(
@@ -152,17 +128,21 @@ class WeatherController extends StateNotifier<WeatherState> {
         lastFetchedAt: DateTime.now(),
       );
     } catch (e) {
-      final msg = _formatError(e);
-      state = state.copyWith(loading: false, error: msg);
+      state = state.copyWith(
+        loading: false,
+        error: _formatAdvisoryError(e),
+      );
     }
   }
 }
 
-String _formatError(Object e) {
+String _formatAdvisoryError(Object e) {
   if (e is DioException) {
     final statusCode = e.response?.statusCode;
     if (statusCode == 401) return '登录态失效，请重新登录';
-    if (statusCode != null && statusCode >= 500) return '天气服务暂不可用 ($statusCode)';
+    if (statusCode != null && statusCode >= 500) {
+      return '天气管家服务暂不可用 ($statusCode)';
+    }
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
@@ -172,5 +152,15 @@ String _formatError(Object e) {
   }
   if (e is LocationServiceDisabledException) return '请开启手机定位服务';
   if (e.toString().contains('permission')) return '需要位置权限';
-  return '获取天气失败: ${e.toString().split('\n').first}';
+  return '获取天气管家建议失败: ${e.toString().split('\n').first}';
 }
+
+// ============================================================
+// Provider
+// ============================================================
+
+final smartAdvisoryProvider = StateNotifierProvider<SmartAdvisoryController,
+    SmartAdvisoryState>((ref) {
+  final repository = ref.watch(weatherRepositoryProvider);
+  return SmartAdvisoryController(repository);
+});

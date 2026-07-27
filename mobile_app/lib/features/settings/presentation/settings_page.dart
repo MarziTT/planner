@@ -6,6 +6,7 @@ import '../../../core/theme/theme_controller.dart';
 import '../../updates/state/update_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/settings_controller.dart';
+import 'weather_tone_page.dart';
 
 const _zzzPreviewAssets = <String>[
   'assets/themes/zzz/shield.gif',
@@ -333,6 +334,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          _WeatherToneEntryCard(isZzz: isZzz),
           const SizedBox(height: 12),
           Card(
             color: isZzz ? const Color(0xFF0D0B12) : null,
@@ -679,6 +682,53 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// 天气管家语气入口卡片
+class _WeatherToneEntryCard extends StatelessWidget {
+  const _WeatherToneEntryCard({required this.isZzz});
+
+  final bool isZzz;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      color: isZzz ? const Color(0xFF0D0B12) : null,
+      shape: isZzz
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: const BorderSide(color: Color(0xFF00FF41)),
+            )
+          : null,
+      child: ListTile(
+        title: Text(
+          '天气管家语气',
+          style: TextStyle(
+            color: isZzz ? const Color(0xFFE0F0E0) : null,
+          ),
+        ),
+        subtitle: Text(
+          '自定义天气管家的说话风格',
+          style: TextStyle(
+            color: isZzz ? const Color(0xFFC8C8D8) : null,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isZzz ? const Color(0xFF6A6A7A) : null,
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const WeatherTonePage(),
+            ),
+          );
+        },
       ),
     );
   }

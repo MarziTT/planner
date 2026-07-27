@@ -8,4 +8,4 @@ fi
 
 echo "Starting gunicorn..."
 cd /app
-exec gunicorn --bind 0.0.0.0:$PORT backend.wsgi:app
+flask db upgrade && exec gunicorn --bind 0.0.0.0:$PORT backend.wsgi:app

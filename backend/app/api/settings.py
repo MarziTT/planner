@@ -55,3 +55,22 @@ def update_settings():
         settings.zzz_enabled = bool(payload["zzzEnabled"])
     db.session.commit()
     return success({"item": _settings_to_dict(settings)})
+
+
+@settings_bp.get("/settings/weather-tone")
+@auth_required
+def get_weather_tone():
+    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    return success({"weather_tone": settings.weather_tone})
+
+
+@settings_bp.put("/settings/weather-tone")
+@auth_required
+def update_weather_tone():
+    settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    payload = request.get_json(silent=True) or {}
+    tone = payload.get("weather_tone")
+    if tone is not None:
+        settings.weather_tone = tone if tone.strip() else None
+    db.session.commit()
+    return success({"weather_tone": settings.weather_tone})

@@ -48,7 +48,7 @@ def get_today(user: User):
 def create_record(user: User):
     try:
         body = request.get_json(silent=True) or {}
-        exercise_type = body.get("exercise_type", "").strip()
+        exercise_type = (body.get("exercise_type") or "").strip()
         duration_minutes = body.get("duration_minutes", 0)
         source = body.get("source", "manual")
         calories = body.get("calories")
@@ -109,7 +109,7 @@ def get_mode(user: User):
 def set_mode(user: User):
     try:
         body = request.get_json(silent=True) or {}
-        exercise_mode = body.get("exercise_mode", "").strip()
+        exercise_mode = (body.get("exercise_mode") or "").strip()
         trainer_end_date = body.get("trainer_end_date")
 
         if exercise_mode not in ("self", "trainer"):

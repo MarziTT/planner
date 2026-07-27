@@ -106,8 +106,8 @@ def _get_weather_snapshot(lat: float | None, lon: float | None) -> dict:
         return {"available": False, "message": "lat/lon not provided"}
 
     try:
-        from ..services.weather import get_weather
-        data = get_weather(lat, lon)
+        from ..services.weather_service import fetch_weather
+        data = fetch_weather(lat, lon)
 
         current = data.get("current", {})
         daily = data.get("daily", [])
@@ -117,12 +117,12 @@ def _get_weather_snapshot(lat: float | None, lon: float | None) -> dict:
             "available": True,
             "temp": current.get("temp", "--"),
             "feels_like": current.get("feels_like", "--"),
-            "condition": current.get("condition", {}).get("text", "--"),
-            "condition_code": current.get("condition", {}).get("code", 0),
+            "condition": current.get("weather_text", "--"),
+            "condition_code": current.get("weather_code", 0),
             "humidity": current.get("humidity", "--"),
             "wind_speed": current.get("wind_speed", "--"),
-            "high": today_daily.get("tempMax", "--"),
-            "low": today_daily.get("tempMin", "--"),
+            "high": today_daily.get("temp_max", "--"),
+            "low": today_daily.get("temp_min", "--"),
         }
     except Exception as exc:
         logger.warning("Weather snapshot failed: %s", exc)

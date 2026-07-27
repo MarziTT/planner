@@ -1,107 +1,165 @@
+"""
+天气 API 端点。
+
+- GET /                    — 当前天气、今日预报和未来逐时天气（保留兼容）
+- GET /smart-advisory      — 天气智能管家：天气 + 日程 → LLM 行动建议
+"""
+
 from __future__ import annotations
 
 import logging
-import time
+from datetime import datetime
 
-from flask import Blueprint, current_app, request
+from flask import Blueprint, current_app, g, request
 
-from ..services.weather import get_weather, QWEATHER_PRIVATE_KEY, QWEATHER_KID, QWEATHER_PROJECT_ID
+from ..services import weather_service as ws
+from ..services.scheduler_service import _load_day_events
+from ..extensions import db
 from .common import auth_required, failure, success
 
 weather_bp = Blueprint("weather", __name__)
 
-# 内存缓存：{(lat, lon): (timestamp, result)}
-_cache: dict[tuple[float, float], tuple[float, dict]] = {}
-_CACHE_TTL = 3600  # 1 小时（秒）
+logger = logging.getLogger(__name__)
 
 
-def _cache_key(lat: float, lon: float) -> tuple[float, float]:
-    """按 2 位小数精度取整，避免浮点噪点导致缓存未命中。"""
-    return (round(lat, 2), round(lon, 2))
+# ---- 辅助 ----
 
+def _parse_lat_lon() -> tuple | tuple[None, None, int]:
+    """从 query string 解析 lat/lon。成功返回 (lat, lon)，失败返回 (None, None, status)。"""
+    lat_str = (request.args.get("lat") or "").strip()
+    lon_str = (request.args.get("lon") or "").strip()
+    if not lat_str or not lon_str:
+        return None, None, 422
+    try:
+        return float(lat_str), float(lon_str)
+    except ValueError:
+        return None, None, 422
+
+
+def _openai_config() -> dict:
+    """从 current_app.config 读取 OpenAI 相关配置。"""
+    return {
+        "OPENAI_API_KEY": current_app.config.get("OPENAI_API_KEY", ""),
+        "OPENAI_BASE_URL": current_app.config.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+        "OPENAI_MODEL": current_app.config.get("OPENAI_MODEL", "gpt-4o-mini"),
+    }
+
+
+# ---- 端点 ----
 
 @weather_bp.get("/")
 @auth_required
 def weather_now():
-    """获取指定经纬度的当前天气、今日预报和未来 3 小时逐时天气。"""
-    lat_str = request.args.get("lat", "").strip()
-    lon_str = request.args.get("lon", "").strip()
+    """获取指定经纬度的当前天气、今日预报和未来逐时天气。
 
-    if not lat_str or not lon_str:
-        return failure("validation_error", "lat and lon are required", status=422)
-
-    try:
-        lat = float(lat_str)
-        lon = float(lon_str)
-    except ValueError:
-        return failure("validation_error", "lat and lon must be valid numbers", status=422)
-
-    key = _cache_key(lat, lon)
-    now = time.time()
-
-    if key in _cache:
-        cached_at, cached_result = _cache[key]
-        if now - cached_at < _CACHE_TTL:
-            return success(cached_result)
+    数据源：Open-Meteo + OpenAQ（自适应降级）。
+    """
+    parsed = _parse_lat_lon()
+    if len(parsed) == 3:
+        _, _, status = parsed
+        return failure("validation_error", "lat and lon are required and must be numbers", status=status)
+    lat, lon = parsed
 
     try:
-        result = get_weather(lat, lon)
+        openaq_key = current_app.config.get("OPENAQ_API_KEY")
+        weather = ws.fetch_weather(lat, lon, openaq_api_key=openaq_key)
     except Exception as exc:
-        logger = logging.getLogger(__name__)
-        logger.error(
-            "Weather fetch failed (lat=%s, lon=%s): %s",
-            lat, lon, exc,
-        )
-        return failure(
-            "weather_unavailable",
-            "Weather service is temporarily unavailable",
-            status=502,
-        )
+        logger.exception("Weather fetch failed (lat=%s, lon=%s): %s", lat, lon, exc)
+        return failure("weather_unavailable", "天气服务暂不可用", status=502)
 
-    _cache[key] = (now, result)
-    return success(result)
+    return success(weather)
 
 
-@weather_bp.get("/debug")
+@weather_bp.get("/smart-advisory")
 @auth_required
-def weather_debug():
-    """诊断和风天气连接状态（需登录，仅返回连接健康信息）。"""
-    import logging as _logging
-    _logger = _logging.getLogger(__name__)
+def smart_advisory():
+    """
+    天气智能管家 — 结合日程与天气，由 LLM 生成行动建议。
 
-    result = {
-        "configured": bool(QWEATHER_PRIVATE_KEY and QWEATHER_KID),
-    }
+    Query 参数:
+        lat  (float) — 纬度，必填
+        lon  (float) — 经度，必填
+        date (str)   — 日期 YYYY-MM-DD，默认今天
 
-    # JWT generation check — only report success/failure, no key preview
+    返回:
+        {
+            "ok": true,
+            "data": {
+                "timeline": [{time_slot, event, weather, advisory}],
+                "summary": "一句当日总结",
+                "generated_at": "ISO8601"
+            }
+        }
+    """
+    parsed = _parse_lat_lon()
+    if len(parsed) == 3:
+        _, _, status = parsed
+        return failure("validation_error", "lat and lon are required and must be numbers", status=status)
+    lat, lon = parsed
+
+    date_str = (request.args.get("date") or "").strip()
+    if not date_str:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    else:
+        try:
+            datetime.strptime(date_str, "%Y-%m-%d")
+        except ValueError:
+            return failure(
+                "validation_error",
+                "date must be in YYYY-MM-DD format",
+                status=422,
+            )
+
+    user = g.current_user
+
     try:
-        from ..services.weather import _generate_jwt
-        _generate_jwt()
-        result["jwt_ok"] = True
-    except Exception:
-        result["jwt_ok"] = False
-        _logger.exception("Weather debug: JWT generation failed")
+        # ---- 1. 获取天气 ----
+        openaq_key = current_app.config.get("OPENAQ_API_KEY")
+        weather = ws.fetch_weather(lat, lon, openaq_api_key=openaq_key)
 
-    # API connectivity check — only report status code, no response body
-    try:
-        from ..services.weather import _auth_headers
-        headers = _auth_headers()
-        import httpx
+        # ---- 2. 获取当日日程 ----
+        day_start = datetime.strptime(date_str, "%Y-%m-%d")
+        raw_events = _load_day_events(user.id, day_start)
+        events_formatted = _normalize_events(raw_events)
 
-        def _test():
-            with httpx.Client(timeout=10.0) as c:
-                r = c.get(
-                    "https://mp5u9xx3e3.re.qweatherapi.com/v7/weather/now",
-                    params={"location": "116.41,39.91"},
-                    headers=headers or None,
-                )
-                return r
+        # ---- 3. 读取用户天气管家语气设置 ----
+        from ..models import AppSetting  # noqa: E402
+        settings = db.session.get(AppSetting, user.id)
+        tone_prompt = settings.weather_tone if settings else None
 
-        resp = _test()
-        result["api_status"] = resp.status_code
-        result["api_ok"] = resp.status_code < 400
-    except Exception:
-        result["api_ok"] = False
-        _logger.exception("Weather debug: API connectivity test failed")
+        # ---- 4. LLM 合成 ----
+        config = _openai_config()
+        result = ws.generate_advisory(
+            lat=lat, lon=lon,
+            date_str=date_str,
+            events=events_formatted,
+            weather=weather,
+            openai_config=config,
+            tone_prompt=tone_prompt,
+        )
+    except Exception as exc:
+        logger.exception("Smart advisory generation failed: %s", exc)
+        return failure("advisory_unavailable", "天气智能建议暂不可用", status=502)
 
     return success(result)
+
+
+def _normalize_events(raw_events: list[dict]) -> list[dict]:
+    """将 scheduler_service 返回的 events 统一为 ISO8601 字符串格式。"""
+    return [
+        {
+            "title": e.get("title", ""),
+            "starts_at": _to_iso(e.get("starts_at")),
+            "ends_at": _to_iso(e.get("ends_at")),
+        }
+        for e in raw_events
+    ]
+
+
+def _to_iso(value) -> str:
+    """将 datetime 或字符串转为 ISO8601。"""
+    if value is None:
+        return ""
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return str(value)

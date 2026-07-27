@@ -23,6 +23,9 @@ class TrainerService {
   /// 当前训练计划（由外部设置）
   List<TrainingPlan> _todayPlans = [];
 
+  /// 已调度的训练提醒通知 ID，用于精确取消
+  final Set<int> _scheduledIds = {};
+
   TrainerService({required ExerciseService service}) : _service = service;
 
   ModeInfo? get modeInfo => _modeInfo;
@@ -109,12 +112,16 @@ class TrainerService {
     final now = DateTime.now();
     final notifyTime = scheduledDate.isAfter(now) ? scheduledDate : now;
 
+    final id = plan.id.hashCode;
+    _scheduledIds.add(id);
+
     NotifyManager.show(
       channel: NotifyChannel.exercise,
       title: '训练提醒',
       body: '${plan.exerciseType.label} · ${plan.durationMinutes} 分钟 · ${plan.notes ?? ""}',
       priority: NotifyPriority.important,
       scheduledDate: notifyTime,
+      notificationId: id,
       payload: NotifyPayload(
         eventType: 'exercise',
         eventId: plan.id.hashCode,
@@ -138,7 +145,10 @@ class TrainerService {
   }
 
   Future<void> _cancelAllReminders() async {
-    await NotifyManager.cancelAll();
+    for (final id in _scheduledIds) {
+      await NotifyManager.plugin.cancel(id);
+    }
+    _scheduledIds.clear();
   }
 
   // ---------------------------------------------------------------------------

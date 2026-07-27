@@ -9,11 +9,9 @@ const _skipAuthRefreshKey = 'skipAuthRefresh';
 
 final apiClientProvider = Provider<Dio>((ref) {
   final storage = ref.watch(tokenStorageProvider);
+  final envUrl = const String.fromEnvironment('API_BASE_URL');
   final options = BaseOptions(
-    baseUrl: const String.fromEnvironment(
-      'API_BASE_URL',
-      defaultValue: _defaultApiBaseUrl,
-    ),
+    baseUrl: envUrl.isNotEmpty ? envUrl : _defaultApiBaseUrl,
     connectTimeout: const Duration(seconds: 25),
     receiveTimeout: const Duration(seconds: 25),
     headers: const {'Content-Type': 'application/json'},
@@ -97,6 +95,8 @@ Future<String?> _refreshAccessToken(TokenStorage storage, Dio dio) async {
     );
     return nextAccessToken;
   } on DioException {
+    return null;
+  } catch (_) {
     return null;
   }
 }

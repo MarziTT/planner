@@ -6,6 +6,7 @@ import '../features/auth/presentation/login_page.dart';
 import '../features/auth/state/auth_controller.dart';
 import '../features/home/presentation/home_shell_page.dart';
 import '../features/onboarding/presentation/profile_setup_page.dart';
+import '../features/weather/presentation/weather_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
@@ -35,6 +36,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/profile-setup', builder: (context, state) => const ProfileSetupPage()),
       GoRoute(path: '/home', builder: (context, state) => const HomeShellPage()),
+      GoRoute(path: '/weather', builder: (context, state) => const WeatherPage()),
     ],
   );
 });

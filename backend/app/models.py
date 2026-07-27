@@ -121,6 +121,7 @@ class AppSetting(TimestampMixin, db.Model):
     voice_enabled = db.Column(db.Boolean, default=True, nullable=False)
     update_channel = db.Column(db.String(32), default="stable", nullable=False)
     zzz_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    weather_tone = db.Column(db.Text, nullable=True)
 
 
 def register_models() -> None:

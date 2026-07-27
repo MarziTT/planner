@@ -111,7 +111,7 @@ def _ensure_tables(app: Flask) -> None:
                         ))
                     elif dialect == "sqlite":
                         db.session.execute(text(
-                            "ALTER TABLE users ADD COLUMN phone VARCHAR(20) NOT NULL DEFAULT 'migrated'"
+                            "ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT 'migrated'"
                         ))
                         db.session.execute(text(
                             "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone ON users (phone)"
@@ -130,16 +130,24 @@ def _ensure_tables(app: Flask) -> None:
                 cols = {c["name"] for c in inspector.get_columns("tags")}
                 dialect = db.engine.dialect.name
                 if "is_recurring" not in cols:
-                    if dialect == "postgresql" or dialect == "sqlite":
+                    if dialect == "postgresql":
                         db.session.execute(text(
                             "ALTER TABLE tags ADD COLUMN is_recurring BOOLEAN NOT NULL DEFAULT false"
+                        ))
+                    elif dialect == "sqlite":
+                        db.session.execute(text(
+                            "ALTER TABLE tags ADD COLUMN is_recurring BOOLEAN DEFAULT false"
                         ))
                     db.session.commit()
                     app.logger.info("Migration: added is_recurring to tags (dialect=%s)", dialect)
                 if "recurrence_rule" not in cols:
-                    if dialect == "postgresql" or dialect == "sqlite":
+                    if dialect == "postgresql":
                         db.session.execute(text(
                             "ALTER TABLE tags ADD COLUMN recurrence_rule VARCHAR(120) NOT NULL DEFAULT ''"
+                        ))
+                    elif dialect == "sqlite":
+                        db.session.execute(text(
+                            "ALTER TABLE tags ADD COLUMN recurrence_rule VARCHAR(120) DEFAULT ''"
                         ))
                     db.session.commit()
                     app.logger.info("Migration: added recurrence_rule to tags (dialect=%s)", dialect)
@@ -155,9 +163,13 @@ def _ensure_tables(app: Flask) -> None:
                 cols = {c["name"] for c in inspector.get_columns("settings")}
                 if "zzz_enabled" not in cols:
                     dialect = db.engine.dialect.name
-                    if dialect == "postgresql" or dialect == "sqlite":
+                    if dialect == "postgresql":
                         db.session.execute(text(
                             "ALTER TABLE settings ADD COLUMN zzz_enabled BOOLEAN NOT NULL DEFAULT false"
+                        ))
+                    elif dialect == "sqlite":
+                        db.session.execute(text(
+                            "ALTER TABLE settings ADD COLUMN zzz_enabled BOOLEAN DEFAULT false"
                         ))
                     db.session.commit()
                     app.logger.info("Migration: added zzz_enabled to settings (dialect=%s)", dialect)
@@ -180,12 +192,21 @@ def _ensure_tables(app: Flask) -> None:
                     ("wants_fitness", "BOOLEAN NOT NULL DEFAULT false"),
                     ("fitness_mode", "VARCHAR(32) NOT NULL DEFAULT 'self'"),
                 ]
-                if dialect == "postgresql" or dialect == "sqlite":
-                    for col_name, col_def in missing:
-                        if col_name not in cols:
-                            db.session.execute(text(
-                                f"ALTER TABLE profiles ADD COLUMN {col_name} {col_def}"
-                            ))
+                # SQLite doesn't support NOT NULL in ALTER TABLE ADD COLUMN
+                sqlite_missing = [
+                    ("identity", "VARCHAR(32) DEFAULT 'worker'"),
+                    ("routine_start", "VARCHAR(8) DEFAULT '09:00'"),
+                    ("routine_end", "VARCHAR(8) DEFAULT '18:00'"),
+                    ("focus_area", "VARCHAR(120) DEFAULT ''"),
+                    ("wants_fitness", "BOOLEAN DEFAULT false"),
+                    ("fitness_mode", "VARCHAR(32) DEFAULT 'self'"),
+                ]
+                target = sqlite_missing if dialect == "sqlite" else missing
+                for col_name, col_def in target:
+                    if col_name not in cols:
+                        db.session.execute(text(
+                            f"ALTER TABLE profiles ADD COLUMN {col_name} {col_def}"
+                        ))
                 db.session.commit()
                 app.logger.info("Migration: checked profiles columns (dialect=%s)", dialect)
         except Exception:
@@ -206,7 +227,7 @@ def _ensure_tables(app: Flask) -> None:
                         ))
                     elif dialect == "sqlite":
                         db.session.execute(text(
-                            "ALTER TABLE users ADD COLUMN exercise_mode VARCHAR(20) NOT NULL DEFAULT 'self'"
+                            "ALTER TABLE users ADD COLUMN exercise_mode VARCHAR(20) DEFAULT 'self'"
                         ))
                     db.session.commit()
                 if "trainer_end_date" not in cols:

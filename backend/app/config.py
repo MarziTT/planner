@@ -66,6 +66,10 @@ class BaseConfig:
     HABITS_WINDOW_DAYS = int(os.getenv("HABITS_WINDOW_DAYS", "30"))
     HABITS_MIN_SAMPLES = int(os.getenv("HABITS_MIN_SAMPLES", "3"))
 
+    # Phase 3 — weather smart advisory
+    OPENAQ_API_KEY = os.getenv("OPENAQ_API_KEY", "")
+    WEATHER_CACHE_TTL = int(os.getenv("WEATHER_CACHE_TTL", "1800"))  # 秒，默认 30 分钟
+
 
 class DevelopmentConfig(BaseConfig):
     DEBUG = True
