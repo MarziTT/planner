@@ -155,6 +155,48 @@ def _ensure_tables(app: Flask) -> None:
             db.session.rollback()
             app.logger.exception("Migration failed: tags columns")
 
+        # Ensure settings table exists (db.create_all() may silently fail on PG)
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            if "settings" not in tables:
+                dialect = db.engine.dialect.name
+                if dialect == "postgresql":
+                    db.session.execute(text("""
+                        CREATE TABLE IF NOT EXISTS settings (
+                            user_id INTEGER PRIMARY KEY REFERENCES users(id),
+                            theme VARCHAR(32) NOT NULL DEFAULT 'forest',
+                            theme_mode VARCHAR(16) NOT NULL DEFAULT 'dark',
+                            notifications_enabled BOOLEAN NOT NULL DEFAULT true,
+                            voice_enabled BOOLEAN NOT NULL DEFAULT true,
+                            update_channel VARCHAR(32) NOT NULL DEFAULT 'stable',
+                            zzz_enabled BOOLEAN NOT NULL DEFAULT false,
+                            weather_tone TEXT,
+                            created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                        )
+                    """))
+                elif dialect == "sqlite":
+                    db.session.execute(text("""
+                        CREATE TABLE IF NOT EXISTS settings (
+                            user_id INTEGER PRIMARY KEY REFERENCES users(id),
+                            theme VARCHAR(32) NOT NULL DEFAULT 'forest',
+                            theme_mode VARCHAR(16) NOT NULL DEFAULT 'dark',
+                            notifications_enabled BOOLEAN NOT NULL DEFAULT 1,
+                            voice_enabled BOOLEAN NOT NULL DEFAULT 1,
+                            update_channel VARCHAR(32) NOT NULL DEFAULT 'stable',
+                            zzz_enabled BOOLEAN NOT NULL DEFAULT 0,
+                            weather_tone TEXT,
+                            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                        )
+                    """))
+                db.session.commit()
+                app.logger.info("Manually created settings table (dialect=%s)", dialect)
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Failed to create settings table")
+
         # Add zzz_enabled column if settings table exists without it
         try:
             inspector = inspect(db.engine)
