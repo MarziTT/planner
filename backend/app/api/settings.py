@@ -42,8 +42,12 @@ def _settings_to_dict(settings: AppSetting):
 @settings_bp.get("/settings")
 @auth_required
 def get_settings():
-    settings = _get_or_create_settings()
-    return success({"item": _settings_to_dict(settings)})
+    try:
+        settings = _get_or_create_settings()
+        return success({"item": _settings_to_dict(settings)})
+    except Exception as e:
+        import traceback
+        return {"ok": False, "data": None, "error": {"message": str(e), "trace": traceback.format_exc()}, "meta": {}}, 500
 
 
 @settings_bp.put("/settings")
