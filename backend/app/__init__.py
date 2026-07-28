@@ -64,9 +64,17 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
             db_status = "ok"
         except Exception:
             db_status = "unreachable"
+        tables_info = {}
+        try:
+            inspector = inspect(db.engine)
+            tables_info["all_tables"] = sorted(inspector.get_table_names())
+            tables_info["has_settings"] = "settings" in tables_info["all_tables"]
+            tables_info["dialect"] = db.engine.dialect.name
+        except Exception as e:
+            tables_info = {"error": str(e)}
         return {
             "ok": True,
-            "data": {"status": "healthy", "db": db_status},
+            "data": {"status": "healthy", "db": db_status, "tables": tables_info},
             "error": None,
             "meta": {},
         }
