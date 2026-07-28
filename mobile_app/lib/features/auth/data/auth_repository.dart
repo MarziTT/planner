@@ -29,11 +29,22 @@ class AuthRepository {
       final userJson = await _storage.readSessionUser();
       if (accessToken != null && refreshToken != null && userJson != null) {
         final user = AuthUser.fromJson(userJson);
-        return AuthSession(
+        final cachedSession = AuthSession(
           user: user,
           accessToken: accessToken,
           refreshToken: refreshToken,
         );
+        try {
+          return await refreshSession(refreshToken: refreshToken, user: user);
+        } on DioException catch (error) {
+          final status = error.response?.statusCode;
+          if (status == 401 || status == 403) {
+            await _storage.clear();
+            return null;
+          }
+          // A temporary network failure should not log the user out.
+          return cachedSession;
+        }
       }
       if (attempt < 4) {
         await Future<void>.delayed(const Duration(milliseconds: 200));

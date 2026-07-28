@@ -8,16 +8,15 @@ import 'package:flutter/material.dart';
 // ============================================================
 
 // --- ZZZ Theme (cyberpunk / gaming aesthetics) ---
-// These are aliased from zzz_gif_decoration.dart for convenience.
-// Re-exported to avoid circular imports between widgets/ and core/.
+// Refined: softer neon, better readability on dark bg.
 
-const kZzzBg = Color(0xFF0A0A0F);
-const kZzzSurface = Color(0xFF0D0B12);
-const kZzzRed = Color(0xFFFF1744);
-const kZzzGreen = Color(0xFF00FF41);
-const kZzzGreenLight = Color(0xFFE0F0E0);
-const kZzzText = Color(0xFFE0F0E0);
-const kZzzSilver = Color(0xFFC8C8D8);
+const kZzzBg = Color(0xFF0B0B12);
+const kZzzSurface = Color(0xFF12121C);
+const kZzzRed = Color(0xFFFF2D55);
+const kZzzGreen = Color(0xFF4ADE80);
+const kZzzGreenLight = Color(0xFFDCFCE7);
+const kZzzText = Color(0xFFE8E8F0);
+const kZzzSilver = Color(0xFF9E9EB8);
 
 // --- Weather Gradients ---
 const kWeatherSunnyStart = Color(0xFF3A4A5A);

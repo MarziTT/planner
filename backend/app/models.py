@@ -122,6 +122,9 @@ class AppSetting(TimestampMixin, db.Model):
     update_channel = db.Column(db.String(32), default="stable", nullable=False)
     zzz_enabled = db.Column(db.Boolean, default=False, nullable=False)
     weather_tone = db.Column(db.Text, nullable=True)
+    llm_api_key = db.Column(db.Text, nullable=True)
+    llm_base_url = db.Column(db.Text, nullable=True)
+    llm_model = db.Column(db.String(64), nullable=True)
 
 
 def register_models() -> None:

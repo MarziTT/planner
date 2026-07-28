@@ -49,8 +49,10 @@ class BaseConfig:
     SMS_CODE_LENGTH = int(os.getenv("SMS_CODE_LENGTH", "6"))
     SMS_PROVIDER = os.getenv("SMS_PROVIDER", "console")
 
-    BACKDOOR_PHONE = os.getenv("BACKDOOR_PHONE", "13800000001")
-    BACKDOOR_CODE = os.getenv("BACKDOOR_CODE", "888888")
+    # Backdoor login is disabled unless an isolated test configuration opts in.
+    ENABLE_BACKDOOR = False
+    BACKDOOR_PHONE = os.getenv("BACKDOOR_PHONE", "")
+    BACKDOOR_CODE = os.getenv("BACKDOOR_CODE", "")
 
     TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID") or os.getenv("TENCENTCLOUD_SECRET_ID", "")
     TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY") or os.getenv("TENCENTCLOUD_SECRET_KEY", "")
@@ -78,6 +80,9 @@ class DevelopmentConfig(BaseConfig):
 class TestingConfig(BaseConfig):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    ENABLE_BACKDOOR = True
+    BACKDOOR_PHONE = "13800000001"
+    BACKDOOR_CODE = "888888"
 
 
 class ProductionConfig(BaseConfig):
@@ -93,11 +98,8 @@ class ProductionConfig(BaseConfig):
             raise RuntimeError(
                 "PIXEL_JWT_SECRET must be set in production environment"
             )
-        if self.BACKDOOR_PHONE == "13800000001" or self.BACKDOOR_CODE == "888888":
-            raise RuntimeError(
-                "BACKDOOR_PHONE and BACKDOOR_CODE must be overridden in production. "
-                "Default backdoor credentials are insecure."
-            )
+        if self.ENABLE_BACKDOOR:
+            raise RuntimeError("Backdoor login must remain disabled in production")
 
 
 def get_config(config_name: str | None = None):

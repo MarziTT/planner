@@ -117,3 +117,43 @@ def test_send_code_invalid_phone(app_client):
     finally:
         with app.app_context():
             db.drop_all()
+
+
+def test_refresh_token_cannot_access_protected_api(app_client):
+    """Refresh tokens must not be accepted as bearer access tokens."""
+    app, client = app_client
+    try:
+        login = client.post(
+            "/api/v1/auth/phone-login",
+            json={"phone": "13800000001", "code": "888888"},
+        ).get_json()["data"]
+
+        response = client.get(
+            "/api/v1/profile",
+            headers={"Authorization": f"Bearer {login['tokens']['refreshToken']}"},
+        )
+
+        assert response.status_code == 401
+    finally:
+        with app.app_context():
+            db.drop_all()
+
+
+def test_access_token_cannot_refresh_session(app_client):
+    """Only refresh tokens may be exchanged for a new token pair."""
+    app, client = app_client
+    try:
+        login = client.post(
+            "/api/v1/auth/phone-login",
+            json={"phone": "13800000001", "code": "888888"},
+        ).get_json()["data"]
+
+        response = client.post(
+            "/api/v1/auth/refresh",
+            json={"refreshToken": login["tokens"]["accessToken"]},
+        )
+
+        assert response.status_code == 401
+    finally:
+        with app.app_context():
+            db.drop_all()

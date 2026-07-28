@@ -92,7 +92,7 @@ class PlannerController extends StateNotifier<PlannerState> {
     int? tagId,
   }) async {
     try {
-      final item = await _repository.createEvent(
+      final item = await _repository.createEventWithTags(
         title: title,
         startsAt: startsAt,
         endsAt: endsAt,
@@ -308,7 +308,6 @@ final plannerControllerProvider =
     StateNotifierProvider<PlannerController, PlannerState>(
   (ref) => PlannerController(ref.watch(plannerRepositoryProvider)),
 );
-
 
 
 

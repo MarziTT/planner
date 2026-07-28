@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/color_palette.dart';
 import '../features/updates/presentation/hot_update_image.dart';
 
-// --- ZZZ Color Constants ---
-const zzzBgColor = Color(0xFF0A0A0F);
-const zzzSurfaceColor = Color(0xFF0D0B12);
-const zzzRed = Color(0xFFFF1744);
-const zzzGreen = Color(0xFF00FF41);
-const zzzGreenLight = Color(0xFFE0F0E0);
-const zzzTextColor = Color(0xFFE0F0E0);
-const zzzSilver = Color(0xFFC8C8D8);
+// --- ZZZ Colors (aliased from centralized palette) ---
+const zzzBgColor = kZzzBg;
+const zzzSurfaceColor = kZzzSurface;
+const zzzRed = kZzzRed;
+const zzzGreen = kZzzGreen;
+const zzzGreenLight = kZzzGreenLight;
+const zzzTextColor = kZzzText;
+const zzzSilver = kZzzSilver;
 
 // --- ZZZ GIF Spec ---
 class ZzzGifSpec {

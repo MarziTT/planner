@@ -17,7 +17,7 @@ from flask import Blueprint, current_app, g, request
 from ..extensions import db
 from ..models import Event, Todo
 from ..models_habits import ExerciseRecord, MealRecord
-from ..services.agent import parse_schedule, parse_text
+from ..services.agent import parse_schedule, parse_text, suggest_commands
 from ..services.meal_service import create_meal_record
 from ..services import exercise_service
 from ..services.routine_service import record_wake
@@ -32,11 +32,27 @@ TZ = timezone(timedelta(hours=8))
 
 
 def _read_llm_config() -> dict:
-    """Read LLM credentials from Flask app config."""
-    return {
+    """Read LLM credentials — user settings first, then app config / env."""
+    from ..models import AppSetting
+
+    fallback = {
         "OPENAI_API_KEY": current_app.config.get("OPENAI_API_KEY", ""),
         "OPENAI_BASE_URL": current_app.config.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         "OPENAI_MODEL": current_app.config.get("OPENAI_MODEL", "gpt-4o-mini"),
+    }
+
+    try:
+        user_settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    except Exception:
+        return fallback
+
+    if user_settings is None:
+        return fallback
+
+    return {
+        "OPENAI_API_KEY": user_settings.llm_api_key or fallback["OPENAI_API_KEY"],
+        "OPENAI_BASE_URL": user_settings.llm_base_url or fallback["OPENAI_BASE_URL"],
+        "OPENAI_MODEL": user_settings.llm_model or fallback["OPENAI_MODEL"],
     }
 
 
@@ -376,3 +392,20 @@ def schedule():
         {"event_id": event.id, "status": "created"},
         status=201,
     )
+
+
+@agent_bp.post("/suggest")
+@auth_required
+def suggest():
+    """Generate contextual quick-command suggestions for the butler chat page.
+
+    Request:  {"butler_name": "贾维斯"} (optional, defaults to "贾维斯")
+
+    Response: {"suggestions": ["短语1", "短语2", ...]}
+    """
+    payload = request.get_json(silent=True) or {}
+    butler_name = (payload.get("butler_name") or "贾维斯").strip()
+
+    config = _read_llm_config()
+    suggestions = suggest_commands(butler_name=butler_name, config=config)
+    return success({"suggestions": suggestions})

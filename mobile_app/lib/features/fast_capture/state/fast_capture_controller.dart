@@ -288,7 +288,7 @@ class FastCaptureController extends StateNotifier<FastCaptureState> {
     );
     try {
       final tagId = _matchTagForEventType(draft.eventType);
-      await _repository.createEvent(
+        await _repository.createEventWithTags(
         title: draft.title,
         startsAt: draft.startsAt,
         endsAt: draft.endsAt,

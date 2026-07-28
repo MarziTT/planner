@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pixel_planner_mobile/core/storage/secure_token_storage.dart';
 
@@ -36,8 +37,12 @@ class AuthState {
 }
 
 class AuthController extends StateNotifier<AuthState> {
-  AuthController(this._repository, this._tokenStorage, {LocalCacheService? cache})
-      : _cache = cache, super(const AuthState()) {
+  AuthController(this._repository,
+      {TokenStorage? tokenStorage, LocalCacheService? cache})
+      : _tokenStorage =
+            tokenStorage ?? TokenStorage(const FlutterSecureStorage()),
+        _cache = cache,
+        super(const AuthState()) {
     restore();
     _tokenStorage.invalidateNotifier.addListener(_onTokensCleared);
   }
@@ -164,7 +169,7 @@ class AuthController extends StateNotifier<AuthState> {
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
   (ref) => AuthController(
     ref.watch(authRepositoryProvider),
-    ref.watch(tokenStorageProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
     cache: ref.watch(localCacheProvider),
   ),
 );

@@ -40,5 +40,8 @@ def create_token_pair(*, user_id: int, secret: str, issuer: str, access_ttl_seco
     }
 
 
-def decode_token(*, token: str, secret: str, issuer: str):
-    return jwt.decode(token, secret, algorithms=["HS256"], issuer=issuer)
+def decode_token(*, token: str, secret: str, issuer: str, expected_type: str | None = None):
+    payload = jwt.decode(token, secret, algorithms=["HS256"], issuer=issuer)
+    if expected_type is not None and payload.get("type") != expected_type:
+        raise ValueError("Unexpected token type")
+    return payload

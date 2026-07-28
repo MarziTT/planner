@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_theme.dart';
+import 'zzz_theme_extension.dart';
 
 enum PlannerThemePreset {
   sakuraSeason,
@@ -125,11 +126,17 @@ class ThemeController extends StateNotifier<ThemeState> {
         brightness: Brightness.light,
         seed: seed,
         surfaceMuted: lightMuted,
+        zzzTheme: preset == PlannerThemePreset.kamenRiderZzz
+            ? ZzzThemeExtension.standard
+            : null,
       ),
       darkTheme: AppThemeBuilder.build(
         brightness: Brightness.dark,
         seed: seed,
         surfaceMuted: darkMuted,
+        zzzTheme: preset == PlannerThemePreset.kamenRiderZzz
+            ? ZzzThemeExtension.standard
+            : null,
       ),
       availablePresets: available,
     );
@@ -156,5 +163,7 @@ class ThemeController extends StateNotifier<ThemeState> {
 }
 
 final themeControllerProvider = StateNotifierProvider<ThemeController, ThemeState>(
-  (ref) => throw UnimplementedError('Must be overridden in main.dart'),
+  // Keep a usable synchronous fallback for previews and widget tests. The
+  // production entrypoint can still override this with persisted preferences.
+  (ref) => ThemeController(null),
 );

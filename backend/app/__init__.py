@@ -22,11 +22,13 @@ from .api.widget import widget_bp
 from .config import get_config
 from .extensions import cors, db, limiter, migrate
 from .models import register_models
+from .services.time_service import SystemClock
 
 
 def create_app(config_name: str | None = None, repair_tables: bool = False) -> Flask:
     app = Flask(__name__)
     app.config.from_object(get_config(config_name))
+    app.extensions["clock"] = SystemClock()
 
     cors.init_app(app, resources={r"/api/*": {"origins": app.config.get("CORS_ORIGINS", "*")}})
     db.init_app(app)

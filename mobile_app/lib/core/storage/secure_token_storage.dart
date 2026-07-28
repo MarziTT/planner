@@ -3,9 +3,15 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+const bool _isOhos = bool.fromEnvironment('dart.library.ohos');
+
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
+  if (_isOhos) {
+    return HarmonyTokenStorage();
+  }
   return TokenStorage(const FlutterSecureStorage(
     aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
@@ -114,4 +120,72 @@ class TokenStorage {
   Future<String?> getPhoneNumber() async {
     return await _storage.read(key: _loginPhoneKey);
   }
+}
+
+/// OpenHarmony implementation backed by the native Keystore/Preferences
+/// bridge. Keeping the same TokenStorage contract means auth code and tests
+/// do not need platform checks.
+class HarmonyTokenStorage extends TokenStorage {
+  HarmonyTokenStorage() : super(const FlutterSecureStorage());
+
+  static const MethodChannel _channel =
+      MethodChannel('pixelplanner/harmony_secure_storage');
+
+  Future<void> _write(String key, String value) =>
+      _channel.invokeMethod<void>('write', {'key': key, 'value': value});
+
+  Future<String?> _read(String key) =>
+      _channel.invokeMethod<String>('read', {'key': key});
+
+  Future<void> _delete(String key) =>
+      _channel.invokeMethod<void>('delete', {'key': key});
+
+  @override
+  Future<void> saveSession({
+    required String accessToken,
+    required String refreshToken,
+    required Map<String, dynamic> user,
+  }) async {
+    await _write('access_token', accessToken);
+    await _write('refresh_token', refreshToken);
+    await _write('session_user', jsonEncode(user));
+  }
+
+  @override
+  Future<void> saveTokens({
+    required String accessToken,
+    required String refreshToken,
+  }) async {
+    await _write('access_token', accessToken);
+    await _write('refresh_token', refreshToken);
+  }
+
+  @override
+  Future<String?> readAccessToken() => _read('access_token');
+
+  @override
+  Future<String?> readRefreshToken() => _read('refresh_token');
+
+  @override
+  Future<Map<String, dynamic>?> readSessionUser() async {
+    final raw = await _read('session_user');
+    if (raw == null || raw.isEmpty) return null;
+    return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+  }
+
+  @override
+  Future<void> clear() async {
+    await Future.wait([
+      _delete('access_token'),
+      _delete('refresh_token'),
+      _delete('session_user'),
+    ]);
+    invalidateNotifier.value++;
+  }
+
+  @override
+  Future<void> savePhoneNumber(String phone) => _write('login_phone', phone);
+
+  @override
+  Future<String?> getPhoneNumber() => _read('login_phone');
 }

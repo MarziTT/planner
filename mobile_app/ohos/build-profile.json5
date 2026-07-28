@@ -20,8 +20,8 @@
     "products": [
       {
         "name": "default",
-        // 签名配置名，与 signingConfigs[].name 对应，暂时留空（未配置签名）
-        "signingConfig": "default",
+        // 未配置签名：移除引用避免构建异常，正式发布前必须配置
+        // "signingConfig": "default",
         "compatibleSdkVersion": "5.0.0(12)",
         "compileSdkVersion": "5.0.0(12)",
         "runtimeOS": "HarmonyOS",

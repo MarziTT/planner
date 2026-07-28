@@ -1,9 +1,14 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
+
+import '../notifications/data/harmony_notification_service.dart';
+
+const bool isOhos = bool.fromEnvironment('dart.library.ohos');
 
 /// 通知三级优先级
 enum NotifyPriority {
@@ -132,6 +137,21 @@ class NotifyManager {
   ///
   /// 应在 App 启动时调用一次。
   static Future<void> ensureChannels() async {
+    // ── HarmonyOS 路径 ──
+    if (isOhos) {
+      for (final ch in NotifyChannel.values) {
+        await HarmonyNotificationService.instance.ensureChannel(
+          id: ch.id,
+          name: ch.label,
+          description: '${ch.label}提醒通知',
+          priority: _priorityName(ch.defaultPriority),
+          category: _ohosCategory(ch),
+        );
+      }
+      return;
+    }
+
+    // ── Android 路径 ──
     final androidPlugin = _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin == null) return;
@@ -209,6 +229,25 @@ class NotifyManager {
   }) async {
     final effectivePriority = priority ?? channel.defaultPriority;
     final isScheduled = scheduledDate != null;
+    final id = notificationId ??
+        payload?.eventId ??
+        (title + body).hashCode.abs();
+    final payloadStr = payload?.toJsonString();
+
+    // ---- HarmonyOS 路径 ----
+    if (isOhos) {
+      await HarmonyNotificationService.instance.show(
+        id: id,
+        title: title,
+        body: body,
+        channelId: channel.id,
+        priority: _priorityName(effectivePriority),
+        payload: payloadStr,
+        scheduledDate: scheduledDate,
+        category: _ohosCategory(channel),
+      );
+      return;
+    }
 
     // ---- 乔布斯规则：每日上限（仅即时通知） ----
     if (!isScheduled && effectivePriority != NotifyPriority.urgent) {
@@ -219,11 +258,6 @@ class NotifyManager {
       }
     }
 
-    final id = notificationId ??
-        payload?.eventId ??
-        (title + body).hashCode.abs();
-
-    final payloadStr = payload?.toJsonString();
     final actions = [
       ..._buildActions(channel, effectivePriority),
       ...?extraActions,
@@ -404,12 +438,40 @@ class NotifyManager {
 
   /// 取消所有已调度的通知和已显示的通知。
   static Future<void> cancelAll() async {
+    if (isOhos) {
+      await HarmonyNotificationService.instance.cancelAll();
+    }
     await _plugin.cancelAll();
   }
 
   // ---------------------------------------------------------------------------
   // 辅助映射
   // ---------------------------------------------------------------------------
+
+  static String _priorityName(NotifyPriority p) {
+    switch (p) {
+      case NotifyPriority.urgent:
+        return 'urgent';
+      case NotifyPriority.important:
+        return 'important';
+      case NotifyPriority.daily:
+        return 'daily';
+    }
+  }
+
+  static String _ohosCategory(NotifyChannel ch) {
+    switch (ch) {
+      case NotifyChannel.transit:
+      case NotifyChannel.schedule:
+        return 'alarm';
+      case NotifyChannel.meal:
+      case NotifyChannel.exercise:
+      case NotifyChannel.standing:
+        return 'reminder';
+      case NotifyChannel.weather:
+        return 'recommendation';
+    }
+  }
 
   static Importance _toAndroidImportance(NotifyPriority p) {
     switch (p) {

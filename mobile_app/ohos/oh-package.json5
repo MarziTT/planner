@@ -1,0 +1,14 @@
+{
+  "modelVersion": "5.0.0",
+  "name": "pixelplanner",
+  "version": "1.0.0",
+  "description": "PixelPlanner HarmonyOS application",
+  "main": "",
+  "license": "",
+  "dependencies": {
+    "@ohos/flutter_ohos": "file:./har/flutter.har"
+  },
+  "overrides": {
+    "@ohos/flutter_ohos": "file:./har/flutter.har"
+  }
+}

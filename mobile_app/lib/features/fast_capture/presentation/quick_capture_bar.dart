@@ -435,7 +435,17 @@ class _QuickCaptureBarState extends ConsumerState<QuickCaptureBar> {
     if (text.isEmpty || state.isSubmitting || state.pendingDraft != null) {
       return;
     }
+    // Clear immediately so the composer cannot retain stale text while the
+    // parser or confirmation flow is running.
+    _controller.clear();
     await ref.read(fastCaptureControllerProvider.notifier).submitText(text);
+    final result = ref.read(fastCaptureControllerProvider);
+    if (mounted &&
+        result.pendingDraft == null &&
+        !result.isSubmitting) {
+      _controller.clear();
+      _focusNode.unfocus();
+    }
   }
 
   Future<void> _toggleMic() async {

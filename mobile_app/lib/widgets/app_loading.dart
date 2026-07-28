@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import '../core/theme/zzz_theme_extension.dart';
 
 /// 主题无关的加载指示器颜色
 /// ZZZ主题使用终端绿，Material主题使用主题色
-Color _loadingColor(BuildContext context, {bool isZzz = false}) {
-  if (isZzz) return const Color(0xFF00FF41);
-  return Theme.of(context).colorScheme.primary;
+Color _loadingColor(BuildContext context) {
+  final zzz = context.zzz;
+  return zzz?.accent ?? Theme.of(context).colorScheme.primary;
 }
 
 // ── 全屏居中加载 ────────────────────────────────────────────────────────
@@ -14,15 +15,13 @@ class AppLoadingOverlay extends StatelessWidget {
   const AppLoadingOverlay({
     super.key,
     this.message,
-    this.isZzz = false,
   });
 
   final String? message;
-  final bool isZzz;
-
   @override
   Widget build(BuildContext context) {
-    final color = _loadingColor(context, isZzz: isZzz);
+    final zzz = context.zzz;
+    final color = _loadingColor(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -40,11 +39,11 @@ class AppLoadingOverlay extends StatelessWidget {
             Text(
               message!,
               style: TextStyle(
-                color: isZzz
-                    ? const Color(0xFF00FF41).withValues(alpha: 0.7)
+                color: zzz != null
+                    ? zzz.accent.withValues(alpha: 0.7)
                     : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 14,
-                fontFamily: isZzz ? 'monospace' : null,
+                fontFamily: zzz != null ? 'monospace' : null,
               ),
             ),
           ],
@@ -61,26 +60,24 @@ class AppPageLoading extends StatelessWidget {
   const AppPageLoading({
     super.key,
     this.message,
-    this.isZzz = false,
   });
 
   final String? message;
-  final bool isZzz;
-
   @override
   Widget build(BuildContext context) {
+    final zzz = context.zzz;
     return Column(
       children: [
         _buildLinearProgress(context),
         Expanded(
-          child: AppLoadingOverlay(message: message, isZzz: isZzz),
+          child: AppLoadingOverlay(message: message),
         ),
       ],
     );
   }
 
   Widget _buildLinearProgress(BuildContext context) {
-    final color = _loadingColor(context, isZzz: isZzz);
+    final color = _loadingColor(context);
     return LinearProgressIndicator(
       minHeight: 2,
       valueColor: AlwaysStoppedAnimation(color),
@@ -96,15 +93,13 @@ class AppInlineLoading extends StatelessWidget {
   const AppInlineLoading({
     super.key,
     this.size = 18,
-    this.isZzz = false,
   });
 
   final double size;
-  final bool isZzz;
-
   @override
   Widget build(BuildContext context) {
-    final color = _loadingColor(context, isZzz: isZzz);
+    final zzz = context.zzz;
+    final color = _loadingColor(context);
     return SizedBox(
       width: size,
       height: size,
@@ -126,7 +121,6 @@ class AppLoadingButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.loading = false,
-    this.isZzz = false,
     this.icon,
     this.variant = _ButtonVariant.filled,
     this.fullWidth = false,
@@ -135,14 +129,14 @@ class AppLoadingButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool loading;
-  final bool isZzz;
   final IconData? icon;
   final _ButtonVariant variant;
   final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
-    final color = _loadingColor(context, isZzz: isZzz);
+    final zzz = context.zzz;
+    final color = _loadingColor(context);
     final effectiveOnPressed = loading ? null : onPressed;
 
     Widget child = Row(
@@ -169,7 +163,7 @@ class AppLoadingButton extends StatelessWidget {
         Text(
           loading ? '处理中...' : label,
           style: TextStyle(
-            fontFamily: isZzz ? 'monospace' : null,
+            fontFamily: zzz != null ? 'monospace' : null,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -177,15 +171,15 @@ class AppLoadingButton extends StatelessWidget {
       ],
     );
 
-    if (isZzz) {
+    if (zzz != null) {
       return SizedBox(
         width: fullWidth ? double.infinity : null,
         child: OutlinedButton(
           onPressed: effectiveOnPressed,
           style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFF00FF41),
+            foregroundColor: zzz.accent,
             side: BorderSide(
-              color: const Color(0xFF00FF41).withValues(alpha: loading ? 0.3 : 0.6),
+              color: zzz.accent.withValues(alpha: loading ? 0.3 : 0.6),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
@@ -235,14 +229,11 @@ class AppSkeletonBlock extends StatefulWidget {
     this.width,
     this.height = 14,
     this.borderRadius = 6,
-    this.isZzz = false,
   });
 
   final double? width;
   final double height;
   final double borderRadius;
-  final bool isZzz;
-
   @override
   State<AppSkeletonBlock> createState() => _AppSkeletonBlockState();
 }
@@ -270,8 +261,9 @@ class _AppSkeletonBlockState extends State<AppSkeletonBlock>
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = widget.isZzz
-        ? const Color(0xFF00FF41).withValues(alpha: 0.08)
+    final zzz = context.zzz;
+    final baseColor = zzz != null
+        ? zzz.accent.withValues(alpha: 0.08)
         : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08);
 
     return AnimatedBuilder(
@@ -295,12 +287,9 @@ class AppSkeletonCard extends StatelessWidget {
   const AppSkeletonCard({
     super.key,
     this.lines = 3,
-    this.isZzz = false,
   });
 
   final int lines;
-  final bool isZzz;
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -309,13 +298,12 @@ class AppSkeletonCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppSkeletonBlock(width: 160, height: 16, isZzz: isZzz),
+            AppSkeletonBlock(width: 160, height: 16),
             const SizedBox(height: 12),
             for (int i = 0; i < lines - 1; i++) ...[
               AppSkeletonBlock(
                 width: i == lines - 2 ? 120 : double.infinity,
-                height: 12,
-                isZzz: isZzz,
+                height: 12
               ),
               if (i < lines - 2) const SizedBox(height: 8),
             ],
@@ -333,12 +321,9 @@ class AppSkeletonList extends StatelessWidget {
   const AppSkeletonList({
     super.key,
     this.count = 4,
-    this.isZzz = false,
   });
 
   final int count;
-  final bool isZzz;
-
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
@@ -346,8 +331,7 @@ class AppSkeletonList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: count,
       itemBuilder: (_, __) => AppSkeletonCard(
-        lines: 3,
-        isZzz: isZzz,
+        lines: 3
       ),
     );
   }

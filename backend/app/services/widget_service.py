@@ -21,10 +21,11 @@ from typing import Any
 from ..extensions import db
 from ..models import Event, Todo
 from ..models_habits import EventHistory, ExerciseRecord, MealRecord, UserPattern
+from .time_service import SHANGHAI_TZ, get_clock
 
 logger = logging.getLogger(__name__)
 
-TZ = timezone(timedelta(hours=8))
+TZ = SHANGHAI_TZ
 
 # Greeting time buckets (Beijing time)
 GREETING_BUCKETS = [
@@ -42,7 +43,7 @@ WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "�
 
 def get_widget_summary(user_id: int) -> dict[str, Any]:
     """Return a compact daily summary for the home screen widget."""
-    now = datetime.now(TZ)
+    now = get_clock().now_local()
     today = now.date()
     today_start = datetime.combine(today, time(0, 0), tzinfo=TZ)
     today_end = datetime.combine(today, time(23, 59, 59), tzinfo=TZ)
@@ -111,7 +112,7 @@ def _get_meals_snapshot(
     count = len(meals)
 
     # Determine next meal time suggestion
-    now = datetime.now(TZ)
+    now = get_clock().now_local()
     meal_times = {"早餐": time(8, 0), "午餐": time(12, 0), "晚餐": time(18, 0)}
     next_meal = None
     next_time_str = None
@@ -206,15 +207,21 @@ def _get_schedule_snapshot(
 ) -> dict[str, Any]:
     """Next upcoming event and today's event count."""
     # Today's events
-    today_events = (
-        Event.query
-        .filter(
-            Event.user_id == user_id,
-            Event.starts_at >= now,
-            Event.starts_at <= today_end,
-        )
-        .order_by(Event.starts_at.asc())
-        .all()
+    # SQLite drops timezone information from DateTime values. Normalize both
+    # sides in Python so events written with either aware or naive timestamps
+    # are consistently visible to the widget.
+    candidates = Event.query.filter(Event.user_id == user_id).all()
+    def _as_tz(value: datetime) -> datetime:
+        return value.replace(tzinfo=TZ) if value.tzinfo is None else value.astimezone(TZ)
+
+    today_events = sorted(
+        (
+            event
+            for event in candidates
+            if event.starts_at
+            and now <= _as_tz(event.starts_at) <= now + timedelta(hours=24)
+        ),
+        key=lambda event: _as_tz(event.starts_at),
     )
 
     count = len(today_events)

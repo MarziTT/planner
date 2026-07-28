@@ -24,10 +24,11 @@ from sqlalchemy import func
 from ..extensions import db
 from ..models import Event, Todo
 from ..models_habits import EventHistory, ExerciseRecord, MealRecord, UserPattern
+from .time_service import SHANGHAI_TZ, get_clock
 
 logger = logging.getLogger(__name__)
 
-TZ = timezone(timedelta(hours=8))
+TZ = SHANGHAI_TZ
 
 # ── Scene priority ───────────────────────────────────────────────────────
 PRIORITY_HIGH = "high"
@@ -61,7 +62,7 @@ def check_scenes(user_id: int, weather_text: str | None = None) -> list[dict[str
     """
     cards: list[dict[str, Any]] = []
 
-    now = datetime.now(TZ)
+    now = get_clock().now_local()
     today = now.date()
     today_start = datetime.combine(today, datetime.min.time(), tzinfo=TZ)
     today_end = today_start + timedelta(days=1)
@@ -151,8 +152,8 @@ def _check_exercise(
         db.session.query(func.coalesce(func.sum(ExerciseRecord.duration_minutes), 0))
         .filter(
             ExerciseRecord.user_id == user_id,
-            ExerciseRecord.completed_at >= today_start,
-            ExerciseRecord.completed_at < today_end,
+            ExerciseRecord.recorded_at >= today_start,
+            ExerciseRecord.recorded_at < today_end,
         )
         .scalar()
     )

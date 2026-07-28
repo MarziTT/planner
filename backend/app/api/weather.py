@@ -22,6 +22,19 @@ weather_bp = Blueprint("weather", __name__)
 logger = logging.getLogger(__name__)
 
 
+@weather_bp.get("/debug")
+@auth_required
+def debug():
+    """Return non-sensitive weather integration health information."""
+    config = _openai_config()
+    return success({
+        "api_ok": True,
+        "openai_configured": bool(config["OPENAI_API_KEY"]),
+        "base_url": config["OPENAI_BASE_URL"],
+        "model": config["OPENAI_MODEL"],
+    })
+
+
 # ---- 辅助 ----
 
 def _parse_lat_lon() -> tuple | tuple[None, None, int]:

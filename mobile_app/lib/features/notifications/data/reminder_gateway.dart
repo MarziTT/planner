@@ -11,6 +11,9 @@ import '../../planner/domain/planner_models.dart';
 import '../../settings/domain/settings_model.dart';
 import '../domain/notification_tap_event.dart';
 import '../domain/reminder_schedule.dart';
+import 'harmony_notification_service.dart';
+
+const bool _isOhos = bool.fromEnvironment('dart.library.ohos');
 
 abstract class ReminderGateway {
   Stream<NotificationTapEvent> get taps;
@@ -41,6 +44,51 @@ class InMemoryReminderGateway implements ReminderGateway {
 
   @override
   Future<void> replaceSchedules(List<ReminderSchedule> schedules) async {}
+}
+
+class HarmonyReminderGateway implements ReminderGateway {
+  HarmonyReminderGateway({HarmonyNotificationService? service})
+      : _service = service ?? HarmonyNotificationService.instance;
+
+  final HarmonyNotificationService _service;
+
+  @override
+  Stream<NotificationTapEvent> get taps => const Stream.empty();
+
+  @override
+  Future<void> initialize() async {
+    await _service.ensureChannel(
+      id: NotifyChannel.schedule.id,
+      name: '日程提醒',
+      description: '即将开始的日程提醒',
+      priority: 'important',
+      category: 'schedule',
+    );
+  }
+
+  @override
+  Future<bool> ensurePermissions() async => true;
+
+  @override
+  Future<NotificationTapEvent?> getLaunchTap() async => null;
+
+  @override
+  Future<void> replaceSchedules(List<ReminderSchedule> schedules) async {
+    await initialize();
+    await _service.cancelAll();
+    for (final schedule in schedules) {
+      await _service.show(
+        id: schedule.eventId,
+        title: schedule.title,
+        body: schedule.body,
+        channelId: NotifyChannel.schedule.id,
+        priority: schedule.leadMinutes <= 30 ? 'urgent' : 'important',
+        payload: schedule.eventId.toString(),
+        scheduledDate: schedule.triggerAt,
+        category: 'schedule',
+      );
+    }
+  }
 }
 
 class LocalReminderGateway implements ReminderGateway {
@@ -176,6 +224,9 @@ class LocalReminderGateway implements ReminderGateway {
 }
 
 final reminderGatewayProvider = Provider<ReminderGateway>((ref) {
+  if (_isOhos) {
+    return HarmonyReminderGateway();
+  }
   return LocalReminderGateway();
 });
 

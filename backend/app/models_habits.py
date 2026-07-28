@@ -7,6 +7,7 @@ Spec: mobile_app/docs/superpowers/specs/2026-07-23-jarvis-agent-phase2-design.md
 from __future__ import annotations
 
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import synonym
 
 from .extensions import db
 from .models import TimestampMixin, utc_now
@@ -42,11 +43,16 @@ class UserPattern(TimestampMixin, db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    pattern_type = db.Column(db.String(50), nullable=False)  # 'wake_time' / 'meal_time' / 'transit_mode' ...
+    pattern_type = db.Column(
+        db.String(50), default="wake_time", nullable=False
+    )  # 'wake_time' / 'meal_time' / 'transit_mode' ...
     pattern_key = db.Column(db.String(100), default="", nullable=False)
     pattern_value = db.Column(JSONVariant)
     confidence = db.Column(db.Float, default=0.0, nullable=False)
     sample_count = db.Column(db.Integer, default=0, nullable=False)
+    # Kept as a first-class field for the scene engine and older clients that
+    # persisted the learned wake time directly.
+    wake_time = db.Column(db.String(5), nullable=True)
 
 
 class NotifyPreference(TimestampMixin, db.Model):
@@ -108,3 +114,7 @@ class ExerciseRecord(db.Model):
     steps = db.Column(db.Integer)
     recorded_at = db.Column(db.DateTime, default=utc_now, nullable=False, index=True)
     source = db.Column(db.String(20), default="auto", nullable=False)  # 'auto' / 'manual'
+
+    # Compatibility aliases used by the original scene-engine contract.
+    completed_at = synonym("recorded_at")
+    calories_burned = synonym("calories")

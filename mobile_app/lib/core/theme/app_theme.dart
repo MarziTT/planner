@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 
+import 'zzz_theme_extension.dart';
+
 class PlannerPalette extends ThemeExtension<PlannerPalette> {
   const PlannerPalette({
     required this.surfaceMuted,
@@ -45,6 +47,7 @@ class AppThemeBuilder {
     required Brightness brightness,
     required Color seed,
     required Color surfaceMuted,
+    ZzzThemeExtension? zzzTheme,
   }) {
     final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
     final isDark = brightness == Brightness.dark;
@@ -111,6 +114,7 @@ class AppThemeBuilder {
           success: const Color(0xFF2C9A68),
           warning: const Color(0xFFF59E0B),
         ),
+        if (zzzTheme != null) zzzTheme,
       ],
     );
   }

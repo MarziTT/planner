@@ -78,7 +78,35 @@ class PlannerRepository {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+  }) async {
+    return _createEvent(
+      title: title,
+      startsAt: startsAt,
+      endsAt: endsAt,
+    );
+  }
+
+  /// Creates an event while preserving the legacy [createEvent] API used by
+  /// integrations and test doubles.
+  Future<PlannerEvent> createEventWithTags({
+    required String title,
+    required DateTime startsAt,
+    required DateTime endsAt,
     int? tagId,
+    List<int>? tagIds,
+  }) async {
+    return _createEvent(
+      title: title,
+      startsAt: startsAt,
+      endsAt: endsAt,
+      tagIds: tagIds ?? (tagId == null ? null : [tagId]),
+    );
+  }
+
+  Future<PlannerEvent> _createEvent({
+    required String title,
+    required DateTime startsAt,
+    required DateTime endsAt,
     List<int>? tagIds,
   }) async {
     final data = <String, dynamic>{
@@ -87,10 +115,8 @@ class PlannerRepository {
       'endsAt': endsAt.toIso8601String(),
       'status': 'planned',
     };
-    final effectiveTagIds = tagIds ??
-        (tagId != null ? [tagId] : null);
-    if (effectiveTagIds != null && effectiveTagIds.isNotEmpty) {
-      data['tagIds'] = effectiveTagIds;
+    if (tagIds != null && tagIds.isNotEmpty) {
+      data['tagIds'] = tagIds;
     }
     final response = await _dio.post('/events', data: data);
     return PlannerEvent.fromJson(

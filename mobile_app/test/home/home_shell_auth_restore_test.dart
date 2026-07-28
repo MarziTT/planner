@@ -113,7 +113,10 @@ class _SilentReminderGateway implements ReminderGateway {
 
 class _ReadyAuthController extends AuthController {
   _ReadyAuthController()
-      : super(AuthRepository(dio: Dio(), storage: _NoopTokenStorage())) {
+      : super(
+          AuthRepository(dio: Dio(), storage: _NoopTokenStorage()),
+          tokenStorage: _NoopTokenStorage(),
+        ) {
     state = const AuthState(
       session: AuthSession(
         user: AuthUser(

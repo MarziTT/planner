@@ -48,6 +48,8 @@ class _FakePlannerRepository extends PlannerRepository {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    int? tagId,
+    List<int>? tagIds,
   }) async {
     final event = PlannerEvent(
       id: createdEvents.length + 1,
@@ -59,6 +61,21 @@ class _FakePlannerRepository extends PlannerRepository {
     createdEvents.add(event);
     return event;
   }
+
+  @override
+  Future<PlannerEvent> createEventWithTags({
+    required String title,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    int? tagId,
+    List<int>? tagIds,
+  }) => createEvent(
+        title: title,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        tagId: tagId,
+        tagIds: tagIds,
+      );
 }
 
 class _FakeSpeechCaptureGateway extends SpeechCaptureGateway {

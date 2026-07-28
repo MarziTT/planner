@@ -1,15 +1,12 @@
-// EntryAbility.ets — Pixel Planner 鸿蒙入口 Ability
-// 继承 FlutterAbility，由华为定制 flutter_ohos 插件提供基类。
-// 后续可在此重写 configureFlutterEngine() 注册自定义 Platform Channel。
-
+// PixelPlanner 鸿蒙入口 Ability。
+// MethodChannel 的具体注册由 OpenHarmony-SIG Flutter SDK 提供；原生桥接
+// 实现应在确认 SDK 版本后接入，避免把 Android API 误用到 ArkTS。
 import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
+import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine): void {
     super.configureFlutterEngine(flutterEngine);
-
-    // TODO: 在此注册自定义 MethodChannel / EventChannel
-    // 示例:
-    // GeneratedPluginRegistrant.registerWith(flutterEngine);
+    GeneratedPluginRegistrant.registerWith(flutterEngine);
   }
 }

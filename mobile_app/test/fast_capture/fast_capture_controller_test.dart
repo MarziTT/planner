@@ -17,6 +17,8 @@ class _FakePlannerRepository extends PlannerRepository {
     required String title,
     required DateTime startsAt,
     required DateTime endsAt,
+    int? tagId,
+    List<int>? tagIds,
   }) async {
     if (shouldThrow) {
       throw Exception('create failed');
@@ -32,6 +34,21 @@ class _FakePlannerRepository extends PlannerRepository {
     createdEvents.add(event);
     return event;
   }
+
+  @override
+  Future<PlannerEvent> createEventWithTags({
+    required String title,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    int? tagId,
+    List<int>? tagIds,
+  }) => createEvent(
+        title: title,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        tagId: tagId,
+        tagIds: tagIds,
+      );
 }
 
 void main() {

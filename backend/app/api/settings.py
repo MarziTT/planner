@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import logging
+
 from flask import Blueprint, g, request
 
 from ..extensions import db
 from ..models import AppSetting
-from .common import auth_required, success
+from .common import auth_required, failure, success
 
 
 settings_bp = Blueprint("settings", __name__)
+logger = logging.getLogger(__name__)
 
 
 _BASE_THEMES = ["sakuraSeason", "ocean", "forest", "desertDusk", "aurora"]
@@ -36,6 +39,9 @@ def _settings_to_dict(settings: AppSetting):
         "updateChannel": settings.update_channel,
         "availableThemes": available,
         "zzzEnabled": settings.zzz_enabled,
+        "llmApiKey": settings.llm_api_key or "",
+        "llmBaseUrl": settings.llm_base_url or "",
+        "llmModel": settings.llm_model or "",
     }
 
 
@@ -45,9 +51,10 @@ def get_settings():
     try:
         settings = _get_or_create_settings()
         return success({"item": _settings_to_dict(settings)})
-    except Exception as e:
-        import traceback
-        return {"ok": False, "data": None, "error": {"message": str(e), "trace": traceback.format_exc()}, "meta": {}}, 500
+    except Exception:
+        db.session.rollback()
+        logger.exception("Failed to load settings for user %s", g.current_user.id)
+        return failure("settings_unavailable", "Settings are temporarily unavailable", status=500)
 
 
 @settings_bp.put("/settings")
@@ -67,6 +74,12 @@ def update_settings():
         settings.update_channel = payload["updateChannel"] or settings.update_channel
     if "zzzEnabled" in payload:
         settings.zzz_enabled = bool(payload["zzzEnabled"])
+    if "llmApiKey" in payload:
+        settings.llm_api_key = payload["llmApiKey"] or None
+    if "llmBaseUrl" in payload:
+        settings.llm_base_url = payload["llmBaseUrl"] or None
+    if "llmModel" in payload:
+        settings.llm_model = payload["llmModel"] or None
     db.session.commit()
     return success({"item": _settings_to_dict(settings)})
 

@@ -828,8 +828,8 @@ def parse_text(text: str, config: dict | None = None) -> dict:
 
     Supports: create_event, log_meal, log_exercise, log_routine, query, create_reminder.
 
-    Primary: call OpenAI-compatible LLM with multi-intent Few-shot prompt.
-    Fallback: keyword-based regex intent detection + entity extraction.
+    Primary: keyword-based regex intent detection + entity extraction (fast, free).
+    Fallback: call OpenAI-compatible LLM when regex can't determine intent.
 
     Returns a dict with at minimum:
         {"intent": "...", "confidence": 0.0-1.0}
@@ -842,7 +842,12 @@ def parse_text(text: str, config: dict | None = None) -> dict:
             "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         }
 
-    # Try LLM first with multi-intent prompt
+    # Try regex first — fast, no API cost
+    regex_result = _parse_multi_regex(text)
+    if regex_result.get("intent") != "unknown":
+        return regex_result
+
+    # Regex couldn't determine intent, fall back to LLM
     if config.get("OPENAI_API_KEY"):
         result = _call_openai_multi(text, config)
         if result is not None:
@@ -852,6 +857,185 @@ def parse_text(text: str, config: dict | None = None) -> dict:
                 result["confidence"] = 0.5
             return result
 
-    # Fallback to regex
-    logger.info("Falling back to multi-intent regex parser for: %s", text)
-    return _parse_multi_regex(text)
+    # Both failed — return regex unknown result
+    return regex_result
+
+
+# -- Public API: suggestion generation ----------------------------------------
+
+SUGGEST_SYSTEM_PROMPT = """You are a friendly personal butler named {butler_name} for a lifestyle app. Your job is to suggest 5-6 short, natural Chinese phrases that the user might want to say to you RIGHT NOW. Think of yourself as the butler — what would you suggest that feels relevant and helpful at this moment?
+
+Context:
+- Current time: {time_of_day} on {weekday}
+- {butler_name} 管家 helps with: scheduling, meals, exercise, routines, reminders, questions about health or schedule
+
+Rules:
+1. Output ONLY a JSON array of strings. No markdown, no explanation.
+2. Each string is a natural Chinese phrase the user would say to their butler (like a quick command).
+3. Mix practical and casual — some task-oriented, some conversational.
+4. Vary the suggestions each time — don't always suggest the same things.
+5. Make them feel human and contextual, not robotic.
+
+Suggested output format:
+["短语1", "短语2", "短语3", "短语4", "短语5"]
+
+Examples for different times:
+
+Morning (7-9am): ["昨晚睡得怎么样", "帮我记录早餐", "今天有什么安排", "早上提醒我带伞", "来一杯咖啡的建议"]
+Midday (12-2pm): ["记录午餐吃了什么", "下午提醒我喝水", "今天运动达标了吗", "三点提醒我开会", "推荐一个午休放松方式"]
+Afternoon (2-6pm): ["记一笔今天的运动", "晚上吃什么好", "今天摄入多少卡路里了", "帮我设置明天的闹钟", "有什么待办没完成的"]
+Evening (6-10pm): ["总结一下今天", "明天的日程是什么", "记录晚餐", "帮我安排明早的晨跑", "今晚适合看什么类型的电影"]
+Night (10pm-7am): ["帮我记录今天的睡眠", "明天几点起床好", "安排明天的日程", "回顾一下这周的饮食", "设置一个早安提醒"]
+
+IMPORTANT: VARY the suggestions — use different wording, different topics, different angles. Don't pick the same suggestions from the examples above. Be creative within the user's context."""
+
+
+def _build_suggest_prompt(butler_name: str = "贾维斯") -> str:
+    now = datetime.now(TZ)
+    hour = now.hour
+
+    if 6 <= hour < 9:
+        time_of_day = "早上"
+    elif 9 <= hour < 12:
+        time_of_day = "上午"
+    elif 12 <= hour < 14:
+        time_of_day = "中午"
+    elif 14 <= hour < 18:
+        time_of_day = "下午"
+    elif 18 <= hour < 22:
+        time_of_day = "晚上"
+    else:
+        time_of_day = "深夜"
+
+    weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+    weekday = weekdays[now.weekday()]
+
+    return SUGGEST_SYSTEM_PROMPT.format(
+        butler_name=butler_name,
+        time_of_day=time_of_day,
+        weekday=weekday,
+    )
+
+
+def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None) -> list[str]:
+    """Generate 5-6 contextual quick-command suggestions.
+
+    Primary: call OpenAI-compatible LLM with suggest prompt.
+    Fallback: time-based hardcoded suggestions.
+    """
+    if config is None:
+        config = {
+            "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", ""),
+            "OPENAI_BASE_URL": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        }
+
+    # Try LLM
+    if config.get("OPENAI_API_KEY"):
+        result = _call_openai_suggest(butler_name, config)
+        if result is not None and isinstance(result, list) and len(result) > 0:
+            return [s for s in result if isinstance(s, str) and s.strip()][:6]
+
+    # Fallback: time-based defaults
+    logger.info("Falling back to default suggest commands")
+    return _fallback_suggest()
+
+
+def _call_openai_suggest(butler_name: str, config: dict) -> list[str] | None:
+    api_key = config.get("OPENAI_API_KEY", "")
+    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    model = config.get("OPENAI_MODEL", "gpt-4o-mini")
+
+    if not api_key:
+        return None
+
+    url = f"{base_url.rstrip('/')}/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    payload: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": _build_suggest_prompt(butler_name)},
+            {"role": "user", "content": "生成一组建议"},
+        ],
+        "temperature": 0.9,
+        "max_tokens": 300,
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=12)
+        resp.raise_for_status()
+        body = resp.json()
+        raw = body["choices"][0]["message"]["content"].strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```(?:json)?\s*", "", raw)
+            raw = re.sub(r"\s*```$", "", raw)
+        result = json.loads(raw)
+        if isinstance(result, list):
+            return result
+        return None
+    except Exception as exc:
+        logger.warning("Suggest LLM call failed: %s", exc)
+        return None
+
+
+def _fallback_suggest() -> list[str]:
+    now = datetime.now(TZ)
+    hour = now.hour
+
+    if 6 <= hour < 9:
+        return [
+            "昨晚睡得怎么样",
+            "帮我记录早餐",
+            "今天有什么安排",
+            "早上提醒我带伞",
+            "帮我规划今天的饮食",
+            "今天的天气适合运动吗",
+        ]
+    elif 9 <= hour < 12:
+        return [
+            "记录上午吃了什么",
+            "今天的日程安排",
+            "提醒我中午喝水",
+            "帮我安排下午的会议",
+            "今天的运动计划",
+            "有什么待办事项",
+        ]
+    elif 12 <= hour < 14:
+        return [
+            "记录午餐",
+            "今天运动达标了吗",
+            "下午提醒我喝水",
+            "三点提醒我开会",
+            "晚上吃什么建议",
+            "帮我查今天的卡路里",
+        ]
+    elif 14 <= hour < 18:
+        return [
+            "记一笔今天的运动",
+            "晚上吃什么好",
+            "今天摄入多少卡路里了",
+            "帮我设置明天的闹钟",
+            "有什么待办没完成的",
+            "总结一下下午做的事",
+        ]
+    elif 18 <= hour < 22:
+        return [
+            "总结一下今天",
+            "明天的日程是什么",
+            "记录晚餐",
+            "帮我安排明早的晨跑",
+            "回顾一下这周的饮食",
+            "设置一个晚安提醒",
+        ]
+    else:
+        return [
+            "帮我记录今天的睡眠",
+            "明天几点起床好",
+            "安排明天的日程",
+            "回顾一下这周的饮食",
+            "设置一个早安提醒",
+            "最近睡眠质量怎么样",
+        ]

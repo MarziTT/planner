@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import random
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
+from hmac import compare_digest
 
 from flask import Blueprint, current_app, request
 
@@ -28,7 +29,7 @@ def _serialize_user(user: User):
 
 
 def _generate_sms_code(length: int) -> str:
-    return "".join(str(random.randint(0, 9)) for _ in range(length))
+    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
 
 def _validate_phone(phone: str) -> str | None:
@@ -79,10 +80,16 @@ def phone_login():
     if phone_err := _validate_phone(phone):
         return failure("invalid_phone", phone_err, status=400)
 
-    backdoor_phone = current_app.config["BACKDOOR_PHONE"]
-    backdoor_code = current_app.config["BACKDOOR_CODE"]
+    backdoor_phone = current_app.config.get("BACKDOOR_PHONE", "")
+    backdoor_code = current_app.config.get("BACKDOOR_CODE", "")
 
-    if phone == backdoor_phone and code == backdoor_code:
+    if (
+        current_app.config.get("ENABLE_BACKDOOR", False)
+        and backdoor_phone
+        and backdoor_code
+        and compare_digest(phone, backdoor_phone)
+        and compare_digest(code, backdoor_code)
+    ):
         sms_code = None  # backdoor bypasses SmsCode
     else:
         now = datetime.now(timezone.utc)
@@ -159,8 +166,12 @@ def refresh():
             token=payload["refreshToken"],
             secret=current_app.config["JWT_SECRET_KEY"],
             issuer=current_app.config["JWT_ISSUER"],
+            expected_type="refresh",
         )
     except Exception:
+        return failure("invalid_refresh_token", "Refresh token is invalid", status=401)
+
+    if str(refresh_payload.get("sub")) != str(stored.user_id):
         return failure("invalid_refresh_token", "Refresh token is invalid", status=401)
 
     tokens = create_token_pair(
