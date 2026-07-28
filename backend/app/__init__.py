@@ -211,6 +211,18 @@ def _ensure_tables(app: Flask) -> None:
             tables = inspector.get_table_names()
             if "settings" in tables:
                 cols = {c["name"] for c in inspector.get_columns("settings")}
+                if "weather_tone" not in cols:
+                    dialect = db.engine.dialect.name
+                    if dialect == "postgresql":
+                        db.session.execute(text(
+                            "ALTER TABLE settings ADD COLUMN weather_tone TEXT"
+                        ))
+                    elif dialect == "sqlite":
+                        db.session.execute(text(
+                            "ALTER TABLE settings ADD COLUMN weather_tone TEXT"
+                        ))
+                    db.session.commit()
+                    app.logger.info("Migration: added weather_tone to settings (dialect=%s)", dialect)
                 if "zzz_enabled" not in cols:
                     dialect = db.engine.dialect.name
                     if dialect == "postgresql":
