@@ -44,8 +44,8 @@ class SettingsController extends StateNotifier<SettingsState> {
       _ref
           .read(themeControllerProvider.notifier)
           .setAvailableThemes(settings.availableThemes);
-    } catch (_) {
-      state = state.copyWith(loading: false, errorMessage: '设置加载失败');
+    } catch (e) {
+      state = state.copyWith(loading: false, errorMessage: '设置加载失败: ${e.toString().split('\n').first}');
     }
   }
 
