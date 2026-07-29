@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/zzz_theme_extension.dart';
 import '../../../../widgets/zzz_gif_decoration.dart';
 
 export '../../../../widgets/zzz_gif_decoration.dart';
@@ -39,6 +40,7 @@ class ZzzLedMarquee extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zzz = context.zzz ?? ZzzThemeExtension.standard;
     final ds =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} $_weekday';
     return Column(
@@ -48,10 +50,12 @@ class ZzzLedMarquee extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.only(top: 6, bottom: 6),
           decoration: BoxDecoration(
-            color: zzzGreen.withValues(alpha: 0.06),
+            color: zzz.signal.withValues(alpha: 0.06),
             border: Border(
-              top: BorderSide(color: zzzGreen.withValues(alpha: 0.55), width: 1.5),
-              bottom: BorderSide(color: zzzGreen.withValues(alpha: 0.55), width: 1.5),
+              top: BorderSide(
+                  color: zzz.signal.withValues(alpha: 0.55), width: 1.5),
+              bottom: BorderSide(
+                  color: zzz.signal.withValues(alpha: 0.55), width: 1.5),
             ),
           ),
           child: Column(
@@ -59,25 +63,32 @@ class ZzzLedMarquee extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(width: 20, height: 1, color: zzzRed.withValues(alpha: 0.6)),
+                  Container(
+                      width: 20,
+                      height: 1,
+                      color: zzz.accent.withValues(alpha: 0.6)),
                   Container(
                     width: 8,
                     height: 8,
                     margin: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
-                      color: zzzRed.withValues(alpha: 0.25),
+                      color: zzz.accent.withValues(alpha: 0.25),
                       shape: BoxShape.circle,
-                      border: Border.all(color: zzzRed.withValues(alpha: 0.7), width: 1.5),
+                      border: Border.all(
+                          color: zzz.accent.withValues(alpha: 0.7), width: 1.5),
                     ),
                   ),
-                  Container(width: 20, height: 1, color: zzzRed.withValues(alpha: 0.6)),
+                  Container(
+                      width: 20,
+                      height: 1,
+                      color: zzz.accent.withValues(alpha: 0.6)),
                 ],
               ),
               const SizedBox(height: 4),
               Text(
                 'ZEZ-TZDRIVER — $ds',
-                style: const TextStyle(
-                  color: zzzGreen,
+                style: TextStyle(
+                  color: zzz.signal,
                   fontSize: 10,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w700,
@@ -104,6 +115,7 @@ class ZzzSideArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zzz = context.zzz ?? ZzzThemeExtension.standard;
     return IgnorePointer(
       child: Stack(
         fit: StackFit.expand,
@@ -118,15 +130,15 @@ class ZzzSideArt extends StatelessWidget {
               errorBuilder: (_, __, ___) => const SizedBox.shrink(),
             ),
           ),
-          const DecoratedBox(
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
                 colors: [
-                  zzzBgColor,
-                  Color(0x990A0A0F),
-                  Color(0x000A0A0F),
+                  zzz.bg,
+                  const Color(0x990A0A0F),
+                  const Color(0x000A0A0F),
                 ],
               ),
             ),
@@ -159,6 +171,7 @@ class ZzzActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zzz = context.zzz ?? ZzzThemeExtension.standard;
     return InkWell(
       onTap: isLoading ? null : onPressed,
       borderRadius: BorderRadius.circular(14),
@@ -169,18 +182,18 @@ class ZzzActionButton extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              zzzGreen.withValues(alpha: 0.13),
-              zzzGreen.withValues(alpha: 0.05),
+              zzz.signal.withValues(alpha: 0.13),
+              zzz.signal.withValues(alpha: 0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: zzzGreen.withValues(alpha: 0.4),
+            color: zzz.signal.withValues(alpha: 0.4),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: zzzGreen.withValues(alpha: 0.1),
+              color: zzz.signal.withValues(alpha: 0.1),
               blurRadius: 6,
               spreadRadius: 0,
             ),
@@ -189,22 +202,22 @@ class ZzzActionButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: zzzGreen.withValues(alpha: 0.85)),
+            Icon(icon, size: 14, color: zzz.signal.withValues(alpha: 0.85)),
             const SizedBox(width: 4),
             if (isLoading)
-              const SizedBox(
+              SizedBox(
                 width: 12,
                 height: 12,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.5,
-                  color: zzzGreen,
+                  color: zzz.signal,
                 ),
               )
             else
               Text(
                 '> $label',
-                style: const TextStyle(
-                  color: zzzGreen,
+                style: TextStyle(
+                  color: zzz.signal,
                   fontSize: 10,
                   fontFamily: 'monospace',
                   fontWeight: FontWeight.w600,
@@ -232,6 +245,7 @@ class ZzzEditorButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zzz = context.zzz ?? ZzzThemeExtension.standard;
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(2),
@@ -239,19 +253,19 @@ class ZzzEditorButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: primary
-              ? zzzRed.withValues(alpha: 0.18)
-              : zzzGreen.withValues(alpha: 0.08),
+              ? zzz.accent.withValues(alpha: 0.18)
+              : zzz.signal.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(2),
           border: Border.all(
             color: primary
-                ? zzzRed.withValues(alpha: 0.55)
-                : zzzGreen.withValues(alpha: 0.35),
+                ? zzz.accent.withValues(alpha: 0.55)
+                : zzz.signal.withValues(alpha: 0.35),
           ),
         ),
         child: Text(
           '> $label',
           style: TextStyle(
-            color: primary ? zzzRed : zzzGreen,
+            color: primary ? zzz.accent : zzz.signal,
             fontSize: 12,
             fontFamily: 'monospace',
             fontWeight: FontWeight.w600,
@@ -294,7 +308,7 @@ class ZzzScanlinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0x0D00FF41)
+      ..color = const Color(0x0D50E3FF)
       ..strokeWidth = 1;
     for (double y = 0; y < size.height; y += 3) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);

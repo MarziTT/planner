@@ -10,6 +10,7 @@ from datetime import date, datetime, timedelta, time, timezone
 import pytest
 from app.extensions import db
 from app.models_habits import EventHistory, UserPattern
+from app.services.time_service import Clock
 from app.services.routine_service import (
     get_routine_today,
     get_standing_status,
@@ -20,17 +21,44 @@ from app.services.routine_service import (
 TZ = timezone(timedelta(hours=8))
 
 
+class FixedClock(Clock):
+    def __init__(self, now: datetime):
+        self._now = now
+
+    def now_utc(self) -> datetime:
+        return self._now.astimezone(timezone.utc)
+
+    def now_local(self) -> datetime:
+        return self._now
+
+
+@pytest.fixture(autouse=True)
+def fixed_clock(app_client):
+    app, _ = app_client
+    app.extensions["clock"] = FixedClock(datetime(2026, 7, 29, 10, 0, tzinfo=TZ))
+
+
+def _today(app_client) -> date:
+    app, _ = app_client
+    return app.extensions["clock"].now_local().date()
+
+
+def _now(app_client) -> datetime:
+    app, _ = app_client
+    return app.extensions["clock"].now_local()
+
+
 # ===========================================================================
 # get_routine_today
 # ===========================================================================
 
 
 class TestGetRoutineToday:
-    def test_default_routine(self, db_session, test_user):
+    def test_default_routine(self, app_client, db_session, test_user):
         """No learned pattern → use defaults (wake 7:30, sleep 23:30)."""
         result = get_routine_today(test_user.id)
 
-        assert result["date"] == date.today().isoformat()
+        assert result["date"] == _today(app_client).isoformat()
         assert result["wake_time"]["hour"] == 7
         assert result["wake_time"]["minute"] == 30
         assert result["wake_time"]["source"] == "default"
@@ -81,10 +109,10 @@ class TestGetRoutineToday:
 
 
 class TestRecordWake:
-    def test_auto_time(self, db_session, test_user):
+    def test_auto_time(self, app_client, db_session, test_user):
         """record_wake with no arg uses current time."""
         result = record_wake(test_user.id)
-        now = datetime.now(TZ)
+        now = _now(app_client)
         assert result["hour"] == now.hour
         assert result["minute"] == now.minute
 
@@ -173,9 +201,9 @@ class TestGetStandingStatus:
         assert status["today_skipped"] == 0
         assert status["auto_stopped"] is False
 
-    def test_with_events(self, db_session, test_user):
+    def test_with_events(self, app_client, db_session, test_user):
         """Events recorded today should be reflected."""
-        today_start = datetime.combine(date.today(), time(10, 0), tzinfo=TZ)
+        today_start = datetime.combine(_today(app_client), time(10, 0), tzinfo=TZ)
         e1 = EventHistory(
             event_id=None, user_id=test_user.id,
             notify_type="standing", planned_time=today_start,
@@ -194,9 +222,9 @@ class TestGetStandingStatus:
         assert status["today_total"] == 2
         assert status["today_skipped"] == 1
 
-    def test_auto_stop_after_5_consecutive_skips(self, db_session, test_user):
+    def test_auto_stop_after_5_consecutive_skips(self, app_client, db_session, test_user):
         """5 consecutive skips should trigger auto_stop."""
-        base = datetime.combine(date.today(), time(9, 0), tzinfo=TZ)
+        base = datetime.combine(_today(app_client), time(9, 0), tzinfo=TZ)
         for i in range(5):
             e = EventHistory(
                 event_id=None, user_id=test_user.id,
@@ -212,9 +240,9 @@ class TestGetStandingStatus:
         assert status["enabled"] is False
         assert status["consecutive_skips"] == 5
 
-    def test_no_auto_stop_with_interleaved_accept(self, db_session, test_user):
+    def test_no_auto_stop_with_interleaved_accept(self, app_client, db_session, test_user):
         """4 skips + 1 accept → should NOT auto-stop."""
-        base = datetime.combine(date.today(), time(9, 0), tzinfo=TZ)
+        base = datetime.combine(_today(app_client), time(9, 0), tzinfo=TZ)
         for i in range(4):
             e = EventHistory(
                 event_id=None, user_id=test_user.id,
@@ -236,9 +264,9 @@ class TestGetStandingStatus:
         assert status["auto_stopped"] is False
         assert status["enabled"] is True
 
-    def test_user_isolation(self, db_session, test_user, test_user2):
+    def test_user_isolation(self, app_client, db_session, test_user, test_user2):
         """User A's standing events shouldn't affect User B's status."""
-        today_start = datetime.combine(date.today(), time(10, 0), tzinfo=TZ)
+        today_start = datetime.combine(_today(app_client), time(10, 0), tzinfo=TZ)
         e = EventHistory(
             event_id=None, user_id=test_user.id,
             notify_type="standing", planned_time=today_start, skipped=True,

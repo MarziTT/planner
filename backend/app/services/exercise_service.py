@@ -15,6 +15,7 @@ from flask import current_app
 from ..extensions import db
 from ..models import User
 from ..models_habits import ExerciseRecord
+from .time_service import get_clock
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def get_current_mode(user: User) -> dict[str, Any]:
     end_date = getattr(user, "trainer_end_date", None)
 
     if mode == "trainer" and end_date is not None:
-        if end_date < datetime.now(timezone.utc).date():
+        if end_date < get_clock().now_utc().date():
             # Auto-switch back to self
             user.exercise_mode = "self"
             user.trainer_end_date = None
@@ -103,7 +104,7 @@ def create_record(
         source=source,
         calories=calories,
         steps=steps,
-        recorded_at=recorded_at or datetime.now(timezone.utc),
+        recorded_at=recorded_at or get_clock().now_utc(),
     )
     db.session.add(record)
     db.session.commit()
@@ -116,7 +117,7 @@ def get_today_summary(user_id: int) -> dict[str, Any]:
     Returns:
         Dict with date, total_minutes, total_calories, total_steps, records.
     """
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = get_clock().now_utc().replace(hour=0, minute=0, second=0, microsecond=0)
     records = (
         ExerciseRecord.query
         .filter_by(user_id=user_id)
@@ -147,7 +148,7 @@ def get_today_summary(user_id: int) -> dict[str, Any]:
 
 def get_history(user_id: int, days: int = 7) -> dict[str, Any]:
     """Get exercise history for the past N days."""
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = get_clock().now_utc() - timedelta(days=days)
     records = (
         ExerciseRecord.query
         .filter_by(user_id=user_id)

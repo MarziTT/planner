@@ -7,16 +7,15 @@ import 'package:flutter/material.dart';
 // Import this file instead of writing raw hex colors.
 // ============================================================
 
-// --- ZZZ Theme (cyberpunk / gaming aesthetics) ---
-// Refined: softer neon, better readability on dark bg.
-
-const kZzzBg = Color(0xFF0B0B12);
-const kZzzSurface = Color(0xFF12121C);
-const kZzzRed = Color(0xFFFF2D55);
-const kZzzGreen = Color(0xFF4ADE80);
-const kZzzGreenLight = Color(0xFFDCFCE7);
-const kZzzText = Color(0xFFE8E8F0);
-const kZzzSilver = Color(0xFF9E9EB8);
+// --- ZZZ Theme (original cyber-terminal palette) ---
+const kZzzBg = Color(0xFF080A10);
+const kZzzSurface = Color(0xFF111522);
+const kZzzRed = Color(0xFFFF2147);
+const kZzzSignal = Color(0xFF50E3FF);
+const kZzzGreen = kZzzSignal; // Backward-compatible alias for old widgets.
+const kZzzGreenLight = Color(0xFFF4F7FB);
+const kZzzText = Color(0xFFF4F7FB);
+const kZzzSilver = Color(0xFF6F7D91);
 
 // --- Weather Gradients ---
 const kWeatherSunnyStart = Color(0xFF3A4A5A);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/butler/butler_name_provider.dart';
+import '../../../core/butler/butler_persona.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../planner/state/planner_controller.dart';
 import '../domain/parse_result.dart';
@@ -181,8 +182,8 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
                 ? _buildEmptyState(isZzz, theme)
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: agentState.messages.length +
                         (_isLoadingStatus(agentState.status) ? 1 : 0),
                     itemBuilder: (context, index) {
@@ -226,6 +227,13 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
   }
 
   Widget _buildTopBar(bool isZzz, ColorScheme colorScheme, ThemeData theme) {
+    final persona = ButlerPersona.forTheme(
+      ref.watch(themeControllerProvider).preset,
+    );
+    final savedName = ref.watch(butlerNameProvider);
+    final displayName =
+        savedName == kDefaultButlerName ? persona.displayName : savedName;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -244,7 +252,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
           ),
           const SizedBox(width: 8),
           Text(
-            '${ref.watch(butlerNameProvider)} 管家',
+            '$displayName 管家',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
@@ -277,20 +285,15 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     _scrollToBottom();
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 6) return '夜深了';
-    if (hour < 9) return '早上好';
-    if (hour < 12) return '上午好';
-    if (hour < 14) return '中午好';
-    if (hour < 18) return '下午好';
-    return '晚上好';
-  }
-
   Widget _buildEmptyState(bool isZzz, ThemeData theme) {
     final colorScheme = theme.colorScheme;
     final primary = isZzz ? colorScheme.primary : colorScheme.primary;
-    final butlerName = ref.watch(butlerNameProvider);
+    final persona = ButlerPersona.forTheme(
+      ref.watch(themeControllerProvider).preset,
+    );
+    final savedName = ref.watch(butlerNameProvider);
+    final butlerName =
+        savedName == kDefaultButlerName ? persona.displayName : savedName;
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -317,7 +320,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
         ),
         const SizedBox(height: 16),
         Text(
-          '${_greeting()}，我是$butlerName',
+          '${persona.greeting} 我是$butlerName',
           textAlign: TextAlign.center,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w700,
@@ -407,63 +410,67 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
       ),
       child: SafeArea(
         top: false,
-        child: isListening ? _buildListeningBar(isZzz, theme, colorScheme) : Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _textController,
-                focusNode: _focusNode,
-                enabled: canInteract,
-                minLines: 1,
-                maxLines: 3,
-                textInputAction: TextInputAction.send,
-                cursorColor: isZzz ? colorScheme.primary : null,
-                style: TextStyle(color: colorScheme.onSurface),
-                onSubmitted: (_) => _handleSubmitText(),
-                decoration: InputDecoration(
-                  hintText: '打字输入你想做的...',
-                  hintStyle: TextStyle(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+        child: isListening
+            ? _buildListeningBar(isZzz, theme, colorScheme)
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      focusNode: _focusNode,
+                      enabled: canInteract,
+                      minLines: 1,
+                      maxLines: 3,
+                      textInputAction: TextInputAction.send,
+                      cursorColor: isZzz ? colorScheme.primary : null,
+                      style: TextStyle(color: colorScheme.onSurface),
+                      onSubmitted: (_) => _handleSubmitText(),
+                      decoration: InputDecoration(
+                        hintText: '打字输入你想做的...',
+                        hintStyle: TextStyle(
+                          color: colorScheme.onSurfaceVariant
+                              .withValues(alpha: 0.5),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(24),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surface,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        isDense: true,
+                      ),
+                    ),
                   ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
+                  const SizedBox(width: 8),
+                  _MicButton(
+                    isListening: isListening,
+                    canInteract: canInteract,
+                    isZzz: isZzz,
+                    onTap: _handleMicPress,
                   ),
-                  filled: true,
-                  fillColor: colorScheme.surface,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
-                  isDense: true,
-                ),
+                  const SizedBox(width: 8),
+                  IconButton.filled(
+                    onPressed:
+                        canInteract && _textController.text.trim().isNotEmpty
+                            ? _handleSubmitText
+                            : null,
+                    icon: const Icon(Icons.send_rounded, size: 20),
+                    style: IconButton.styleFrom(
+                      backgroundColor: colorScheme.primary,
+                      foregroundColor: colorScheme.onPrimary,
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 8),
-            _MicButton(
-              isListening: isListening,
-              canInteract: canInteract,
-              isZzz: isZzz,
-              onTap: _handleMicPress,
-            ),
-            const SizedBox(width: 8),
-            IconButton.filled(
-              onPressed: canInteract &&
-                      _textController.text.trim().isNotEmpty
-                  ? _handleSubmitText
-                  : null,
-              icon: const Icon(Icons.send_rounded, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 
-  Widget _buildListeningBar(bool isZzz, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildListeningBar(
+      bool isZzz, ThemeData theme, ColorScheme colorScheme) {
     return Row(
       children: [
         Expanded(
@@ -520,12 +527,9 @@ class _MicButton extends StatelessWidget {
       icon: Icon(isListening ? Icons.stop_rounded : Icons.mic_none_rounded,
           size: 22),
       style: IconButton.styleFrom(
-        backgroundColor: isListening
-            ? colorScheme.error
-            : colorScheme.primary,
-        foregroundColor: isListening
-            ? colorScheme.onError
-            : colorScheme.onPrimary,
+        backgroundColor: isListening ? colorScheme.error : colorScheme.primary,
+        foregroundColor:
+            isListening ? colorScheme.onError : colorScheme.onPrimary,
         minimumSize: const Size(48, 48),
       ),
     );
@@ -623,4 +627,3 @@ class _PulsingDotState extends State<_PulsingDot>
     );
   }
 }
-

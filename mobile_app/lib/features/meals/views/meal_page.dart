@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/cache/local_cache_service.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../../../widgets/stat_item.dart';
 import '../models/meal.dart';
 import '../services/meal_ocr.dart';
@@ -100,7 +101,7 @@ class _MealPageState extends ConsumerState<MealPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('识别失败：${result.reason ?? "请手动记录"}'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -135,7 +136,7 @@ class _MealPageState extends ConsumerState<MealPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('添加失败，请检查网络后重试'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -213,6 +214,7 @@ class _MealPageState extends ConsumerState<MealPage> {
   }
 
   Widget _buildStatsCard(ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     final summary = _summary;
     final totalKcal = summary?.totalCalories ?? 0;
     final weeklyAvg = summary?.weeklyAvgCalories ?? 0;
@@ -231,7 +233,9 @@ class _MealPageState extends ConsumerState<MealPage> {
               value: '$totalKcal',
               unit: '千卡',
               icon: Icons.local_fire_department,
-              color: totalKcal > 0 ? Colors.orange : theme.colorScheme.onSurface,
+              color: totalKcal > 0
+                  ? (zzz?.warning ?? Colors.orange)
+                  : theme.colorScheme.onSurface,
             ),
             Container(
               width: 1,
@@ -243,7 +247,7 @@ class _MealPageState extends ConsumerState<MealPage> {
               value: weeklyAvg > 0 ? '${weeklyAvg.toStringAsFixed(0)}' : '--',
               unit: '千卡',
               icon: Icons.show_chart,
-              color: theme.colorScheme.primary,
+              color: zzz?.signal ?? theme.colorScheme.primary,
             ),
           ],
         ),
@@ -252,6 +256,7 @@ class _MealPageState extends ConsumerState<MealPage> {
   }
 
   Widget _buildMealCard(ThemeData theme, MealType type) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     final record = _summary?.byType[type.apiValue] ?? null;
 
     return Card(
@@ -288,7 +293,7 @@ class _MealPageState extends ConsumerState<MealPage> {
             ? Text(
                 '· ${record.totalCalories} 千卡',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.orange.shade700,
+                  color: zzz?.warning ?? Colors.orange.shade700,
                   fontWeight: FontWeight.w600,
                 ),
               )

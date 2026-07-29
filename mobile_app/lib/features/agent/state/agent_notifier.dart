@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/voice/voice_output_service.dart';
 import '../../fast_capture/data/speech_capture_gateway.dart';
 import '../data/agent_repository.dart';
 import '../domain/agent_repository.dart' as domain;
@@ -14,7 +17,15 @@ final speechCaptureGatewayProvider = Provider<SpeechCaptureGateway>((ref) {
   );
 });
 
-enum AgentStatus { idle, listening, recognizing, parsing, confirming, done, error }
+enum AgentStatus {
+  idle,
+  listening,
+  recognizing,
+  parsing,
+  confirming,
+  done,
+  error
+}
 
 enum ChatMessageType { user, system, confirmCard, answerCard, error }
 
@@ -66,14 +77,17 @@ class AgentNotifier extends StateNotifier<AgentState> {
   AgentNotifier(
     this._repository,
     this._speechGateway,
+    this._voiceOutput,
   ) : super(const AgentState());
 
   final domain.AgentRepository _repository;
   final SpeechCaptureGateway? _speechGateway;
+  final VoiceOutputService _voiceOutput;
 
   static int _nextId = 0;
 
-  String _generateId() => 'msg_${++_nextId}_${DateTime.now().millisecondsSinceEpoch}';
+  String _generateId() =>
+      'msg_${++_nextId}_${DateTime.now().millisecondsSinceEpoch}';
 
   void startListening() {
     final gateway = _speechGateway;
@@ -215,6 +229,7 @@ class AgentNotifier extends StateNotifier<AgentState> {
         status: AgentStatus.done,
         errorMessage: null,
       );
+      unawaited(_voiceOutput.speak(answer));
     } on DioException {
       final errorMsg = ChatMessage(
         id: _generateId(),
@@ -251,6 +266,7 @@ class AgentNotifier extends StateNotifier<AgentState> {
         status: AgentStatus.done,
         errorMessage: null,
       );
+      unawaited(_voiceOutput.speak(summary));
       return true;
     } on DioException {
       final errorMsg = ChatMessage(
@@ -294,6 +310,7 @@ class AgentNotifier extends StateNotifier<AgentState> {
         status: AgentStatus.done,
         errorMessage: null,
       );
+      unawaited(_voiceOutput.speak('已安排：${result.eventName}'));
       return true;
     } on DioException {
       final errorMsg = ChatMessage(
@@ -347,5 +364,6 @@ final agentControllerProvider =
     StateNotifierProvider<AgentNotifier, AgentState>((ref) {
   final repository = ref.watch(agentRepositoryProvider);
   final gateway = ref.watch(speechCaptureGatewayProvider);
-  return AgentNotifier(repository, gateway);
+  final voiceOutput = ref.watch(voiceOutputProvider);
+  return AgentNotifier(repository, gateway, voiceOutput);
 });

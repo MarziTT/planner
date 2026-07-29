@@ -28,6 +28,7 @@ from ..services.meal_service import (
     get_weekly_average_calories,
     ocr_meal,
 )
+from ..services.time_service import get_clock
 from .common import auth_required, failure, success
 
 logger = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ def ocr_and_record():
     # Infer meal type from time if not given
     meal_type = (payload.get("meal_type") or "").strip()
     if not meal_type:
-        hour = datetime.now(timezone.utc).hour
+        hour = get_clock().now_local().hour
         if 6 <= hour < 10:
             meal_type = "breakfast"
         elif 11 <= hour < 14:

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../../updates/state/update_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/settings_controller.dart';
@@ -28,8 +29,7 @@ const _leadLabel = '提前提醒时间';
 const _voiceLabel = '语音录入';
 const _versionTitle = '版本与更新';
 const _checking = '正在检查更新…';
-const _resourceUpdateHint =
-    '资源主题、文案和装饰素材可以直接热更新；涉及 Flutter 逻辑和原生能力的改动仍然需要发新包。';
+const _resourceUpdateHint = '资源主题、文案和装饰素材可以直接热更新；涉及 Flutter 逻辑和原生能力的改动仍然需要发新包。';
 const _zzzPreviewTitle = '假面骑士 ZZZ 主题';
 const _zzzPreviewBody = '文字固定在高对比信息区，GIF 只做下方装饰，不再影响可读性。';
 
@@ -56,399 +56,386 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final zzz = context.zzz;
     final themeState = ref.watch(themeControllerProvider);
     final themeController = ref.read(themeControllerProvider.notifier);
     final settingsState = ref.watch(settingsControllerProvider);
     final updateInfo = ref.watch(updateControllerProvider).info;
     final settings = settingsState.settings;
-    final isZzz =
-        themeState.preset == PlannerThemePreset.kamenRiderZzz;
+    final isZzz = themeState.preset == PlannerThemePreset.kamenRiderZzz;
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            // 保存加载指示器
-            if (settingsState.loading)
-              LinearProgressIndicator(
-                minHeight: 2,
-                valueColor: AlwaysStoppedAnimation(
-                  isZzz
-                      ? const Color(0xFF00FF41)
-                      : Theme.of(context).colorScheme.primary,
-                ),
-                backgroundColor: isZzz
-                    ? const Color(0xFF00FF41).withValues(alpha: 0.08)
-                    : null,
+    return Stack(children: [
+      Column(
+        children: [
+          // 保存加载指示器
+          if (settingsState.loading)
+            LinearProgressIndicator(
+              minHeight: 2,
+              valueColor: AlwaysStoppedAnimation(
+                isZzz
+                    ? (zzz?.signal ?? theme.colorScheme.primary)
+                    : theme.colorScheme.primary,
               ),
-            Expanded(
-              child: Container(
-                color: isZzz ? const Color(0xFF0A0A0F) : null,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Text(
-                _pageTitle,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: isZzz ? const Color(0xFFE0F0E0) : null,
-                ),
-          ),
-          const SizedBox(height: 12),
-          const _ButlerNameCard(),
-          const SizedBox(height: 12),
-          Card(
-            color: isZzz ? const Color(0xFF0D0B12) : null,
-            shape: isZzz
-                ? RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Color(0xFF00FF41)),
-                  )
-                : null,
-            elevation: isZzz ? 4 : null,
-            shadowColor: isZzz
-                ? const Color(0xFF00FF41).withValues(alpha: 0.12)
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              backgroundColor: isZzz
+                  ? (zzz?.signal ?? theme.colorScheme.primary)
+                      .withValues(alpha: 0.08)
+                  : null,
+            ),
+          Expanded(
+            child: Container(
+              color: isZzz ? zzz?.bg : null,
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  DropdownButtonFormField<PlannerThemePreset>(
-                    initialValue: themeState.preset,
-                    decoration: InputDecoration(
-                      labelText: _presetLabel,
-                      fillColor: isZzz
-                          ? const Color(0xFF0D0B12)
-                          : null,
-                      filled: isZzz ? true : null,
-                      focusedBorder: isZzz
-                          ? const OutlineInputBorder(
-                              borderSide:
-                                  BorderSide(color: Color(0xFF00FF41)))
-                          : null,
+                  Text(
+                    _pageTitle,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: isZzz ? zzz?.textPrimary : null,
                     ),
-                    items: themeState.availablePresets
-                        .map(
-                          (preset) => DropdownMenuItem(
-                            value: preset,
-                            child: Text(_labelOf(preset),
-                                style: isZzz
-                                    ? const TextStyle(color: Color(0xFFE0F0E0))
-                                    : null),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) async {
-                      if (value == null || settings == null) return;
-                      if (value == themeState.preset) return;
-                      themeController.switchPreset(value);
-                      await ref
-                          .read(settingsControllerProvider.notifier)
-                          .save(
-                            settings.copyWith(theme: value.name),
-                          );
-                    },
                   ),
-                  if (themeState.preset ==
-                      PlannerThemePreset.kamenRiderZzz) ...[
-                    const SizedBox(height: 14),
-                    const _ZzzThemePreview(),
-                  ],
                   const SizedBox(height: 12),
-                  SegmentedButton<ThemeMode>(
-                    segments: [
-                      ButtonSegment(
-                          value: ThemeMode.system,
-                          label: Text(_modeSystem,
-                              style: isZzz
-                                  ? const TextStyle(
-                                      color: Color(0xFFE0F0E0))
-                                  : null)),
-                      ButtonSegment(
-                          value: ThemeMode.light,
-                          label: Text(_modeLight,
-                              style: isZzz
-                                  ? const TextStyle(
-                                      color: Color(0xFFE0F0E0))
-                                  : null)),
-                      ButtonSegment(
-                          value: ThemeMode.dark,
-                          label: Text(_modeDark,
-                              style: isZzz
-                                  ? const TextStyle(
-                                      color: Color(0xFFE0F0E0))
-                                  : null)),
-                    ],
-                    selected: {themeState.mode},
-                    style: isZzz
-                        ? ButtonStyle(
-                            backgroundColor:
-                                WidgetStateProperty.resolveWith((states) {
-                              if (states
-                                  .contains(WidgetState.selected)) {
-                                return const Color(0xFF00FF41)
-                                    .withValues(alpha: 0.2);
-                              }
-                              return null;
-                            }),
+                  const _ButlerNameCard(),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: isZzz ? zzz?.surface : null,
+                    shape: isZzz
+                        ? RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                                color: zzz?.borderStrong ??
+                                    theme.colorScheme.primary),
                           )
                         : null,
-                    onSelectionChanged: (value) async {
-                      final selected = value.first;
-                      if (selected == themeState.mode) return;
-                      themeController.setThemeMode(selected);
-                      if (settings == null) return;
-                      await ref
-                          .read(settingsControllerProvider.notifier)
-                          .save(
-                            settings.copyWith(
-                                themeMode: selected.name),
-                          );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    initialValue: settings?.updateChannel ?? 'stable',
-                    decoration: InputDecoration(
-                      labelText: _channelLabel,
-                      fillColor: isZzz
-                          ? const Color(0xFF0D0B12)
-                          : null,
-                      filled: isZzz ? true : null,
-                      focusedBorder: isZzz
-                          ? const OutlineInputBorder(
-                              borderSide:
-                                  BorderSide(color: Color(0xFF00FF41)))
-                          : null,
-                    ),
-                    items: [
-                      DropdownMenuItem(
-                          value: 'stable',
-                          child: Text(_stableLabel,
-                              style: isZzz
-                                  ? const TextStyle(color: Color(0xFFE0F0E0))
-                                  : null)),
-                      DropdownMenuItem(
-                          value: 'beta',
-                          child: Text(_betaLabel,
-                              style: isZzz
-                                  ? const TextStyle(color: Color(0xFFE0F0E0))
-                                  : null)),
-                    ],
-                    onChanged: settings == null
-                        ? null
-                        : (value) async {
-                            if (value == null) return;
-                            if (value == settings.updateChannel) return;
-                            await ref
-                                .read(
-                                    settingsControllerProvider.notifier)
-                                .save(
-                                  settings.copyWith(
-                                      updateChannel: value),
-                                );
-                          },
-                  ),
-                  const SizedBox(height: 16),
-                  SwitchListTile(
-                    value: settings?.notificationsEnabled ?? true,
-                    activeColor: isZzz
-                        ? const Color(0xFF00FF41)
-                        : null,
-                    onChanged: settings == null
-                        ? null
-                        : (value) => ref
-                            .read(settingsControllerProvider.notifier)
-                            .updateNotifications(enabled: value),
-                    title: Text(_notifyTitle,
-                        style: isZzz
-                            ? const TextStyle(color: Color(0xFFE0F0E0))
-                            : null),
-                    subtitle: Text(_notifySubtitle,
-                        style: isZzz
-                            ? const TextStyle(color: Color(0xFFC8C8D8))
-                            : null),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<int>(
-                    initialValue:
-                        settings?.notificationsLeadMinutes ?? 15,
-                    decoration: InputDecoration(
-                      labelText: _leadLabel,
-                      fillColor: isZzz
-                          ? const Color(0xFF0D0B12)
-                          : null,
-                      filled: isZzz ? true : null,
-                      focusedBorder: isZzz
-                          ? const OutlineInputBorder(
-                              borderSide:
-                                  BorderSide(color: Color(0xFF00FF41)))
-                          : null,
-                    ),
-                    items: _notificationLeadOptions
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text('提前 $value 分钟',
+                    elevation: isZzz ? 4 : null,
+                    shadowColor: isZzz ? zzz?.borderGlow : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          DropdownButtonFormField<PlannerThemePreset>(
+                            initialValue: themeState.preset,
+                            decoration: InputDecoration(
+                              labelText: _presetLabel,
+                              fillColor: isZzz ? zzz?.surface : null,
+                              filled: isZzz ? true : null,
+                              focusedBorder: isZzz
+                                  ? OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                          color: zzz?.signal ??
+                                              theme.colorScheme.primary))
+                                  : null,
+                            ),
+                            items: themeState.availablePresets
+                                .map(
+                                  (preset) => DropdownMenuItem(
+                                    value: preset,
+                                    child: Text(_labelOf(preset),
+                                        style: isZzz
+                                            ? TextStyle(color: zzz?.textPrimary)
+                                            : null),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) async {
+                              if (value == null || settings == null) return;
+                              if (value == themeState.preset) return;
+                              themeController.switchPreset(value);
+                              await ref
+                                  .read(settingsControllerProvider.notifier)
+                                  .save(
+                                    settings.copyWith(theme: value.name),
+                                  );
+                            },
+                          ),
+                          if (themeState.preset ==
+                              PlannerThemePreset.kamenRiderZzz) ...[
+                            const SizedBox(height: 14),
+                            const _ZzzThemePreview(),
+                          ],
+                          const SizedBox(height: 12),
+                          SegmentedButton<ThemeMode>(
+                            segments: [
+                              ButtonSegment(
+                                  value: ThemeMode.system,
+                                  label: Text(_modeSystem,
+                                      style: isZzz
+                                          ? TextStyle(color: zzz?.textPrimary)
+                                          : null)),
+                              ButtonSegment(
+                                  value: ThemeMode.light,
+                                  label: Text(_modeLight,
+                                      style: isZzz
+                                          ? TextStyle(color: zzz?.textPrimary)
+                                          : null)),
+                              ButtonSegment(
+                                  value: ThemeMode.dark,
+                                  label: Text(_modeDark,
+                                      style: isZzz
+                                          ? TextStyle(color: zzz?.textPrimary)
+                                          : null)),
+                            ],
+                            selected: {themeState.mode},
+                            style: isZzz
+                                ? ButtonStyle(
+                                    backgroundColor:
+                                        WidgetStateProperty.resolveWith(
+                                            (states) {
+                                      if (states
+                                          .contains(WidgetState.selected)) {
+                                        return zzz?.signal
+                                            .withValues(alpha: 0.2);
+                                      }
+                                      return null;
+                                    }),
+                                  )
+                                : null,
+                            onSelectionChanged: (value) async {
+                              final selected = value.first;
+                              if (selected == themeState.mode) return;
+                              themeController.setThemeMode(selected);
+                              if (settings == null) return;
+                              await ref
+                                  .read(settingsControllerProvider.notifier)
+                                  .save(
+                                    settings.copyWith(themeMode: selected.name),
+                                  );
+                            },
+                          ),
+                          const SizedBox(height: 16),
+                          DropdownButtonFormField<String>(
+                            initialValue: settings?.updateChannel ?? 'stable',
+                            decoration: InputDecoration(
+                              labelText: _channelLabel,
+                              fillColor: isZzz ? zzz?.surface : null,
+                              filled: isZzz ? true : null,
+                              focusedBorder: isZzz
+                                  ? OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                          color: zzz?.signal ??
+                                              theme.colorScheme.primary))
+                                  : null,
+                            ),
+                            items: [
+                              DropdownMenuItem(
+                                  value: 'stable',
+                                  child: Text(_stableLabel,
+                                      style: isZzz
+                                          ? TextStyle(color: zzz?.textPrimary)
+                                          : null)),
+                              DropdownMenuItem(
+                                  value: 'beta',
+                                  child: Text(_betaLabel,
+                                      style: isZzz
+                                          ? TextStyle(color: zzz?.textPrimary)
+                                          : null)),
+                            ],
+                            onChanged: settings == null
+                                ? null
+                                : (value) async {
+                                    if (value == null) return;
+                                    if (value == settings.updateChannel) return;
+                                    await ref
+                                        .read(
+                                            settingsControllerProvider.notifier)
+                                        .save(
+                                          settings.copyWith(
+                                              updateChannel: value),
+                                        );
+                                  },
+                          ),
+                          const SizedBox(height: 16),
+                          SwitchListTile(
+                            value: settings?.notificationsEnabled ?? true,
+                            activeThumbColor: isZzz ? zzz?.signal : null,
+                            onChanged: settings == null
+                                ? null
+                                : (value) => ref
+                                    .read(settingsControllerProvider.notifier)
+                                    .updateNotifications(enabled: value),
+                            title: Text(_notifyTitle,
                                 style: isZzz
-                                    ? const TextStyle(color: Color(0xFFE0F0E0))
+                                    ? TextStyle(color: zzz?.textPrimary)
+                                    : null),
+                            subtitle: Text(_notifySubtitle,
+                                style: isZzz
+                                    ? TextStyle(color: zzz?.textSecondary)
                                     : null),
                           ),
-                        )
-                        .toList(),
-                    onChanged:
-                        settings == null || !(settings.notificationsEnabled)
-                            ? null
-                            : (value) async {
-                                if (value == null) return;
-                                if (value == settings.notificationsLeadMinutes) return;
-                                await ref
-                                    .read(settingsControllerProvider
-                                        .notifier)
-                                    .updateNotifications(
-                                      enabled:
-                                          settings.notificationsEnabled,
-                                      leadMinutes: value,
-                                    );
-                              },
-                  ),
-                  const SizedBox(height: 16),
-                  SwitchListTile(
-                    value: settings?.voiceEnabled ?? true,
-                    activeColor: isZzz
-                        ? const Color(0xFF00FF41)
-                        : null,
-                    onChanged: settings == null
-                        ? null
-                        : (value) => ref
-                            .read(settingsControllerProvider.notifier)
-                            .save(
-                              settings.copyWith(voiceEnabled: value),
+                          const SizedBox(height: 8),
+                          DropdownButtonFormField<int>(
+                            initialValue:
+                                settings?.notificationsLeadMinutes ?? 15,
+                            decoration: InputDecoration(
+                              labelText: _leadLabel,
+                              fillColor: isZzz ? zzz?.surface : null,
+                              filled: isZzz ? true : null,
+                              focusedBorder: isZzz
+                                  ? OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                          color: zzz?.signal ??
+                                              theme.colorScheme.primary))
+                                  : null,
                             ),
-                    title: Text(_voiceLabel,
-                        style: isZzz
-                            ? const TextStyle(color: Color(0xFFE0F0E0))
-                            : null),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _WeatherToneEntryCard(isZzz: isZzz),
-          const SizedBox(height: 12),
-          Card(
-            color: isZzz ? const Color(0xFF0D0B12) : null,
-            shape: isZzz
-                ? RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: const BorderSide(color: Color(0xFF00FF41)),
-                  )
-                : null,
-            elevation: isZzz ? 4 : null,
-            shadowColor: isZzz
-                ? const Color(0xFF00FF41).withValues(alpha: 0.12)
-                : null,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _versionTitle,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(
-                          color: isZzz
-                              ? const Color(0xFFE0F0E0)
-                              : null,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    updateInfo == null
-                        ? _checking
-                        : '最新版本 ${updateInfo.version} (${updateInfo.buildNumber})',
-                    style: TextStyle(
-                      color: isZzz
-                          ? const Color(0xFFE0F0E0)
-                          : null,
+                            items: _notificationLeadOptions
+                                .map(
+                                  (value) => DropdownMenuItem(
+                                    value: value,
+                                    child: Text('提前 $value 分钟',
+                                        style: isZzz
+                                            ? TextStyle(color: zzz?.textPrimary)
+                                            : null),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: settings == null ||
+                                    !(settings.notificationsEnabled)
+                                ? null
+                                : (value) async {
+                                    if (value == null) return;
+                                    if (value ==
+                                        settings.notificationsLeadMinutes)
+                                      return;
+                                    await ref
+                                        .read(
+                                            settingsControllerProvider.notifier)
+                                        .updateNotifications(
+                                          enabled:
+                                              settings.notificationsEnabled,
+                                          leadMinutes: value,
+                                        );
+                                  },
+                          ),
+                          const SizedBox(height: 16),
+                          SwitchListTile(
+                            value: settings?.voiceEnabled ?? true,
+                            activeThumbColor: isZzz ? zzz?.signal : null,
+                            onChanged: settings == null
+                                ? null
+                                : (value) => ref
+                                    .read(settingsControllerProvider.notifier)
+                                    .save(
+                                      settings.copyWith(voiceEnabled: value),
+                                    ),
+                            title: Text(_voiceLabel,
+                                style: isZzz
+                                    ? TextStyle(color: zzz?.textPrimary)
+                                    : null),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _resourceUpdateHint,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(
-                          color: isZzz
-                              ? const Color(0xFFC8C8D8)
-                              : null,
-                        ),
-                  ),
-                  if (updateInfo != null &&
-                      updateInfo.releaseNotes.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    ...updateInfo.releaseNotes.take(3).map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Text(
-                              '• $item',
-                              style: TextStyle(
-                                color: isZzz
-                                    ? const Color(0xFFE0F0E0)
-                                    : null,
-                              ),
+                  const SizedBox(height: 12),
+                  _WeatherToneEntryCard(isZzz: isZzz),
+                  const SizedBox(height: 12),
+                  Card(
+                    color: isZzz ? zzz?.surface : null,
+                    shape: isZzz
+                        ? RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                                color: zzz?.borderStrong ??
+                                    theme.colorScheme.primary),
+                          )
+                        : null,
+                    elevation: isZzz ? 4 : null,
+                    shadowColor: isZzz ? zzz?.borderGlow : null,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _versionTitle,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: isZzz ? zzz?.textPrimary : null,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Text(
+                            updateInfo == null
+                                ? _checking
+                                : '最新版本 ${updateInfo.version} (${updateInfo.buildNumber})',
+                            style: TextStyle(
+                              color: isZzz ? zzz?.textPrimary : null,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _resourceUpdateHint,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: isZzz ? zzz?.textSecondary : null,
+                            ),
+                          ),
+                          if (updateInfo != null &&
+                              updateInfo.releaseNotes.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            ...updateInfo.releaseNotes.take(3).map(
+                                  (item) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 4),
+                                    child: Text(
+                                      '• $item',
+                                      style: TextStyle(
+                                        color: isZzz ? zzz?.textPrimary : null,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (settingsState.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.error_outline,
+                              size: 18,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              settingsState.errorMessage!,
+                              style: TextStyle(
+                                  color: isZzz
+                                      ? zzz?.danger
+                                      : Theme.of(context).colorScheme.error),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => ref
+                                .read(settingsControllerProvider.notifier)
+                                .load(),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            child: const Text('重试'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ],
-              ),
-            ),
-          ),
-          if (settingsState.errorMessage != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.errorContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, size: 18,
-                    color: Theme.of(context).colorScheme.onErrorContainer),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      settingsState.errorMessage!,
-                      style: TextStyle(
-                        color: isZzz
-                            ? const Color(0xFFFF1744)
-                            : Theme.of(context).colorScheme.error),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => ref.read(settingsControllerProvider.notifier).load(),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    child: const Text('重试'),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-        ), // ListView
-      ), // Container
-    ), // Expanded
-  ], // Column children
-        ), // Column
+              ), // ListView
+            ), // Container
+          ), // Expanded
+        ], // Column children
+      ), // Column
       if (isZzz)
         Positioned(
           right: 0,
@@ -486,13 +473,15 @@ class _ZzzThemePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFF08090D),
+        color: zzz?.surfaceLow,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: const Color(0xFFE53935).withValues(alpha: 0.55)),
+            color: (zzz?.accent ?? theme.colorScheme.primary)
+                .withValues(alpha: 0.55)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,7 +490,7 @@ class _ZzzThemePreview extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFAFAFA),
+              color: zzz?.surfaceHigh,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -510,7 +499,7 @@ class _ZzzThemePreview extends StatelessWidget {
                 Text(
                   _zzzPreviewTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: const Color(0xFF101114),
+                    color: zzz?.textPrimary,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -518,7 +507,7 @@ class _ZzzThemePreview extends StatelessWidget {
                 Text(
                   _zzzPreviewBody,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFF3B3D45),
+                    color: zzz?.textSecondary,
                     height: 1.35,
                   ),
                 ),
@@ -541,11 +530,11 @@ class _ZzzThemePreview extends StatelessWidget {
                         fit: BoxFit.cover,
                         gaplessPlayback: true,
                         errorBuilder: (_, __, ___) => Container(
-                          color: const Color(0xFF191B22),
+                          color: zzz?.surface,
                           alignment: Alignment.center,
-                          child: const Icon(
+                          child: Icon(
                             Icons.bolt_rounded,
-                            color: Color(0xFFE53935),
+                            color: zzz?.accent ?? theme.colorScheme.primary,
                           ),
                         ),
                       ),
@@ -601,16 +590,18 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     final isZzz = ref.watch(themeControllerProvider).preset ==
         PlannerThemePreset.kamenRiderZzz;
     final currentName = ref.watch(butlerNameProvider);
 
     return Card(
-      color: isZzz ? const Color(0xFF0D0B12) : null,
+      color: isZzz ? zzz?.surface : null,
       shape: isZzz
           ? RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: Color(0xFF00FF41)),
+              side: BorderSide(
+                  color: zzz?.borderStrong ?? theme.colorScheme.primary),
             )
           : null,
       child: Padding(
@@ -622,13 +613,11 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
               children: [
                 Icon(Icons.workspace_premium_outlined,
                     size: 20,
-                    color: isZzz
-                        ? const Color(0xFF00FF41)
-                        : theme.colorScheme.primary),
+                    color: isZzz ? zzz?.signal : theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text('我的管家',
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: isZzz ? const Color(0xFFE0F0E0) : null,
+                      color: isZzz ? zzz?.textPrimary : null,
                     )),
               ],
             ),
@@ -636,9 +625,7 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
             Text(
               '给管家起个名字，它会出现在对话面板、问候语和提醒里。',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: isZzz
-                    ? const Color(0xFF00FF41)
-                    : theme.colorScheme.onSurfaceVariant,
+                color: isZzz ? zzz?.signal : theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
@@ -648,9 +635,7 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
                   child: TextField(
                     controller: _controller,
                     maxLength: 12,
-                    style: isZzz
-                        ? const TextStyle(color: Color(0xFFE0F0E0))
-                        : null,
+                    style: isZzz ? TextStyle(color: zzz?.textPrimary) : null,
                     decoration: InputDecoration(
                       labelText: '管家名字',
                       hintText: '比如：贾维斯、阿福、小D',
@@ -696,31 +681,33 @@ class _WeatherToneEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
 
     return Card(
-      color: isZzz ? const Color(0xFF0D0B12) : null,
+      color: isZzz ? zzz?.surface : null,
       shape: isZzz
           ? RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: Color(0xFF00FF41)),
+              side: BorderSide(
+                  color: zzz?.borderStrong ?? theme.colorScheme.primary),
             )
           : null,
       child: ListTile(
         title: Text(
           '天气管家语气',
           style: TextStyle(
-            color: isZzz ? const Color(0xFFE0F0E0) : null,
+            color: isZzz ? zzz?.textPrimary : null,
           ),
         ),
         subtitle: Text(
           '自定义天气管家的说话风格',
           style: TextStyle(
-            color: isZzz ? const Color(0xFFC8C8D8) : null,
+            color: isZzz ? zzz?.textSecondary : null,
           ),
         ),
         trailing: Icon(
           Icons.chevron_right,
-          color: isZzz ? const Color(0xFF6A6A7A) : null,
+          color: isZzz ? zzz?.textTertiary : null,
         ),
         onTap: () {
           Navigator.of(context).push(

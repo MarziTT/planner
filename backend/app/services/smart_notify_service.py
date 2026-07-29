@@ -29,10 +29,11 @@ from ..models_habits import (
     NotifyPreference,
     UserPattern,
 )
+from .time_service import SHANGHAI_TZ, get_clock
 
 logger = logging.getLogger(__name__)
 
-TZ = timezone(timedelta(hours=8))
+TZ = SHANGHAI_TZ
 
 # ── Insight priority thresholds ──────────────────────────────────────────
 WAKE_DEVIATION_THRESHOLD_MINUTES = 30
@@ -52,7 +53,7 @@ def generate_insights(user_id: int) -> dict[str, Any]:
     """
     patterns = _load_patterns(user_id)
     prefs = _load_preferences(user_id)
-    now = datetime.now(TZ)
+    now = get_clock().now_local()
 
     insights: list[dict[str, Any]] = []
 
@@ -100,7 +101,7 @@ def get_notify_history(
     limit: int = 50,
 ) -> dict[str, Any]:
     """Return notification history entries for *user_id*."""
-    cutoff = datetime.now(TZ) - timedelta(days=days)
+    cutoff = get_clock().now_local() - timedelta(days=days)
 
     q = (
         EventHistory.query

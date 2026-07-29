@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'zzz_theme_extension.dart';
 
@@ -34,7 +34,8 @@ class PlannerPalette extends ThemeExtension<PlannerPalette> {
   PlannerPalette lerp(ThemeExtension<PlannerPalette>? other, double t) {
     if (other is! PlannerPalette) return this;
     return PlannerPalette(
-      surfaceMuted: Color.lerp(surfaceMuted, other.surfaceMuted, t) ?? surfaceMuted,
+      surfaceMuted:
+          Color.lerp(surfaceMuted, other.surfaceMuted, t) ?? surfaceMuted,
       brand: Color.lerp(brand, other.brand, t) ?? brand,
       success: Color.lerp(success, other.success, t) ?? success,
       warning: Color.lerp(warning, other.warning, t) ?? warning,
@@ -49,33 +50,127 @@ class AppThemeBuilder {
     required Color surfaceMuted,
     ZzzThemeExtension? zzzTheme,
   }) {
-    final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+    final baseScheme = ColorScheme.fromSeed(
+      seedColor: seed,
+      brightness: brightness,
+    );
+    final scheme = zzzTheme == null
+        ? baseScheme
+        : baseScheme.copyWith(
+            primary: zzzTheme.accent,
+            onPrimary: zzzTheme.textPrimary,
+            primaryContainer: zzzTheme.accentDeep,
+            onPrimaryContainer: zzzTheme.textPrimary,
+            secondary: zzzTheme.signal,
+            onSecondary: zzzTheme.bg,
+            secondaryContainer: zzzTheme.surfaceHigh,
+            onSecondaryContainer: zzzTheme.textPrimary,
+            tertiary: zzzTheme.success,
+            onTertiary: zzzTheme.bg,
+            surface: zzzTheme.bg,
+            surfaceContainerLowest: zzzTheme.bg,
+            surfaceContainerLow: zzzTheme.surfaceLow,
+            surfaceContainer: zzzTheme.surface,
+            surfaceContainerHigh: zzzTheme.surfaceHigh,
+            surfaceContainerHighest: zzzTheme.surfaceHigh,
+            onSurface: zzzTheme.textPrimary,
+            onSurfaceVariant: zzzTheme.textSecondary,
+            outline: zzzTheme.borderStrong,
+            outlineVariant: zzzTheme.borderColor,
+            error: zzzTheme.danger,
+            onError: zzzTheme.textPrimary,
+          );
     final isDark = brightness == Brightness.dark;
-    final popupBg = isDark ? const Color(0xFF15151F) : null;
-    final popupSurface = isDark ? const Color(0xFF1A1A2E) : null;
+    final popupBg =
+        zzzTheme?.surfaceLow ?? (isDark ? const Color(0xFF15151F) : null);
+    final popupSurface =
+        zzzTheme?.surface ?? (isDark ? const Color(0xFF1A1A2E) : null);
+    final cardColor = zzzTheme?.surface ?? scheme.surfaceContainerLow;
+    final cardShape = zzzTheme?.cardShape ??
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8));
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: zzzTheme?.bg ?? scheme.surface,
+      fontFamily: zzzTheme?.terminalFontFamily,
       appBarTheme: AppBarTheme(
-        backgroundColor: scheme.surface,
+        backgroundColor: zzzTheme?.surface ?? scheme.surface,
         foregroundColor: scheme.onSurface,
         elevation: 0,
+        centerTitle: zzzTheme != null,
       ),
       cardTheme: CardThemeData(
-        color: scheme.surfaceContainerLow,
-        elevation: 0,
+        color: cardColor,
+        elevation: zzzTheme?.cardElevation ?? 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        shape: cardShape,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceMuted,
+        fillColor: zzzTheme?.surfaceLow ?? surfaceMuted,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(zzzTheme?.cardBorderRadius ?? 12),
+          borderSide: BorderSide(
+            color: zzzTheme?.borderColor ?? Colors.transparent,
+          ),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(zzzTheme?.cardBorderRadius ?? 12),
+          borderSide: BorderSide(
+            color: zzzTheme?.borderColor ?? Colors.transparent,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(zzzTheme?.cardBorderRadius ?? 12),
+          borderSide: BorderSide(
+            color: zzzTheme?.signal ?? scheme.primary,
+            width: zzzTheme == null ? 1 : 1.5,
+          ),
+        ),
+      ),
+      dividerTheme: DividerThemeData(
+        color: zzzTheme?.borderColor ?? scheme.outlineVariant,
+        thickness: zzzTheme == null ? null : 1,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: zzzTheme?.accent,
+          foregroundColor: zzzTheme?.textPrimary,
+          elevation: zzzTheme?.cardElevation ?? 1,
+          shape: zzzTheme?.cardShape,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: zzzTheme?.signal,
+          side: zzzTheme == null
+              ? null
+              : BorderSide(color: zzzTheme.borderStrong),
+          shape: zzzTheme?.cardShape,
+        ),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: zzzTheme?.signal ?? scheme.primary,
+        linearTrackColor: zzzTheme?.surfaceHigh,
+        circularTrackColor: zzzTheme?.surfaceHigh,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: zzzTheme?.surfaceHigh,
+        contentTextStyle:
+            zzzTheme == null ? null : TextStyle(color: zzzTheme.textPrimary),
+        actionTextColor: zzzTheme?.signal,
+        shape: zzzTheme?.cardShape,
+        behavior: SnackBarBehavior.floating,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: zzzTheme?.surface,
+        indicatorColor: zzzTheme?.accentDeep,
+        labelTextStyle: zzzTheme == null
+            ? null
+            : WidgetStatePropertyAll(
+                TextStyle(color: zzzTheme.textSecondary),
+              ),
       ),
       menuTheme: MenuThemeData(
         style: MenuStyle(
@@ -92,7 +187,8 @@ class AppThemeBuilder {
           ? DialogThemeData(
               backgroundColor: popupSurface,
               surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
             )
           : null,
       datePickerTheme: isDark
@@ -110,9 +206,9 @@ class AppThemeBuilder {
       extensions: [
         PlannerPalette(
           surfaceMuted: surfaceMuted,
-          brand: seed,
-          success: const Color(0xFF2C9A68),
-          warning: const Color(0xFFF59E0B),
+          brand: zzzTheme?.accent ?? seed,
+          success: zzzTheme?.success ?? const Color(0xFF2C9A68),
+          warning: zzzTheme?.warning ?? const Color(0xFFF59E0B),
         ),
         if (zzzTheme != null) zzzTheme,
       ],

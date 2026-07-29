@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import datetime, time
 from typing import Any
 
 from ..extensions import db
@@ -20,10 +20,11 @@ from ..models_habits import ExerciseRecord, MealRecord, UserPattern
 from ..services.exercise_service import get_today_summary as _exercise_today
 from ..services.meal_service import get_daily_summary as _meals_summary
 from ..services.routine_service import get_routine_today as _routine_today
+from ..services.time_service import SHANGHAI_TZ, get_clock
 
 logger = logging.getLogger(__name__)
 
-TZ = timezone(timedelta(hours=8))
+TZ = SHANGHAI_TZ
 
 
 def get_dashboard_overview(user_id: int, lat: float | None = None, lon: float | None = None) -> dict[str, Any]:
@@ -32,7 +33,7 @@ def get_dashboard_overview(user_id: int, lat: float | None = None, lon: float | 
     Returns a dictionary with keys:
         date, schedule, weather, routine, meals, exercise, transit, pattern_announcement
     """
-    today = date.today()
+    today = get_clock().now_local().date()
     today_start = datetime.combine(today, time(0, 0), tzinfo=TZ)
     today_end = datetime.combine(today, time(23, 59, 59), tzinfo=TZ)
 
@@ -74,8 +75,8 @@ def _get_schedule_snapshot(user_id: int, today_start: datetime, today_end: datet
         .filter(
             Todo.user_id == user_id,
             Todo.completed == False,
-            Todo.due_date <= date.today(),
-            Todo.due_date >= date.today(),
+            Todo.due_date <= today_start.date(),
+            Todo.due_date >= today_start.date(),
         )
         .count()
     )
@@ -205,7 +206,7 @@ def _get_transit_snapshot(user_id: int, today_start: datetime, today_end: dateti
         .all()
     )
 
-    now = datetime.now(TZ)
+    now = get_clock().now_local()
     trips = []
     for t in recent_transit:
         delta = t.planned_time - now

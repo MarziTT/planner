@@ -2,8 +2,6 @@
 
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from app.extensions import db
 from app.models import Event, User
 from app.models_habits import ExerciseRecord, MealRecord, UserPattern
@@ -27,7 +25,13 @@ class TestSceneCheck:
         resp = client.get("/api/v1/scene/check")
         assert resp.status_code == 401
 
-    def test_returns_empty_cards_for_new_user(self, app_client, auth_headers):
+    def test_returns_no_unexpected_cards_for_new_user(self, app_client, auth_headers, fixed_clock):
+        """A new user has no weather/schedule cards at the fixed test time.
+
+        The scene engine intentionally creates exercise/meal nudges after
+        their configured thresholds.  This test must therefore control the
+        clock instead of assuming the wall clock is before those thresholds.
+        """
         _, client = app_client
         resp = client.get(
             "/api/v1/scene/check",
@@ -92,7 +96,7 @@ class TestWeatherScene:
 class TestExerciseScene:
     """Exercise nudge scenarios."""
 
-    def test_no_exercise_triggers_nudge(self, app_client, auth_headers):
+    def test_no_exercise_triggers_nudge(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         resp = client.get(
             "/api/v1/scene/check",
@@ -100,17 +104,17 @@ class TestExerciseScene:
         )
         cards = resp.get_json()["data"]["cards"]
         exercise_cards = [c for c in cards if c["type"] == "exercise_nudge"]
-        now = datetime.now(TZ)
+        now = fixed_now
         if now.hour >= 16:
             assert len(exercise_cards) == 1
             assert exercise_cards[0]["title"] == "今天还没有运动哦"
         else:
             assert len(exercise_cards) == 0
 
-    def test_enough_exercise_no_nudge(self, app_client, auth_headers):
+    def test_enough_exercise_no_nudge(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         uid = _get_user_id(app_client)
-        now = datetime.now(TZ)
+        now = fixed_now
 
         with app_client[0].app_context():
             record = ExerciseRecord(
@@ -135,7 +139,7 @@ class TestExerciseScene:
 class TestMealScene:
     """Meal reminder scenarios."""
 
-    def test_no_dinner_triggers_reminder(self, app_client, auth_headers):
+    def test_no_dinner_triggers_reminder(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         resp = client.get(
             "/api/v1/scene/check",
@@ -143,16 +147,16 @@ class TestMealScene:
         )
         cards = resp.get_json()["data"]["cards"]
         meal_cards = [c for c in cards if c["type"] == "meal_reminder"]
-        now = datetime.now(TZ)
+        now = fixed_now
         if now.hour >= 19:
             assert len(meal_cards) == 1
         else:
             assert len(meal_cards) == 0
 
-    def test_dinner_logged_no_reminder(self, app_client, auth_headers):
+    def test_dinner_logged_no_reminder(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         uid = _get_user_id(app_client)
-        now = datetime.now(TZ)
+        now = fixed_now
 
         with app_client[0].app_context():
             meal = MealRecord(
@@ -176,10 +180,10 @@ class TestMealScene:
 class TestConflictScene:
     """Schedule conflict scenarios."""
 
-    def test_overlapping_events_trigger_conflict(self, app_client, auth_headers):
+    def test_overlapping_events_trigger_conflict(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         uid = _get_user_id(app_client)
-        now = datetime.now(TZ)
+        now = fixed_now
         today_start = datetime(now.year, now.month, now.day, tzinfo=TZ)
 
         with app_client[0].app_context():
@@ -207,10 +211,10 @@ class TestConflictScene:
         assert len(conflict_cards) == 1
         assert conflict_cards[0]["priority"] == "high"
 
-    def test_non_overlapping_no_conflict(self, app_client, auth_headers):
+    def test_non_overlapping_no_conflict(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         uid = _get_user_id(app_client)
-        now = datetime.now(TZ)
+        now = fixed_now
         today_start = datetime(now.year, now.month, now.day, tzinfo=TZ)
 
         with app_client[0].app_context():
@@ -241,7 +245,7 @@ class TestConflictScene:
 class TestWakeScene:
     """Wake adjustment scenarios."""
 
-    def test_late_wake_no_events_low_priority(self, app_client, auth_headers):
+    def test_late_wake_no_events_low_priority(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         uid = _get_user_id(app_client)
 
@@ -259,7 +263,7 @@ class TestWakeScene:
             )
         cards = resp.get_json()["data"]["cards"]
         wake_cards = [c for c in cards if c["type"] == "wake_adjust"]
-        now = datetime.now(TZ)
+        now = fixed_now
         if now.hour < 12:
             assert len(wake_cards) >= 1
         if wake_cards:
@@ -269,10 +273,10 @@ class TestWakeScene:
 class TestCardStructure:
     """Verify card JSON structure is consistent."""
 
-    def test_all_cards_have_required_fields(self, app_client, auth_headers):
+    def test_all_cards_have_required_fields(self, app_client, auth_headers, fixed_now):
         _, client = app_client
         uid = _get_user_id(app_client)
-        now = datetime.now(TZ)
+        now = fixed_now
         today_start = datetime(now.year, now.month, now.day, tzinfo=TZ)
 
         with app_client[0].app_context():

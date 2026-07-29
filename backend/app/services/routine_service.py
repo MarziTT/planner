@@ -10,14 +10,15 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime, timedelta, time, timezone
+from datetime import datetime, timedelta, time, timezone
 
 from ..extensions import db
 from ..models_habits import EventHistory, UserPattern
+from .time_service import SHANGHAI_TZ, get_clock
 
 logger = logging.getLogger(__name__)
 
-TZ = timezone(timedelta(hours=8))
+TZ = SHANGHAI_TZ
 
 # Default routine window
 DEFAULT_WAKE_HOUR = 7
@@ -34,9 +35,10 @@ def get_routine_today(user_id: int) -> dict:
 
     wake = _get_wake_time(user_id)
     wake_h, wake_m = wake["hour"], wake["minute"]
+    today = get_clock().now_local().date()
 
     # Sleep time = wake - 8h
-    wake_dt = datetime.combine(date.today(), time(wake_h, wake_m))
+    wake_dt = datetime.combine(today, time(wake_h, wake_m))
     sleep_dt = wake_dt - timedelta(hours=8)
     sleep_h = sleep_dt.hour
     sleep_m = sleep_dt.minute
@@ -57,7 +59,7 @@ def get_routine_today(user_id: int) -> dict:
     ]
 
     return {
-        "date": date.today().isoformat(),
+        "date": today.isoformat(),
         "wake_time": {"hour": wake_h, "minute": wake_m, "source": wake["source"]},
         "sleep_time": {"hour": sleep_h, "minute": sleep_m},
         "sleep_reminder": {"hour": remind_h, "minute": remind_m},
@@ -69,11 +71,11 @@ def get_routine_today(user_id: int) -> dict:
 def record_wake(user_id: int, wake_time: str | None = None) -> dict:
     """Record today's wake-up time.  If *wake_time* is not given, use now."""
 
-    now = datetime.now(TZ)
+    now = get_clock().now_local()
     if wake_time:
         try:
             parsed = datetime.strptime(wake_time.strip(), "%H:%M").time()
-            now = datetime.combine(date.today(), parsed, tzinfo=TZ)
+            now = datetime.combine(now.date(), parsed, tzinfo=TZ)
         except ValueError:
             raise ValueError(f"Invalid time format: {wake_time!r}, expected HH:MM")
 
@@ -136,7 +138,7 @@ def _get_wake_time(user_id: int) -> dict:
 def _get_standing_status(user_id: int) -> dict:
     """Return standing reminder status for today."""
 
-    today = date.today()
+    today = get_clock().now_local().date()
     today_start = datetime.combine(today, time(0, 0), tzinfo=TZ)
     today_end = datetime.combine(today, time(23, 59, 59), tzinfo=TZ)
 

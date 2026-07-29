@@ -3,8 +3,32 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
+import pytest
+from app.services.time_service import Clock
 
 TZ = timezone(timedelta(hours=8))
+
+
+class FixedClock(Clock):
+    def __init__(self, now: datetime):
+        self._now = now
+
+    def now_utc(self) -> datetime:
+        return self._now.astimezone(timezone.utc)
+
+    def now_local(self) -> datetime:
+        return self._now
+
+
+@pytest.fixture(autouse=True)
+def fixed_clock(app_client):
+    app, _ = app_client
+    app.extensions["clock"] = FixedClock(datetime(2026, 7, 29, 10, 0, tzinfo=TZ))
+
+
+def _now(app_client) -> datetime:
+    app, _ = app_client
+    return app.extensions["clock"].now_local()
 
 # ---------------------------------------------------------------------------
 # Helpers — use app + db_session for ORM, return helpers
@@ -19,7 +43,7 @@ def _decode_user_id(app, token):
     return payload["sub"]
 
 
-def _make_exercise(db_session, user_id, minutes=30, calories=200, steps=5000):
+def _make_exercise(app_client, db_session, user_id, minutes=30, calories=200, steps=5000):
     from app.models_habits import ExerciseRecord
 
     r = ExerciseRecord(
@@ -28,7 +52,7 @@ def _make_exercise(db_session, user_id, minutes=30, calories=200, steps=5000):
         duration_minutes=minutes,
         calories=calories,
         steps=steps,
-        recorded_at=datetime.now(TZ),
+        recorded_at=_now(app_client),
         source="auto",
     )
     db_session.add(r)
@@ -36,7 +60,7 @@ def _make_exercise(db_session, user_id, minutes=30, calories=200, steps=5000):
     return r
 
 
-def _make_meal(db_session, user_id, meal_type="lunch", items=None, recorded_at=None):
+def _make_meal(app_client, db_session, user_id, meal_type="lunch", items=None, recorded_at=None):
     from app.models_habits import MealRecord
 
     if items is None:
@@ -46,7 +70,7 @@ def _make_meal(db_session, user_id, meal_type="lunch", items=None, recorded_at=N
         user_id=user_id,
         meal_type=meal_type,
         items=items,
-        recorded_at=recorded_at or datetime.now(TZ),
+        recorded_at=recorded_at or _now(app_client),
         source="tap",
     )
     db_session.add(r)
@@ -54,10 +78,10 @@ def _make_meal(db_session, user_id, meal_type="lunch", items=None, recorded_at=N
     return r
 
 
-def _make_standing_event(db_session, user_id, skipped=False):
+def _make_standing_event(app_client, db_session, user_id, skipped=False):
     from app.models_habits import EventHistory
 
-    now = datetime.now(TZ)
+    now = _now(app_client)
     e = EventHistory(
         user_id=user_id,
         notify_type="standing",
@@ -138,8 +162,8 @@ class TestHealthApi:
         """Exercise records are correctly aggregated."""
         app, client = app_client
         uid = _decode_user_id(app, auth_headers["Authorization"])
-        _make_exercise(db_session, uid, minutes=30, calories=200, steps=5000)
-        _make_exercise(db_session, uid, minutes=20, calories=150, steps=3000)
+        _make_exercise(app_client, db_session, uid, minutes=30, calories=200, steps=5000)
+        _make_exercise(app_client, db_session, uid, minutes=20, calories=150, steps=3000)
 
         resp = client.get("/api/v1/dashboard/health", headers=auth_headers)
         assert resp.status_code == 200
@@ -153,9 +177,9 @@ class TestHealthApi:
         """Meal records are correctly aggregated with calories."""
         app, client = app_client
         uid = _decode_user_id(app, auth_headers["Authorization"])
-        _make_meal(db_session, uid, meal_type="lunch",
+        _make_meal(app_client, db_session, uid, meal_type="lunch",
                    items=[{"name": "t1", "calories": 300, "category": "肉类"}])
-        _make_meal(db_session, uid, meal_type="dinner",
+        _make_meal(app_client, db_session, uid, meal_type="dinner",
                    items=[{"name": "t2", "calories": 250, "category": "主食"}])
 
         resp = client.get("/api/v1/dashboard/health", headers=auth_headers)
@@ -168,9 +192,9 @@ class TestHealthApi:
         """Standing events are correctly counted."""
         app, client = app_client
         uid = _decode_user_id(app, auth_headers["Authorization"])
-        _make_standing_event(db_session, uid, skipped=False)
-        _make_standing_event(db_session, uid, skipped=False)
-        _make_standing_event(db_session, uid, skipped=True)
+        _make_standing_event(app_client, db_session, uid, skipped=False)
+        _make_standing_event(app_client, db_session, uid, skipped=False)
+        _make_standing_event(app_client, db_session, uid, skipped=True)
 
         resp = client.get("/api/v1/dashboard/health", headers=auth_headers)
         assert resp.status_code == 200
@@ -244,7 +268,7 @@ class TestHealthCsvExport:
     def test_csv_with_exercise_data(self, app_client, auth_headers, db_session):
         app, client = app_client
         uid = _decode_user_id(app, auth_headers["Authorization"])
-        _make_exercise(db_session, uid, minutes=45, calories=300, steps=6000)
+        _make_exercise(app_client, db_session, uid, minutes=45, calories=300, steps=6000)
 
         resp = client.get("/api/v1/dashboard/health-csv?days=1", headers=auth_headers)
         lines = resp.data.decode("utf-8").strip().split("\n")
@@ -253,4 +277,3 @@ class TestHealthCsvExport:
         # exercise_minutes is column index 1
         assert data_row[1] == "45"
         assert data_row[2] == "300"
-

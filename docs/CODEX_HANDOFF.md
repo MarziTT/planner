@@ -33,6 +33,17 @@
 - 增加 `HarmonySecureStoragePlugin` 和 `HarmonyNotificationPlugin`。
 - 增加 `GeneratedPluginRegistrant` 和 `oh-package.json5`。
 - Flutter 侧已根据 `dart.library.ohos` 选择鸿蒙存储和通知实现。
+- Flutter 侧新增动态语音输出抽象：`mobile_app/lib/core/voice/`。
+- 新增 `mobile_app/lib/core/butler/butler_persona.dart`：普通主题使用标准管家预设，
+  ZZZ 主题自动切换为原创的冷静、克制、任务导向预设，并同步语音参数；用户自定义
+  管家名字优先级高于主题默认称呼。
+- ZZZ 主题核心已重做：`zzz_theme_extension.dart` 提供黑曜石分层、红色警戒、青色
+  遥测、完成/警告/危险语义色和终端字体 token；`app_theme.dart` 已统一应用到卡片、
+  输入框、按钮、弹窗、导航栏、进度条和 SnackBar。需要在另一台电脑上做实际 UI 截图
+  检查，确认不同屏幕尺寸下的对比度和动效表现。
+- Agent 查询回答和确认完成后会触发默认 TTS；鸿蒙原生侧需实现
+  `pixelplanner/harmony_voice` MethodChannel 的 `speak`、`stop`、`setRate`、
+  `setPitch`、`dispose` 方法。
 
 ## 当前验证结果
 
@@ -68,9 +79,11 @@ Flutter：
 2. 安装 DevEco Studio 和 API 12+ HarmonyOS SDK。
 3. 在 `mobile_app/ohos` 执行 `ohpm install`，确认 `har/flutter.har` 存在。
 4. 检查并修正 ArkTS 原生桥接 API，再执行 `flutter build hap`。
-5. 使用真实签名文件配置 release 构建；不要把 `.ohos/` 中的证书和私钥提交到 Git。
-6. 运行后端全量测试和 Flutter 测试。
-7. 处理 Flutter warnings，并补齐固定时钟测试。
+5. 接入鸿蒙 TTS 后验证 `pixelplanner/harmony_voice`，确认动态中文播报、停止和
+   语速/音调设置正常；不得抓取或克隆影视角色/演员原声。
+6. 使用真实签名文件配置 release 构建；不要把 `.ohos/` 中的证书和私钥提交到 Git。
+7. 运行后端全量测试和 Flutter 测试。
+8. 处理 Flutter warnings，并补齐固定时钟测试。
 
 ## 常用命令
 

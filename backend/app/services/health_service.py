@@ -14,15 +14,16 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from ..extensions import db
 from ..models_habits import EventHistory, ExerciseRecord, MealRecord, UserPattern
+from .time_service import SHANGHAI_TZ, get_clock
 
 logger = logging.getLogger(__name__)
 
-TZ = timezone(timedelta(hours=8))
+TZ = SHANGHAI_TZ
 MAX_DAYS = 90
 
 
@@ -33,7 +34,7 @@ def get_health_trends(user_id: int, days: int = 7) -> dict[str, Any]:
         period, exercise, meals, routine, standing
     """
     days = max(1, min(days, MAX_DAYS))
-    today = date.today()
+    today = get_clock().now_local().date()
     start_date = today - timedelta(days=days - 1)
 
     # Pre‑compute date range as list of date objects for zero‑fill

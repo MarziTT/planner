@@ -9,11 +9,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
-
 import '../../../core/network/api_client.dart';
-import '../../../widgets/zzz_gif_decoration.dart';
-import '../../habits/notify_manager.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../models/transit.dart';
 import '../services/external_app.dart';
 import '../services/ocr_service.dart';
@@ -110,7 +107,8 @@ class _TransitPageState extends ConsumerState<TransitPage> {
       _arrivalStationCtrl.text = trip.arrivalStation;
       if (trip.carriage != null) _carriageCtrl.text = trip.carriage!;
       if (trip.seatNumber != null) _seatNumberCtrl.text = trip.seatNumber!;
-      if (trip.departureTime != null) _departureTimeCtrl.text = trip.departureTime!;
+      if (trip.departureTime != null)
+        _departureTimeCtrl.text = trip.departureTime!;
 
       final d = trip.departureDate;
       _departureDateCtrl.text =
@@ -119,7 +117,8 @@ class _TransitPageState extends ConsumerState<TransitPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('识别完成: ${trip.trainNumber} ${trip.departureStation} → ${trip.arrivalStation}'),
+            content: Text(
+                '识别完成: ${trip.trainNumber} ${trip.departureStation} → ${trip.arrivalStation}'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -183,7 +182,8 @@ class _TransitPageState extends ConsumerState<TransitPage> {
         _clearForm();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已保存行程: $trainNum ${trip.departureStation} → ${trip.arrivalStation}'),
+            content: Text(
+                '已保存行程: $trainNum ${trip.departureStation} → ${trip.arrivalStation}'),
           ),
         );
       }
@@ -281,7 +281,8 @@ class _TransitPageState extends ConsumerState<TransitPage> {
 
   Future<void> _onTaxi() async {
     final trip = ref.read(_currentTripProvider);
-    final destination = trip?.departureStation ?? _departureStationCtrl.text.trim();
+    final destination =
+        trip?.departureStation ?? _departureStationCtrl.text.trim();
     if (destination.isEmpty) {
       _showError('请先添加行程或输入出发站');
       return;
@@ -315,8 +316,7 @@ class _TransitPageState extends ConsumerState<TransitPage> {
   Future<void> _onAmapRoute() async {
     final trip = ref.read(_currentTripProvider);
     final from = '我的位置';
-    final to = trip?.departureStation ??
-        _departureStationCtrl.text.trim();
+    final to = trip?.departureStation ?? _departureStationCtrl.text.trim();
 
     if (to.isEmpty) {
       _showError('请先输入出发站');
@@ -348,6 +348,7 @@ class _TransitPageState extends ConsumerState<TransitPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     final trip = ref.watch(_currentTripProvider);
     final timeline = ref.watch(_currentTimelineProvider);
 
@@ -369,21 +370,32 @@ class _TransitPageState extends ConsumerState<TransitPage> {
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLow,
+                  color:
+                      zzz?.surfaceLow ?? theme.colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: (zzz?.borderColor ?? theme.colorScheme.outline)
+                        .withValues(alpha: 0.7),
+                  ),
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.flight_takeoff, size: 40,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                    Icon(Icons.flight_takeoff,
+                        size: 40,
+                        color: (zzz?.textTertiary ??
+                                theme.colorScheme.onSurfaceVariant)
+                            .withValues(alpha: 0.7)),
                     const SizedBox(height: 10),
                     Text('暂无出行行程',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant)),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                            color: zzz?.textPrimary ??
+                                theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 4),
                     Text('扫描车票或手动录入来添加行程',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6))),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: (zzz?.textSecondary ??
+                                    theme.colorScheme.onSurfaceVariant)
+                                .withValues(alpha: 0.8))),
                   ],
                 ),
               ),
@@ -407,7 +419,7 @@ class _TransitPageState extends ConsumerState<TransitPage> {
                     icon: Icons.local_taxi,
                     label: '一键打车',
                     onTap: _onTaxi,
-                    color: Colors.orange,
+                    color: zzz?.warning,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -416,7 +428,7 @@ class _TransitPageState extends ConsumerState<TransitPage> {
                     icon: Icons.map,
                     label: '高德导航',
                     onTap: _onAmapRoute,
-                    color: Colors.blue,
+                    color: zzz?.signal,
                   ),
                 ),
               ],
@@ -536,12 +548,12 @@ class _TransitPageState extends ConsumerState<TransitPage> {
                         child: FilledButton.icon(
                           onPressed: _saveLoading ? null : _onSave,
                           icon: _saveLoading
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 18,
                                   height: 18,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: theme.colorScheme.onPrimary,
                                   ),
                                 )
                               : const Icon(Icons.save, size: 18),
@@ -608,7 +620,8 @@ class _TransitPageState extends ConsumerState<TransitPage> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.route, size: 18),
                         label: Text(_loading ? '查询中...' : '查询线路'),
@@ -621,7 +634,9 @@ class _TransitPageState extends ConsumerState<TransitPage> {
 
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(_error!,
+                  style:
+                      TextStyle(color: zzz?.danger ?? theme.colorScheme.error)),
             ],
 
             if (_routeResult != null) ...[
@@ -650,8 +665,10 @@ class _ActiveTripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     final d = trip.departureDate;
-    final dateStr = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
     String timeStr = dateStr;
     if (trip.departureTime != null && trip.departureTime!.isNotEmpty) {
@@ -667,7 +684,9 @@ class _ActiveTripCard extends StatelessWidget {
     }
 
     return Card(
-      color: theme.colorScheme.primaryContainer.withAlpha(80),
+      color:
+          zzz?.surfaceHigh ?? theme.colorScheme.primaryContainer.withAlpha(80),
+      shape: zzz?.cardShape,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -675,7 +694,8 @@ class _ActiveTripCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.train, size: 20),
+                Icon(Icons.train,
+                    size: 20, color: zzz?.signal ?? theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   '今日行程',
@@ -752,16 +772,16 @@ class _ActiveTripCard extends StatelessWidget {
                       node.passed ? Icons.check_circle_outline : Icons.schedule,
                       size: 16,
                       color: node.passed
-                          ? theme.colorScheme.outline
-                          : theme.colorScheme.primary,
+                          ? (zzz?.textTertiary ?? theme.colorScheme.outline)
+                          : (zzz?.warning ?? theme.colorScheme.primary),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       node.label,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: node.passed
-                            ? theme.colorScheme.outline
-                            : theme.colorScheme.onSurface,
+                            ? (zzz?.textTertiary ?? theme.colorScheme.outline)
+                            : (zzz?.textPrimary ?? theme.colorScheme.onSurface),
                         decoration:
                             node.passed ? TextDecoration.lineThrough : null,
                       ),
@@ -784,9 +804,11 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zzz = context.zzz;
     return Text(
       title,
       style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: zzz?.accent,
             fontWeight: FontWeight.w600,
           ),
     );
@@ -808,7 +830,9 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
+    final theme = Theme.of(context);
+    final zzz = context.zzz;
+    final effectiveColor = color ?? zzz?.signal ?? theme.colorScheme.primary;
 
     return InkWell(
       onTap: onTap,
@@ -816,7 +840,8 @@ class _QuickAction extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          border: Border.all(color: effectiveColor.withAlpha(60)),
+          color: zzz?.surfaceLow,
+          border: Border.all(color: effectiveColor.withAlpha(90)),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -845,10 +870,13 @@ class _SuggestionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final zzz = context.zzz;
     return Container(
       margin: const EdgeInsets.only(top: 4),
       decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        border: Border.all(
+            color: zzz?.borderColor ?? theme.colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(8),
       ),
       constraints: const BoxConstraints(maxHeight: 160),
@@ -875,8 +903,11 @@ class _RouteResultCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
 
     return Card(
+      color: zzz?.surface,
+      shape: zzz?.cardShape,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -884,7 +915,8 @@ class _RouteResultCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.directions_subway, size: 20),
+                Icon(Icons.directions_subway,
+                    size: 20, color: zzz?.signal ?? theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -900,7 +932,7 @@ class _RouteResultCard extends StatelessWidget {
               '约 ${route.durationMinutes} 分钟',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: theme.colorScheme.primary,
+                color: zzz?.signal ?? theme.colorScheme.primary,
               ),
             ),
             if (route.transferStations.isNotEmpty) ...[
@@ -908,7 +940,8 @@ class _RouteResultCard extends StatelessWidget {
               Text(
                 '换乘站: ${route.transferStations.join(" → ")}',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color:
+                      zzz?.textSecondary ?? theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],

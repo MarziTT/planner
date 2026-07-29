@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../domain/health_models.dart';
 import '../state/health_notifier.dart';
 
@@ -35,7 +36,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(healthNotifierProvider.notifier).refresh(),
+            onPressed: () =>
+                ref.read(healthNotifierProvider.notifier).refresh(),
           ),
         ],
       ),
@@ -55,10 +57,12 @@ class _HealthPageState extends ConsumerState<HealthPage> {
           children: [
             Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
             const SizedBox(height: 16),
-            Text(state.errorMessage ?? '加载失败', style: theme.textTheme.bodyLarge),
+            Text(state.errorMessage ?? '加载失败',
+                style: theme.textTheme.bodyLarge),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: () => ref.read(healthNotifierProvider.notifier).refresh(),
+              onPressed: () =>
+                  ref.read(healthNotifierProvider.notifier).refresh(),
               icon: const Icon(Icons.refresh),
               label: const Text('重试'),
             ),
@@ -105,25 +109,27 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   // -----------------------------------------------------------------------
 
   Widget _buildPeriodHeader(PeriodInfo period, ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            theme.colorScheme.primary.withAlpha(30),
-            theme.colorScheme.tertiary.withAlpha(20),
+            (zzz?.signal ?? theme.colorScheme.primary).withAlpha(30),
+            (zzz?.accent ?? theme.colorScheme.tertiary).withAlpha(20),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: theme.colorScheme.primary.withAlpha(40),
+          color: (zzz?.borderStrong ?? theme.colorScheme.primary).withAlpha(40),
         ),
       ),
       child: Row(
         children: [
-          Icon(Icons.health_and_safety, color: theme.colorScheme.primary, size: 28),
+          Icon(Icons.health_and_safety,
+              color: zzz?.signal ?? theme.colorScheme.primary, size: 28),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,16 +156,17 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   }
 
   Widget _buildPeriodBadge(String label, ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
+        color: zzz?.accentDeep ?? theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
         label,
         style: theme.textTheme.labelMedium?.copyWith(
-          color: theme.colorScheme.onPrimaryContainer,
+          color: zzz?.textPrimary ?? theme.colorScheme.onPrimaryContainer,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -171,6 +178,7 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   // -----------------------------------------------------------------------
 
   Widget _buildSummaryCards(HealthTrends trends, ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     return Row(
       children: [
         Expanded(
@@ -179,7 +187,7 @@ class _HealthPageState extends ConsumerState<HealthPage> {
             label: '运动',
             value: '${trends.exercise.summary.totalMinutes}',
             unit: '分钟',
-            color: Colors.green,
+            color: zzz?.success ?? Colors.green,
             theme: theme,
           ),
         ),
@@ -190,7 +198,7 @@ class _HealthPageState extends ConsumerState<HealthPage> {
             label: '消耗',
             value: '${trends.exercise.summary.totalCalories}',
             unit: 'kcal',
-            color: Colors.orange,
+            color: zzz?.warning ?? Colors.orange,
             theme: theme,
           ),
         ),
@@ -201,7 +209,7 @@ class _HealthPageState extends ConsumerState<HealthPage> {
             label: '摄入',
             value: '${trends.meals.summary.totalCalories}',
             unit: 'kcal',
-            color: Colors.blue,
+            color: zzz?.signal ?? Colors.blue,
             theme: theme,
           ),
         ),
@@ -210,9 +218,10 @@ class _HealthPageState extends ConsumerState<HealthPage> {
           child: _StatCard(
             icon: Icons.check_circle,
             label: '站立',
-            value: '${(trends.standing.summary.avgCompletionRate * 100).toInt()}',
+            value:
+                '${(trends.standing.summary.avgCompletionRate * 100).toInt()}',
             unit: '%',
-            color: Colors.purple,
+            color: zzz?.accent ?? Colors.purple,
             theme: theme,
           ),
         ),
@@ -225,6 +234,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   // -----------------------------------------------------------------------
 
   Widget _buildExerciseChart(ExerciseDomain exercise, ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
+    final chartColor = zzz?.success ?? Colors.green;
     final spots = exercise.daily.asMap().entries.map((e) {
       return FlSpot(e.key.toDouble(), e.value.totalMinutes.toDouble());
     }).toList();
@@ -246,13 +257,16 @@ class _HealthPageState extends ConsumerState<HealthPage> {
             drawVerticalLine: false,
             horizontalInterval: maxY > 60 ? 30 : 15,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: theme.colorScheme.outline.withAlpha(30),
+              color:
+                  (zzz?.borderColor ?? theme.colorScheme.outline).withAlpha(30),
               strokeWidth: 1,
             ),
           ),
           titlesData: FlTitlesData(
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
@@ -260,7 +274,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
                 interval: 1,
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
-                  if (i < 0 || i >= exercise.daily.length) return const SizedBox.shrink();
+                  if (i < 0 || i >= exercise.daily.length)
+                    return const SizedBox.shrink();
                   final d = exercise.daily[i].date;
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -291,20 +306,20 @@ class _HealthPageState extends ConsumerState<HealthPage> {
               spots: spots,
               isCurved: true,
               curveSmoothness: 0.3,
-              color: Colors.green,
+              color: chartColor,
               barWidth: 2.5,
               isStrokeCapRound: true,
               dotData: FlDotData(
                 show: true,
-                getDotPainter: (spot, _, __, ___) =>
-                    FlDotCirclePainter(radius: 3, color: Colors.green, strokeWidth: 0),
+                getDotPainter: (spot, _, __, ___) => FlDotCirclePainter(
+                    radius: 3, color: chartColor, strokeWidth: 0),
               ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.green.withAlpha(80), Colors.green.withAlpha(10)],
+                  colors: [chartColor.withAlpha(80), chartColor.withAlpha(10)],
                 ),
               ),
             ),
@@ -315,7 +330,10 @@ class _HealthPageState extends ConsumerState<HealthPage> {
                 return touchedSpots.map((s) {
                   return LineTooltipItem(
                     '${s.y.toInt()} 分钟',
-                    const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                    TextStyle(
+                        color: zzz?.textPrimary ?? theme.colorScheme.onSurface,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500),
                   );
                 }).toList();
               },
@@ -331,9 +349,15 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   // -----------------------------------------------------------------------
 
   Widget _buildMealsChart(MealsDomain meals, ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
+    final chartColor = zzz?.signal ?? Colors.blue;
     final maxCals = meals.daily.isEmpty
         ? 2000.0
-        : meals.daily.map((d) => d.totalCalories).reduce((a, b) => a > b ? a : b).toDouble() * 1.2;
+        : meals.daily
+                .map((d) => d.totalCalories)
+                .reduce((a, b) => a > b ? a : b)
+                .toDouble() *
+            1.2;
 
     return Container(
       height: 200,
@@ -349,21 +373,26 @@ class _HealthPageState extends ConsumerState<HealthPage> {
                 return BarTooltipItem(
                   '${d.totalCalories} kcal\n'
                   '早${d.breakfast} 午${d.lunch} 晚${d.dinner}',
-                  const TextStyle(color: Colors.white, fontSize: 11),
+                  TextStyle(
+                      color: zzz?.textPrimary ?? theme.colorScheme.onSurface,
+                      fontSize: 11),
                 );
               },
             ),
           ),
           titlesData: FlTitlesData(
-            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            rightTitles:
+                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 28,
                 getTitlesWidget: (value, meta) {
                   final i = value.toInt();
-                  if (i < 0 || i >= meals.daily.length) return const SizedBox.shrink();
+                  if (i < 0 || i >= meals.daily.length)
+                    return const SizedBox.shrink();
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
@@ -392,7 +421,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
             show: true,
             drawVerticalLine: false,
             getDrawingHorizontalLine: (value) => FlLine(
-              color: theme.colorScheme.outline.withAlpha(30),
+              color:
+                  (zzz?.borderColor ?? theme.colorScheme.outline).withAlpha(30),
               strokeWidth: 1,
             ),
           ),
@@ -402,9 +432,10 @@ class _HealthPageState extends ConsumerState<HealthPage> {
               barRods: [
                 BarChartRodData(
                   toY: e.value.totalCalories.toDouble(),
-                  color: Colors.blue,
+                  color: chartColor,
                   width: 16,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(4)),
                 ),
               ],
             );
@@ -420,6 +451,10 @@ class _HealthPageState extends ConsumerState<HealthPage> {
 
   Widget _buildStandingChart(StandingDomain standing, ThemeData theme) {
     final rate = standing.summary.avgCompletionRate;
+    final zzz = theme.extension<ZzzThemeExtension>();
+    final statusColor = rate >= 0.7
+        ? (zzz?.success ?? Colors.green)
+        : (zzz?.warning ?? Colors.orange);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -443,7 +478,7 @@ class _HealthPageState extends ConsumerState<HealthPage> {
                       '${(rate * 100).toInt()}%',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: rate >= 0.7 ? Colors.green : Colors.orange,
+                        color: statusColor,
                       ),
                     ),
                     Text(
@@ -465,15 +500,18 @@ class _HealthPageState extends ConsumerState<HealthPage> {
                       child: CircularProgressIndicator(
                         value: rate,
                         strokeWidth: 6,
-                        backgroundColor: theme.colorScheme.outline.withAlpha(40),
+                        backgroundColor:
+                            theme.colorScheme.outline.withAlpha(40),
                         valueColor: AlwaysStoppedAnimation(
-                          rate >= 0.7 ? Colors.green : Colors.orange,
+                          statusColor,
                         ),
                       ),
                     ),
                     Icon(
                       rate >= 0.7 ? Icons.emoji_events : Icons.trending_up,
-                      color: rate >= 0.7 ? Colors.amber : Colors.orange,
+                      color: rate >= 0.7
+                          ? (zzz?.accent ?? Colors.amber)
+                          : statusColor,
                       size: 28,
                     ),
                   ],
@@ -502,6 +540,7 @@ class _HealthPageState extends ConsumerState<HealthPage> {
 
   Widget _buildSleepCard(RoutineDomain routine, ThemeData theme) {
     final avgWake = routine.summary.avgWakeTime;
+    final zzz = theme.extension<ZzzThemeExtension>();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -512,10 +551,11 @@ class _HealthPageState extends ConsumerState<HealthPage> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.indigo.withAlpha(30),
+              color: (zzz?.signal ?? Colors.indigo).withAlpha(30),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Icon(Icons.bedtime, color: Colors.indigo, size: 28),
+            child: Icon(Icons.bedtime,
+                color: zzz?.signal ?? Colors.indigo, size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -531,7 +571,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
                 const SizedBox(height: 4),
                 Text(
                   '起床 $avgWake   睡眠 ${routine.summary.avgSleepHours.toStringAsFixed(1)}h',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w500),
                 ),
                 Text(
                   '默认起床 ${routine.summary.defaultWakeTime}',
@@ -542,7 +583,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withAlpha(100)),
+          Icon(Icons.chevron_right,
+              color: theme.colorScheme.onSurface.withAlpha(100)),
         ],
       ),
     );
@@ -553,23 +595,28 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   // -----------------------------------------------------------------------
 
   Widget _buildSectionTitle(String title, IconData icon, ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     return Row(
       children: [
-        Icon(icon, size: 20, color: theme.colorScheme.primary),
+        Icon(icon, size: 20, color: zzz?.accent ?? theme.colorScheme.primary),
         const SizedBox(width: 8),
-        Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(title,
+            style: theme.textTheme.titleMedium
+                ?.copyWith(fontWeight: FontWeight.w600)),
       ],
     );
   }
 
   BoxDecoration _chartCardDecoration(ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     return BoxDecoration(
-      color: theme.colorScheme.surface,
+      color: zzz?.surface ?? theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: theme.colorScheme.outline.withAlpha(30)),
+      border: Border.all(
+          color: (zzz?.borderColor ?? theme.colorScheme.outline).withAlpha(80)),
       boxShadow: [
         BoxShadow(
-          color: theme.colorScheme.shadow.withAlpha(15),
+          color: (zzz?.borderGlow ?? theme.colorScheme.shadow).withAlpha(35),
           blurRadius: 8,
           offset: const Offset(0, 2),
         ),
@@ -628,7 +675,8 @@ class _StatCard extends StatelessWidget {
           ),
           Text(
             unit,
-            style: theme.textTheme.labelSmall?.copyWith(fontSize: 10, color: color.withAlpha(180)),
+            style: theme.textTheme.labelSmall
+                ?.copyWith(fontSize: 10, color: color.withAlpha(180)),
           ),
         ],
       ),
@@ -649,7 +697,8 @@ class _MiniStat extends StatelessWidget {
       children: [
         Text(
           value,
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+          style:
+              theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
         ),
         Text(
           label,

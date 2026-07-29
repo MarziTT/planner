@@ -8,6 +8,7 @@ import '../../auth/state/auth_controller.dart';
 import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/network/connectivity_service.dart';
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../../fast_capture/domain/capture_enums.dart';
 import '../../fast_capture/presentation/quick_capture_bar.dart';
 import '../../notifications/data/reminder_gateway.dart';
@@ -207,8 +208,13 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
     final theme = Theme.of(context);
     final isZzz = ref.watch(themeControllerProvider).preset ==
         PlannerThemePreset.kamenRiderZzz;
-    final zzzSurface = zzzSurfaceColor;
-    final zzzBg = zzzBgColor;
+    final zzzTokens = context.zzz;
+    final zzzSurface = zzzTokens?.surface ?? zzzSurfaceColor;
+    final zzzBg = zzzTokens?.bg ?? zzzBgColor;
+    final zzzAccent = zzzTokens?.accent ?? zzzRed;
+    final zzzSignal = zzzTokens?.signal ?? zzzGreen;
+    final zzzText = zzzTokens?.textPrimary ?? zzzGreenLight;
+    final zzzMuted = zzzTokens?.textTertiary ?? zzzSilver;
     final butlerName = ref.watch(butlerNameProvider);
 
     PreferredSizeWidget appBar = AppBar(
@@ -222,7 +228,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: isZzz
-                    ? [zzzGreen, zzzGreen.withValues(alpha: 0.6)]
+                    ? [zzzSignal, zzzSignal.withValues(alpha: 0.6)]
                     : [
                         theme.colorScheme.primary,
                         theme.colorScheme.primary.withValues(alpha: 0.6),
@@ -240,19 +246,14 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           const SizedBox(width: 10),
           Text(
             'DD · $butlerName',
-            style: isZzz
-                ? TextStyle(color: zzzGreenLight)
-                : null,
+            style: isZzz ? TextStyle(color: zzzText) : null,
           ),
         ],
       ),
       actions: [
         IconButton(
           onPressed: () => ref.read(authControllerProvider.notifier).logout(),
-          icon: Icon(Icons.logout,
-              color: isZzz
-                  ? zzzGreen
-                  : null),
+          icon: Icon(Icons.logout, color: isZzz ? zzzSignal : null),
         ),
       ],
     );
@@ -275,7 +276,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           Column(
             children: [
               const UpdateBanner(),
-              _OfflineBanner(),
+              const _OfflineBanner(),
               if (currentIndex == 0) QuickCaptureBar(isZzz: isZzz),
               Expanded(child: pages[currentIndex]),
             ],
@@ -285,18 +286,24 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAgentPanel(context),
         tooltip: '$butlerName 管家',
-        backgroundColor: isZzz ? zzzGreen : theme.colorScheme.primary,
-        foregroundColor: isZzz ? zzzBg : theme.colorScheme.onPrimary,
+        backgroundColor: isZzz ? zzzAccent : theme.colorScheme.primary,
+        foregroundColor: isZzz ? zzzText : theme.colorScheme.onPrimary,
         shape: const CircleBorder(),
         child: const Icon(Icons.mic),
       ),
-      bottomNavigationBar: _buildNavBar(isZzz, theme, zzzGreen, zzzSilver,
-          zzzSurface),
+      bottomNavigationBar: _buildNavBar(
+          isZzz, theme, zzzSignal, zzzMuted, zzzSurface, zzzAccent),
     );
   }
 
-  Widget _buildNavBar(bool isZzz, ThemeData theme, Color zzzGreen,
-      Color zzzSilver, Color zzzSurface) {
+  Widget _buildNavBar(
+    bool isZzz,
+    ThemeData theme,
+    Color zzzSignal,
+    Color zzzMuted,
+    Color zzzSurface,
+    Color zzzAccent,
+  ) {
     final nav = NavigationBar(
       selectedIndex: currentIndex,
       onDestinationSelected: (value) {
@@ -307,10 +314,8 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         }
       },
       backgroundColor: isZzz ? zzzSurface : null,
-      indicatorColor:
-          isZzz ? zzzGreen.withValues(alpha: 0.22) : null,
-      surfaceTintColor:
-          isZzz ? zzzGreen.withValues(alpha: 0.06) : null,
+      indicatorColor: isZzz ? zzzAccent.withValues(alpha: 0.24) : null,
+      surfaceTintColor: isZzz ? zzzSignal.withValues(alpha: 0.06) : null,
       destinations: const [
         NavigationDestination(
           icon: Icon(Icons.dashboard_outlined),
@@ -350,18 +355,16 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         navigationBarTheme: NavigationBarThemeData(
           iconTheme: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return IconThemeData(color: zzzGreen);
+              return IconThemeData(color: zzzSignal);
             }
-            return IconThemeData(color: zzzSilver);
+            return IconThemeData(color: zzzMuted);
           }),
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
               return TextStyle(
-                  color: zzzGreen,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500);
+                  color: zzzSignal, fontSize: 12, fontWeight: FontWeight.w500);
             }
-            return TextStyle(color: zzzSilver, fontSize: 12);
+            return TextStyle(color: zzzMuted, fontSize: 12);
           }),
         ),
       ),
@@ -409,7 +412,8 @@ class _OfflineBanner extends ConsumerWidget {
         bottom: false,
         child: Row(
           children: [
-            Icon(Icons.cloud_off, size: 16, color: Colors.white.withValues(alpha: 0.9)),
+            Icon(Icons.cloud_off,
+                size: 16, color: Colors.white.withValues(alpha: 0.9)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

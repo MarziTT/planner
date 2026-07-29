@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/network/api_client.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../../../widgets/stat_item.dart';
 import '../models/exercise.dart';
 import '../services/exercise_service.dart';
@@ -182,7 +182,9 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
 
       if (record != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('已记录${record.type.label} ${record.durationMinutes}分钟')),
+          SnackBar(
+              content:
+                  Text('已记录${record.type.label} ${record.durationMinutes}分钟')),
         );
         await _refresh();
       }
@@ -261,7 +263,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                       IconButton(
                         icon: const Icon(Icons.remove_circle_outline),
                         onPressed: minutes > 1
-                            ? () => setSheetState(() => minutes = (minutes - 5).clamp(1, 180))
+                            ? () => setSheetState(
+                                () => minutes = (minutes - 5).clamp(1, 180))
                             : null,
                       ),
                       Text(
@@ -270,7 +273,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.add_circle_outline),
-                        onPressed: () => setSheetState(() => minutes = (minutes + 5).clamp(1, 180)),
+                        onPressed: () => setSheetState(
+                            () => minutes = (minutes + 5).clamp(1, 180)),
                       ),
                     ],
                   ),
@@ -319,7 +323,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+              Icon(Icons.error_outline,
+                  size: 48, color: theme.colorScheme.error),
               const SizedBox(height: 12),
               Text(
                 _error!,
@@ -399,6 +404,7 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
   // ---- 今日总览 ----
 
   Widget _buildOverviewCard(ThemeData theme) {
+    final zzz = theme.extension<ZzzThemeExtension>();
     final summary = _summary;
     final totalMin = summary?.totalMinutes ?? 0;
     final totalKcal = summary?.totalCalories ?? 0;
@@ -418,7 +424,7 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
               value: '$totalSteps',
               unit: '步',
               icon: Icons.directions_walk,
-              color: theme.colorScheme.primary,
+              color: zzz?.signal ?? theme.colorScheme.primary,
             ),
             _buildDivider(theme),
             StatItem(
@@ -426,7 +432,9 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
               value: '$totalMin',
               unit: '分钟',
               icon: Icons.timer_outlined,
-              color: totalMin > 0 ? Colors.teal : theme.colorScheme.onSurface,
+              color: totalMin > 0
+                  ? (zzz?.success ?? Colors.teal)
+                  : theme.colorScheme.onSurface,
             ),
             _buildDivider(theme),
             StatItem(
@@ -434,7 +442,9 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
               value: '$totalKcal',
               unit: '千卡',
               icon: Icons.local_fire_department,
-              color: totalKcal > 0 ? Colors.orange : theme.colorScheme.onSurface,
+              color: totalKcal > 0
+                  ? (zzz?.warning ?? Colors.orange)
+                  : theme.colorScheme.onSurface,
             ),
           ],
         ),
@@ -509,7 +519,9 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
             : theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: daysLeft <= 3 ? Colors.orange.shade200 : theme.colorScheme.outline.withValues(alpha: 0.2),
+          color: daysLeft <= 3
+              ? Colors.orange.shade200
+              : theme.colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -550,14 +562,16 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
         // 今日运动记录
         Text(
           '今日运动记录',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         if (records.isEmpty)
           Card(
             elevation: 0,
             color: theme.colorScheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Center(
@@ -596,7 +610,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                 const SizedBox(width: 6),
                 Text(
                   '步数目标',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 Text(
@@ -641,14 +656,16 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
       children: [
         Text(
           '今日训练计划',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         if (plans.isEmpty)
           Card(
             elevation: 0,
             color: theme.colorScheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Center(
@@ -670,14 +687,16 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
         // 今日已完成记录
         Text(
           '已完成记录',
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          style: theme.textTheme.titleMedium
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         if ((_summary?.records ?? []).isEmpty)
           Card(
             elevation: 0,
             color: theme.colorScheme.surface,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Center(
@@ -708,7 +727,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
         leading: Text(record.type.emoji, style: const TextStyle(fontSize: 26)),
         title: Text(
           record.type.label,
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+          style:
+              theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
           '${record.formattedTime} · ${record.source == "sensor" ? "自动记录" : "手动记录"}',
@@ -722,7 +742,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
           children: [
             Text(
               '${record.durationMinutes} 分钟',
-              style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             if (record.calories != null && record.calories! > 0)
               Text(
@@ -758,7 +779,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
       child: ListTile(
         leading: plan.isCompleted
             ? const Icon(Icons.check_circle, color: Colors.green)
-            : Text(plan.exerciseType.emoji, style: const TextStyle(fontSize: 26)),
+            : Text(plan.exerciseType.emoji,
+                style: const TextStyle(fontSize: 26)),
         title: Text(
           plan.exerciseType.label,
           style: theme.textTheme.titleSmall?.copyWith(
@@ -790,7 +812,8 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                     : () async {
                         setState(() => _completingPlanIds.add(plan.id));
                         try {
-                          final record = await _trainerService?.completeTraining(
+                          final record =
+                              await _trainerService?.completeTraining(
                             planId: plan.id,
                             type: plan.exerciseType,
                             durationMinutes: plan.durationMinutes,
@@ -798,13 +821,15 @@ class _ExercisePageState extends ConsumerState<ExercisePage> {
                           if (record != null && mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('已完成${record.type.label} ${record.durationMinutes}分钟'),
+                                content: Text(
+                                    '已完成${record.type.label} ${record.durationMinutes}分钟'),
                               ),
                             );
                             await _refresh();
                           }
                         } finally {
-                          if (mounted) setState(() => _completingPlanIds.remove(plan.id));
+                          if (mounted)
+                            setState(() => _completingPlanIds.remove(plan.id));
                         }
                       },
                 style: FilledButton.styleFrom(

@@ -18,6 +18,7 @@ import requests
 
 from ..extensions import db
 from ..models_habits import MealRecord, OcrCache
+from .time_service import get_clock
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ def ocr_meal(image_bytes: bytes, user_id: int, config: dict[str, str]) -> list[d
     if existing is not None:
         existing.parsed = dishes
         existing.raw_text = json.dumps(dishes, ensure_ascii=False)
-        existing.processed_at = datetime.now(timezone.utc)
+        existing.processed_at = get_clock().now_utc()
     else:
         entry = OcrCache(
             user_id=user_id,
@@ -185,7 +186,7 @@ def create_meal_record(
         meal_type=meal_type,
         items=items,
         source=source,
-        recorded_at=recorded_at or datetime.now(timezone.utc),
+        recorded_at=recorded_at or get_clock().now_utc(),
     )
     db.session.add(record)
     db.session.commit()
@@ -201,7 +202,7 @@ def get_today_meals(user_id: int) -> list[dict[str, Any]]:
     Returns:
         List of meal record dicts.
     """
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = get_clock().now_utc().replace(hour=0, minute=0, second=0, microsecond=0)
     records = (
         MealRecord.query
         .filter_by(user_id=user_id)
@@ -222,7 +223,7 @@ def get_meal_history(user_id: int, days: int = 7) -> list[dict[str, Any]]:
     Returns:
         List of meal record dicts.
     """
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = get_clock().now_utc() - timedelta(days=days)
     records = (
         MealRecord.query
         .filter_by(user_id=user_id)
@@ -242,7 +243,7 @@ def get_daily_summary(user_id: int) -> dict[str, Any]:
     Returns:
         Dict with records, total_calories, by_type.
     """
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = get_clock().now_utc().replace(hour=0, minute=0, second=0, microsecond=0)
     records = (
         MealRecord.query
         .filter_by(user_id=user_id)
@@ -275,7 +276,7 @@ def get_daily_summary(user_id: int) -> dict[str, Any]:
 
 def get_weekly_average_calories(user_id: int) -> float:
     """Get average daily calories over the past 7 days."""
-    since = datetime.now(timezone.utc) - timedelta(days=7)
+    since = get_clock().now_utc() - timedelta(days=7)
     records = (
         MealRecord.query
         .filter_by(user_id=user_id)
