@@ -14,7 +14,7 @@ import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
-import requests
+from .llm_gateway import chat_completion, resolve_targets
 
 TZ = timezone(timedelta(hours=8))  # UTC+8
 
@@ -107,34 +107,20 @@ def _build_system_prompt() -> str:
 
 def _call_openai(text: str, config: dict) -> dict | None:
     """Call an OpenAI-compatible chat completion endpoint; return parsed JSON or None."""
-    api_key = config.get("OPENAI_API_KEY", "")
-    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = config.get("OPENAI_MODEL", "gpt-4o-mini")
-
-    if not api_key:
-        logger.warning("OPENAI_API_KEY not configured, skipping LLM call")
-        return None
-
-    url = f"{base_url.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": [
+    raw = chat_completion(
+        [
             {"role": "system", "content": _build_system_prompt()},
             {"role": "user", "content": text},
         ],
-        "temperature": 0.0,
-        "max_tokens": 500,
-    }
+        config,
+        temperature=0.0,
+        max_tokens=500,
+        timeout=15,
+    )
+    if raw is None:
+        return None
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=15)
-        resp.raise_for_status()
-        body = resp.json()
-        raw = body["choices"][0]["message"]["content"].strip()
         # Strip accidental markdown fences
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
@@ -420,7 +406,7 @@ def parse_schedule(text: str, config: dict | None = None) -> dict:
         }
 
     # Try LLM first
-    if config.get("OPENAI_API_KEY"):
+    if resolve_targets(config):
         result = _call_openai(text, config)
         if result is not None:
             # Ensure all expected keys are present
@@ -557,34 +543,20 @@ def _build_multi_intent_prompt() -> str:
 
 def _call_openai_multi(text: str, config: dict) -> dict | None:
     """Call LLM with multi-intent prompt; return parsed JSON or None."""
-    api_key = config.get("OPENAI_API_KEY", "")
-    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = config.get("OPENAI_MODEL", "gpt-4o-mini")
-
-    if not api_key:
-        logger.warning("OPENAI_API_KEY not configured, skipping LLM call")
-        return None
-
-    url = f"{base_url.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": [
+    raw = chat_completion(
+        [
             {"role": "system", "content": _build_multi_intent_prompt()},
             {"role": "user", "content": text},
         ],
-        "temperature": 0.0,
-        "max_tokens": 500,
-    }
+        config,
+        temperature=0.0,
+        max_tokens=500,
+        timeout=15,
+    )
+    if raw is None:
+        return None
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=15)
-        resp.raise_for_status()
-        body = resp.json()
-        raw = body["choices"][0]["message"]["content"].strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)
@@ -853,7 +825,7 @@ def parse_text(text: str, config: dict | None = None) -> dict:
         return regex_result
 
     # Regex couldn't determine intent, fall back to LLM
-    if config.get("OPENAI_API_KEY"):
+    if resolve_targets(config):
         result = _call_openai_multi(text, config)
         if result is not None:
             if "intent" not in result:
@@ -936,7 +908,7 @@ def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None)
         }
 
     # Try LLM
-    if config.get("OPENAI_API_KEY"):
+    if resolve_targets(config):
         result = _call_openai_suggest(butler_name, config)
         if result is not None and isinstance(result, list) and len(result) > 0:
             return [s for s in result if isinstance(s, str) and s.strip()][:6]
@@ -947,33 +919,20 @@ def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None)
 
 
 def _call_openai_suggest(butler_name: str, config: dict) -> list[str] | None:
-    api_key = config.get("OPENAI_API_KEY", "")
-    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = config.get("OPENAI_MODEL", "gpt-4o-mini")
-
-    if not api_key:
-        return None
-
-    url = f"{base_url.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": [
+    raw = chat_completion(
+        [
             {"role": "system", "content": _build_suggest_prompt(butler_name)},
             {"role": "user", "content": "生成一组建议"},
         ],
-        "temperature": 0.9,
-        "max_tokens": 300,
-    }
+        config,
+        temperature=0.9,
+        max_tokens=300,
+        timeout=12,
+    )
+    if raw is None:
+        return None
 
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=12)
-        resp.raise_for_status()
-        body = resp.json()
-        raw = body["choices"][0]["message"]["content"].strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```(?:json)?\s*", "", raw)
             raw = re.sub(r"\s*```$", "", raw)
