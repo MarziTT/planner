@@ -331,6 +331,16 @@ def _check_exercise_drop(user_id: int, now: datetime) -> dict | None:
     this_week = _week_minutes(this_week_start, now)
     last_week = _week_minutes(last_week_start, last_week_end)
 
+    # A completed workout today is stronger evidence than the weekly drop.
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    exercised_today = ExerciseRecord.query.filter(
+        ExerciseRecord.user_id == user_id,
+        ExerciseRecord.recorded_at >= today_start,
+        ExerciseRecord.recorded_at <= now,
+    ).first()
+    if exercised_today:
+        return None
+
     if this_week <= 0 or last_week <= 0:
         return None
 
@@ -377,6 +387,16 @@ def _check_meal_sync(
         confidence = pat.get("confidence", 0)
 
         if hour is None or confidence < 0.4:
+            continue
+
+        meal_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        recent_meal = MealRecord.query.filter(
+            MealRecord.user_id == user_id,
+            MealRecord.meal_type == meal_type,
+            MealRecord.recorded_at >= meal_start,
+            MealRecord.recorded_at <= now,
+        ).first()
+        if recent_meal:
             continue
 
         # Check if this meal type already has notifications enabled
