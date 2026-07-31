@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from app.services.smart_notify_service import _with_presentation
+from app.services.smart_notify_service import _notification_allowed
+from datetime import time
 
 
 def test_notification_presentation_has_live_activity_contract():
@@ -41,3 +43,11 @@ def test_notification_dedupe_key_is_stable_for_same_daily_insight():
 
     assert first["dedupe_key"] == second["dedupe_key"]
     assert first["dedupe_key"] != changed["dedupe_key"]
+
+
+def test_quiet_hours_support_cross_midnight_window():
+    pref = {"standing_nudge": {"quiet_hours_start": time(22, 0), "quiet_hours_end": time(7, 0)}}
+    insight = {"insight_type": "standing_nudge", "priority": "medium"}
+    assert _notification_allowed(insight, pref, datetime(2026, 7, 31, 23, 0)) is False
+    assert _notification_allowed(insight, pref, datetime(2026, 8, 1, 6, 30)) is False
+    assert _notification_allowed(insight, pref, datetime(2026, 8, 1, 10, 0)) is True

@@ -86,6 +86,7 @@ def generate_insights(user_id: int) -> dict[str, Any]:
     # Sort by priority: high → medium → low
     priority_order = {"high": 0, "medium": 1, "low": 2}
     insights.sort(key=lambda i: priority_order.get(i.get("priority", "low"), 99))
+    insights = [i for i in insights if _notification_allowed(i, prefs, now)][:3]
     insights = [_with_presentation(insight, now) for insight in insights]
 
     return {
@@ -94,6 +95,27 @@ def generate_insights(user_id: int) -> dict[str, Any]:
         "count": len(insights),
         "insights": insights,
     }
+
+
+def _notification_allowed(insight: dict[str, Any], prefs: dict[str, dict[str, Any]], now: datetime) -> bool:
+    """Respect per-category quiet hours while allowing high-priority alerts."""
+    if insight.get("priority") == "high":
+        return True
+    pref = prefs.get(str(insight.get("insight_type") or ""))
+    if not pref:
+        return True
+    start = pref.get("quiet_hours_start")
+    end = pref.get("quiet_hours_end")
+    if start is None or end is None:
+        return True
+    current = now.hour * 60 + now.minute
+    start_minutes = start.hour * 60 + start.minute
+    end_minutes = end.hour * 60 + end.minute
+    if start_minutes == end_minutes:
+        return False
+    if start_minutes < end_minutes:
+        return not (start_minutes <= current < end_minutes)
+    return not (current >= start_minutes or current < end_minutes)
 
 
 def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]:
