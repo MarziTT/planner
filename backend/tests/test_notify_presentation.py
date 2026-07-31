@@ -20,7 +20,7 @@ def test_notification_presentation_has_live_activity_contract():
     presentation = insight["presentation"]
     assert presentation["surface"] == "notification_and_live_activity"
     assert presentation["category"] == "exercise_drop"
-    assert presentation["route"] == "/exercise"
+    assert presentation["route"] == "/home?tab=exercise"
     assert presentation["actions"][0]["action"] == "open_exercise"
     assert presentation["expires_at"]
     assert presentation["ongoing"] is False

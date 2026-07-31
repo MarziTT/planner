@@ -123,13 +123,13 @@ def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]
     insight_type = str(insight.get("insight_type") or "general")
     priority = str(insight.get("priority") or "low")
     action_map = {
-        "wake_deviation": {"label": "查看作息", "route": "/health", "action": "open_health"},
-        "standing_nudge": {"label": "记录站立", "route": "/habits", "action": "log_standing"},
-        "exercise_drop": {"label": "开始运动", "route": "/exercise", "action": "open_exercise"},
-        "meal_sync": {"label": "记录餐食", "route": "/meals", "action": "log_meal"},
-        "sleep_reminder": {"label": "查看睡眠", "route": "/health", "action": "open_sleep"},
+        "wake_deviation": {"label": "查看作息", "route": "/home?tab=dashboard", "action": "open_health"},
+        "standing_nudge": {"label": "记录站立", "route": "/home?tab=habits", "action": "log_standing"},
+        "exercise_drop": {"label": "开始运动", "route": "/home?tab=exercise", "action": "open_exercise"},
+        "meal_sync": {"label": "记录餐食", "route": "/home?tab=meals", "action": "log_meal"},
+        "sleep_reminder": {"label": "查看睡眠", "route": "/home?tab=dashboard", "action": "open_sleep"},
     }
-    action = action_map.get(insight_type, {"label": "打开管家", "route": "/agent", "action": "open_agent"})
+    action = action_map.get(insight_type, {"label": "打开管家", "route": "/home?tab=dashboard", "action": "open_agent"})
     actions = [action]
     if priority != "high":
         actions.extend([

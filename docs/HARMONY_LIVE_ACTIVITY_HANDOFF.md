@@ -16,7 +16,7 @@ Example:
   "actions": [
     {"label": "开始运动", "route": "/exercise", "action": "open_exercise"}
   ],
-  "route": "/exercise",
+  "route": "/home?tab=exercise",
   "expires_at": "2026-07-31T12:00:00+08:00",
   "ongoing": false
 }
@@ -38,6 +38,8 @@ Required behavior:
 3. Do not display after `expires_at`.
 4. Use `ongoing` only where the official API supports persistent presentation.
 5. Tapping the surface opens `route` through the existing Flutter navigation.
+   Supported `tab` values are `dashboard`, `habits`, `transit`, `meals`,
+   `exercise`, `tags`, `profile`, and `settings`.
 6. Map action identifiers to Flutter callbacks; unknown actions open `/agent`.
 7. For non-high-priority insights, expose `snooze` (30 minutes) and
    `dismiss_today` actions. Persist these decisions locally and suppress the
