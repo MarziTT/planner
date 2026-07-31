@@ -78,6 +78,19 @@ class TestMultiIntentParse:
         parsed = data["data"]
         assert parsed["intent"] in ("query", "unknown")
 
+    def test_parse_multi_health_summary_query(self, app_client, auth_headers):
+        """Health-summary questions route to the combined health answer."""
+        _, client = app_client
+        resp = client.post(
+            "/api/v1/agent/parse-multi",
+            json={"text": "总结一下我今天的健康状态"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        parsed = resp.get_json()["data"]
+        assert parsed["intent"] == "query"
+        assert parsed["query_type"] == "health_summary"
+
     def test_parse_multi_create_reminder_intent(self, app_client, auth_headers):
         """Voice: 'Remind me to buy milk tonight' → create_reminder intent."""
         _, client = app_client
@@ -262,6 +275,22 @@ class TestExecuteQuery:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "answer" in data["data"]
+
+    def test_health_summary_combines_meal_and_exercise_answers(self, app_client, auth_headers):
+        _, client = app_client
+        resp = client.post(
+            "/api/v1/agent/execute",
+            json={
+                "intent": "query",
+                "query_type": "health_summary",
+                "query_text": "总结一下我今天的健康状态",
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        answer = resp.get_json()["data"]["answer"]
+        assert "kcal" in answer
+        assert "运动" in answer
 
     def test_schedule_query_includes_late_night_event(self, app_client, auth_headers):
         """Schedule queries include events scheduled through the final second of today."""

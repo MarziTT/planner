@@ -612,6 +612,7 @@ _EXERCISE_TYPE_PATTERN = re.compile(r"(跑步|游泳|健身|骑行|散步|瑜伽
 _CALORIE_QUERY = re.compile(r"(?:多少|几个|几).*(?:卡路里|热量|大卡|千卡)")
 _EXERCISE_QUERY = re.compile(r"运动.*(?:怎么样|达标|多少|够)")
 _SCHEDULE_QUERY = re.compile(r"(?:今天|今日|明天).*(?:安排|计划|日程|行程|做什么)")
+_HEALTH_QUERY = re.compile(r"(?:健康|身体)|(?:今天|最近).*(?:状态|状况|情况)")
 _TIME_PATTERN = re.compile(r"(\d{1,2})[点:：](\d{2})?")
 
 
@@ -621,6 +622,8 @@ def _detect_intent_regex(text: str) -> str:
     if _CALORIE_QUERY.search(text):
         return "query"
     if _EXERCISE_QUERY.search(text):
+        return "query"
+    if _HEALTH_QUERY.search(text):
         return "query"
     if _SCHEDULE_QUERY.search(text):
         return "query"
@@ -770,6 +773,8 @@ def _parse_query_regex(text: str) -> dict:
         query_type = "calories_today"
     elif _EXERCISE_QUERY.search(text):
         query_type = "exercise_today"
+    elif _HEALTH_QUERY.search(text):
+        query_type = "health_summary"
     elif _SCHEDULE_QUERY.search(text):
         query_type = "schedule_today"
     else:
