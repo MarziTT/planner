@@ -7,6 +7,7 @@ from datetime import date
 
 from .dashboard_service import get_dashboard_overview
 from ..models import AppSetting, User
+from .persona_service import resolve_persona
 
 
 def build_daily_brief(
@@ -15,6 +16,7 @@ def build_daily_brief(
     lat: float | None = None,
     lon: float | None = None,
     butler_name: str | None = None,
+    persona_preset: str | None = None,
 ) -> dict[str, Any]:
     overview = get_dashboard_overview(user_id, lat=lat, lon=lon)
     weather = overview.get("weather") or {}
@@ -93,7 +95,7 @@ def build_daily_brief(
         parts.append("出行提示：" + "，".join(travel) + "。")
 
     summary = "".join(parts) or "今天没什么特别需要操心的，按自己的节奏来就好。"
-    persona = _load_persona(user_id, butler_name)
+    persona = _load_persona(user_id, butler_name, persona_preset)
     summary = _apply_persona(summary, persona)
     return {
         "date": overview.get("date"),
@@ -109,7 +111,8 @@ def build_daily_brief(
             "meals": meals,
             "routine": routine,
         },
-        "persona": {"butler_name": persona["butler_name"], "user_name": persona["user_name"]},
+        "persona": {"butler_name": persona["butler_name"], "user_name": persona["user_name"],
+                    "preset_id": persona["preset_id"]},
     }
 
 
@@ -133,26 +136,25 @@ def _is_weekend(value: Any) -> bool:
         return False
 
 
-def _load_persona(user_id: int, butler_name: str | None) -> dict[str, str]:
+def _load_persona(user_id: int, butler_name: str | None, preset_id: str | None = None) -> dict[str, str]:
     try:
         user = User.query.filter_by(id=user_id).first()
         setting = AppSetting.query.filter_by(user_id=user_id).first()
     except Exception:
         user = None
         setting = None
-    return {
-        "butler_name": (butler_name or "管家").strip()[:20] or "管家",
-        "user_name": (user.nickname if user else "").strip(),
-        "tone": (setting.weather_tone if setting and setting.weather_tone else "").strip(),
-    }
+    persona = resolve_persona(preset_id, custom_name=butler_name,
+                              tone=setting.weather_tone if setting else None)
+    return {**persona, "butler_name": persona["display_name"],
+            "user_name": (user.nickname if user else "").strip()}
 
 
 def _apply_persona(summary: str, persona: dict[str, str]) -> str:
     """Keep the brief conversational without pretending to be a generic AI."""
     user_name = persona["user_name"]
-    tone = persona["tone"].lower()
+    tone = persona.get("legacy_tone", "").lower()
     greeting = f"{user_name}，" if user_name and user_name not in {"用户", "testuser"} else ""
-    if any(word in tone for word in ("简洁", "冷静", "克制", "专业")):
+    if persona.get("preset_id") == "zzz_zero" or any(word in tone for word in ("简洁", "冷静", "克制", "专业")):
         return f"{greeting}{summary}"
     if any(word in tone for word in ("活泼", "可爱", "幽默", "朋友")):
         return f"{greeting}{summary}别把自己排得太满，有事叫我。"

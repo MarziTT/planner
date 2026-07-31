@@ -3,7 +3,7 @@ from unittest.mock import patch
 from app.services.daily_brief_service import build_daily_brief
 
 
-@patch("app.services.daily_brief_service._load_persona", return_value={"butler_name": "阿福", "user_name": "小林", "tone": "温和朋友"})
+@patch("app.services.daily_brief_service._load_persona", return_value={"butler_name": "阿福", "user_name": "小林", "preset_id": "default", "legacy_tone": "温和朋友"})
 @patch("app.services.daily_brief_service.get_dashboard_overview")
 def test_daily_brief_combines_life_domains(mock_overview, mock_persona):
     mock_overview.return_value = {
@@ -86,3 +86,22 @@ def test_daily_brief_covers_transit_food_and_weekend(mock_hour, mock_overview):
     assert any("手机电量" in tip for tip in result["travel_tips"])
     assert any("摄入偏少" in tip for tip in result["food_tips"])
     assert any("短途散步" in tip for tip in result["travel_tips"])
+
+
+@patch("app.services.daily_brief_service.get_dashboard_overview")
+def test_daily_brief_uses_zzz_zero_preset_without_generic_ai_suffix(mock_overview):
+    mock_overview.return_value = {
+        "date": "2026-08-01",
+        "weather": {"available": False},
+        "schedule": {"pending_count": 0, "upcoming": []},
+        "exercise": {"total_minutes": 30},
+        "meals": {"meal_count": 1, "total_calories": 800},
+        "routine": {"auto_stopped": False},
+    }
+
+    result = build_daily_brief(1, persona_preset="zzz_zero")
+
+    assert result["persona"]["preset_id"] == "zzz_zero"
+    assert result["persona"]["butler_name"] == "零"
+    assert "跟我说一声" not in result["summary"]
+    assert "作为AI" not in result["summary"]

@@ -10,13 +10,14 @@ class DailyBriefRepository {
 
   final Dio _dio;
 
-  Future<DailyBrief> fetch({double? latitude, double? longitude, String? butlerName}) async {
+  Future<DailyBrief> fetch({double? latitude, double? longitude, String? butlerName, String? personaPreset}) async {
     final response = await _dio.get<dynamic>(
       '/dashboard/brief',
       queryParameters: {
         if (latitude != null) 'lat': latitude,
         if (longitude != null) 'lon': longitude,
         if (butlerName != null && butlerName.trim().isNotEmpty) 'butler_name': butlerName.trim(),
+        if (personaPreset != null && personaPreset.trim().isNotEmpty) 'persona_preset': personaPreset.trim(),
       },
     );
     final parsed = ApiResponse.raw(response.data, DailyBrief.fromJson);

@@ -30,11 +30,13 @@ def brief():
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
     butler_name = request.args.get("butler_name", "", type=str).strip() or None
+    persona_preset = request.args.get("persona_preset", "", type=str).strip() or None
     return success(build_daily_brief(
         g.current_user.id,
         lat=lat,
         lon=lon,
         butler_name=butler_name,
+        persona_preset=persona_preset,
     ))
 
 
