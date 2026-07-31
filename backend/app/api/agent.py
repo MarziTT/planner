@@ -327,10 +327,11 @@ def _build_query_answer(user_id: int, query_type: str, query_text: str) -> str:
         return "今天还没有运动记录，动起来吧！"
 
     if query_type == "schedule_today":
+        tomorrow_start = today_start + timedelta(days=1)
         events = Event.query.filter(
             Event.user_id == user_id,
             Event.starts_at >= today_start,
-            Event.starts_at < today_start.replace(hour=23, minute=59),
+            Event.starts_at < tomorrow_start,
             Event.status != "cancelled",
         ).order_by(Event.starts_at).all()
         if events:

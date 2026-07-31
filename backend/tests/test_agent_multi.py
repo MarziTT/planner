@@ -5,6 +5,9 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app.extensions import db
+from app.models import Event
+
 TZ = timezone(timedelta(hours=8))
 
 
@@ -259,6 +262,31 @@ class TestExecuteQuery:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "answer" in data["data"]
+
+    def test_schedule_query_includes_late_night_event(self, app_client, auth_headers):
+        """Schedule queries include events scheduled through the final second of today."""
+        app, client = app_client
+        with app.app_context():
+            from app.models import User
+            user = User.query.filter_by(phone="13800000001").first()
+            assert user is not None
+            today = datetime.now(TZ).replace(hour=23, minute=59, second=30, microsecond=0)
+            starts_at = today
+            db.session.add(Event(
+                user_id=user.id,
+                title="Late-night review",
+                starts_at=starts_at,
+                ends_at=starts_at + timedelta(minutes=15),
+            ))
+            db.session.commit()
+
+        resp = client.post(
+            "/api/v1/agent/execute",
+            json={"intent": "query", "query_type": "schedule_today", "query_text": "今天有什么安排"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        assert "Late-night review" in resp.get_json()["data"]["answer"]
 
     def test_unknown_intent_rejected(self, app_client, auth_headers):
         _, client = app_client
