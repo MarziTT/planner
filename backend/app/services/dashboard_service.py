@@ -57,7 +57,7 @@ def get_dashboard_overview(user_id: int, lat: float | None = None, lon: float | 
 def _get_schedule_snapshot(user_id: int, today_start: datetime, today_end: datetime) -> dict:
     """Today's schedule — pending events count + next 3 upcoming events."""
 
-    events = (
+    event_query = (
         Event.query
         .filter(
             Event.user_id == user_id,
@@ -66,9 +66,9 @@ def _get_schedule_snapshot(user_id: int, today_start: datetime, today_end: datet
             Event.status != "cancelled",
         )
         .order_by(Event.starts_at.asc())
-        .limit(10)
-        .all()
     )
+    event_count = event_query.count()
+    events = event_query.limit(3).all()
 
     todos = (
         Todo.query
@@ -91,8 +91,8 @@ def _get_schedule_snapshot(user_id: int, today_start: datetime, today_end: datet
         })
 
     return {
-        "pending_count": len(events) + todos,
-        "event_count": len(events),
+        "pending_count": event_count + todos,
+        "event_count": event_count,
         "todo_count": todos,
         "upcoming": upcoming,
     }
