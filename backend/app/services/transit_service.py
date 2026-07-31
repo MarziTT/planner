@@ -159,6 +159,7 @@ def ocr_ticket(image_bytes: bytes, user_id: int, config: dict[str, str]) -> Pars
             temperature=0.0,
             max_tokens=512,
             timeout=60,
+            capability="vision",
         )
         if content is None:
             raise ValueError("No OCR provider returned a response")

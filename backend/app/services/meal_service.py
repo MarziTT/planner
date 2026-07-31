@@ -74,6 +74,7 @@ def _call_vision_api(image_bytes: bytes, config: dict[str, str]) -> list[dict[st
         temperature=0.0,
         max_tokens=1024,
         timeout=60,
+        capability="vision",
     )
     if content is None:
         return []

@@ -25,6 +25,7 @@ class LlmTarget:
     api_key: str
     base_url: str
     models: tuple[str, ...]
+    vision_models: tuple[str, ...] = ()
 
 
 def _split_models(value: Any, default: str = "gpt-4o-mini") -> tuple[str, ...]:
@@ -55,6 +56,7 @@ def resolve_targets(config: dict[str, Any]) -> list[LlmTarget]:
                 api_key=str(provider["api_key"]),
                 base_url=str(provider.get("base_url") or "https://api.openai.com/v1").rstrip("/"),
                 models=_split_models(provider.get("models") or provider.get("model")),
+                vision_models=_split_models(provider.get("vision_models"), default="") if provider.get("vision_models") else (),
             ))
 
     legacy_key = str(config.get("OPENAI_API_KEY") or "")
@@ -64,6 +66,7 @@ def resolve_targets(config: dict[str, Any]) -> list[LlmTarget]:
             api_key=legacy_key,
             base_url=str(config.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/"),
             models=_split_models(config.get("OPENAI_MODELS") or config.get("OPENAI_MODEL")),
+            vision_models=_split_models(config.get("OPENAI_VISION_MODELS"), default="") if config.get("OPENAI_VISION_MODELS") else (),
         ))
 
     unique: list[LlmTarget] = []
@@ -84,6 +87,7 @@ def chat_completion(
     max_tokens: int = 500,
     timeout: float = 15,
     extra_payload: dict[str, Any] | None = None,
+    capability: str = "text",
 ) -> str | None:
     """Try providers and models in order, returning the first valid response."""
     for target in resolve_targets(config):
@@ -92,7 +96,8 @@ def chat_completion(
             continue
         url = f"{target.base_url}/chat/completions"
         headers = {"Authorization": f"Bearer {target.api_key}", "Content-Type": "application/json"}
-        for model in target.models:
+        models = target.vision_models or target.models if capability == "vision" else target.models
+        for model in models:
             payload = {
                 "model": model,
                 "messages": messages,

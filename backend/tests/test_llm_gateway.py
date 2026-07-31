@@ -20,6 +20,23 @@ def test_resolve_targets_supports_legacy_and_multiple_relays():
 
 
 @patch("app.services.llm_gateway.requests.post")
+def test_vision_capability_prefers_vision_models(mock_post):
+    response = Mock(status_code=200)
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"choices": [{"message": {"content": "vision"}}]}
+    mock_post.return_value = response
+
+    result = chat_completion([], {
+        "OPENAI_API_KEY": "key",
+        "OPENAI_MODEL": "text-model",
+        "OPENAI_VISION_MODELS": "vision-a,vision-b",
+    }, capability="vision")
+
+    assert result == "vision"
+    assert mock_post.call_args.kwargs["json"]["model"] == "vision-a"
+
+
+@patch("app.services.llm_gateway.requests.post")
 def test_chat_completion_switches_model_then_provider(mock_post):
     unavailable = Mock(status_code=404)
     unavailable.raise_for_status.return_value = None

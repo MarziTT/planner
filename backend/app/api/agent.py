@@ -39,6 +39,7 @@ def _read_llm_config() -> dict:
         "OPENAI_API_KEY": current_app.config.get("OPENAI_API_KEY", ""),
         "OPENAI_BASE_URL": current_app.config.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
         "OPENAI_MODEL": current_app.config.get("OPENAI_MODEL", "gpt-4o-mini"),
+        "OPENAI_VISION_MODELS": current_app.config.get("OPENAI_VISION_MODELS", ""),
         "LLM_PROVIDERS": current_app.config.get("LLM_PROVIDERS", ""),
     }
 
@@ -54,6 +55,7 @@ def _read_llm_config() -> dict:
         "OPENAI_API_KEY": user_settings.llm_api_key or fallback["OPENAI_API_KEY"],
         "OPENAI_BASE_URL": user_settings.llm_base_url or fallback["OPENAI_BASE_URL"],
         "OPENAI_MODEL": user_settings.llm_model or fallback["OPENAI_MODEL"],
+        "OPENAI_VISION_MODELS": fallback["OPENAI_VISION_MODELS"],
         "LLM_PROVIDERS": fallback["LLM_PROVIDERS"],
     }
 
