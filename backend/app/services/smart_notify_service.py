@@ -16,6 +16,8 @@ Notification insight types:
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -107,7 +109,24 @@ def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]
     }
     action = action_map.get(insight_type, {"label": "打开管家", "route": "/agent", "action": "open_agent"})
     lifetime = 6 * 60 * 60 if priority == "high" else 2 * 60 * 60
+    cooldown_minutes = {
+        "wake_deviation": 12 * 60,
+        "standing_nudge": 90,
+        "exercise_drop": 24 * 60,
+        "meal_sync": 12 * 60,
+        "sleep_reminder": 12 * 60,
+    }.get(insight_type, 120)
+    identity_payload = {
+        "type": insight_type,
+        "data": insight.get("data") or {},
+        "date": now.date().isoformat(),
+    }
+    dedupe_key = hashlib.sha256(
+        json.dumps(identity_payload, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()[:24]
     decorated = dict(insight)
+    decorated["dedupe_key"] = dedupe_key
+    decorated["cooldown_minutes"] = cooldown_minutes
     decorated["presentation"] = {
         "surface": "notification_and_live_activity",
         "category": insight_type,
@@ -119,6 +138,8 @@ def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]
         "route": action["route"],
         "expires_at": (now + timedelta(seconds=lifetime)).isoformat(),
         "ongoing": priority == "high",
+        "dedupe_key": dedupe_key,
+        "cooldown_minutes": cooldown_minutes,
     }
     return decorated
 

@@ -22,6 +22,10 @@ Example:
 }
 ```
 
+Each insight also contains `dedupe_key` and `cooldown_minutes`. Persist the last
+display time per key locally. Do not display the same key again until its
+cooldown expires, even if the polling endpoint returns it repeatedly.
+
 The HarmonyOS/debugging Codex should map this protocol to the best currently
 available official HarmonyOS notification and Live View/Live Activity API.
 Do not hard-code category-specific text in ArkTS; the backend owns content and
@@ -35,8 +39,8 @@ Required behavior:
 4. Use `ongoing` only where the official API supports persistent presentation.
 5. Tapping the surface opens `route` through the existing Flutter navigation.
 6. Map action identifiers to Flutter callbacks; unknown actions open `/agent`.
-7. Deduplicate by insight type plus relevant `data` fields to avoid repeated
-   alerts on every polling cycle.
+7. Deduplicate using the backend-provided `dedupe_key` and
+   `cooldown_minutes`; do not invent a separate client hash.
 8. Respect notification permission, quiet hours, and user preference settings.
 9. If Live View is unavailable, fall back to an ordinary notification without
    losing the action or route.
