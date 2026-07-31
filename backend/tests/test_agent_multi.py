@@ -91,6 +91,18 @@ class TestMultiIntentParse:
         assert parsed["intent"] == "query"
         assert parsed["query_type"] == "health_summary"
 
+    def test_parse_multi_tomorrow_schedule_query(self, app_client, auth_headers):
+        _, client = app_client
+        resp = client.post(
+            "/api/v1/agent/parse-multi",
+            json={"text": "明天有什么安排"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        parsed = resp.get_json()["data"]
+        assert parsed["intent"] == "query"
+        assert parsed["query_type"] == "schedule_tomorrow"
+
     def test_parse_multi_create_reminder_intent(self, app_client, auth_headers):
         """Voice: 'Remind me to buy milk tonight' → create_reminder intent."""
         _, client = app_client
@@ -316,6 +328,36 @@ class TestExecuteQuery:
         )
         assert resp.status_code == 200
         assert "Late-night review" in resp.get_json()["data"]["answer"]
+
+    def test_tomorrow_schedule_query_excludes_today(self, app_client, auth_headers):
+        app, client = app_client
+        with app.app_context():
+            from app.models import User
+            user = User.query.filter_by(phone="13800000001").first()
+            assert user is not None
+            today = datetime.now(TZ).replace(hour=10, minute=0, second=0, microsecond=0)
+            tomorrow = today + timedelta(days=1)
+            db.session.add_all([
+                Event(user_id=user.id, title="Today event", starts_at=today,
+                      ends_at=today + timedelta(minutes=30)),
+                Event(user_id=user.id, title="Tomorrow event", starts_at=tomorrow,
+                      ends_at=tomorrow + timedelta(minutes=30)),
+            ])
+            db.session.commit()
+
+        resp = client.post(
+            "/api/v1/agent/execute",
+            json={
+                "intent": "query",
+                "query_type": "schedule_tomorrow",
+                "query_text": "明天有什么安排",
+            },
+            headers=auth_headers,
+        )
+        assert resp.status_code == 200
+        answer = resp.get_json()["data"]["answer"]
+        assert "Tomorrow event" in answer
+        assert "Today event" not in answer
 
     def test_unknown_intent_rejected(self, app_client, auth_headers):
         _, client = app_client

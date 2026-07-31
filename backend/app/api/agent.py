@@ -326,18 +326,21 @@ def _build_query_answer(user_id: int, query_type: str, query_text: str) -> str:
             )
         return "今天还没有运动记录，动起来吧！"
 
-    if query_type == "schedule_today":
-        tomorrow_start = today_start + timedelta(days=1)
+    if query_type in ("schedule_today", "schedule_tomorrow"):
+        day_offset = 1 if query_type == "schedule_tomorrow" else 0
+        range_start = today_start + timedelta(days=day_offset)
+        range_end = range_start + timedelta(days=1)
         events = Event.query.filter(
             Event.user_id == user_id,
-            Event.starts_at >= today_start,
-            Event.starts_at < tomorrow_start,
+            Event.starts_at >= range_start,
+            Event.starts_at < range_end,
             Event.status != "cancelled",
         ).order_by(Event.starts_at).all()
+        day_label = "明天" if day_offset else "今天"
         if events:
             lines = [f"· {e.starts_at.strftime('%H:%M')} {e.title}" for e in events[:5]]
-            return "今天有这些安排：\n" + "\n".join(lines)
-        return "今天还没有日程安排。"
+            return f"{day_label}有这些安排：\n" + "\n".join(lines)
+        return f"{day_label}还没有日程安排。"
 
     if query_type == "health_summary":
         return _build_query_answer(user_id, "calories_today", "") + "\n" + \

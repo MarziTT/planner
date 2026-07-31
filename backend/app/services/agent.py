@@ -776,7 +776,7 @@ def _parse_query_regex(text: str) -> dict:
     elif _HEALTH_QUERY.search(text):
         query_type = "health_summary"
     elif _SCHEDULE_QUERY.search(text):
-        query_type = "schedule_today"
+        query_type = "schedule_tomorrow" if "明天" in text else "schedule_today"
     else:
         query_type = "general"
 
