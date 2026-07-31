@@ -8,15 +8,48 @@ GET  /api/v1/notify/history    —  notification event history
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 
 from flask import Blueprint, g, request
 
 from ..services.smart_notify_service import generate_insights, get_notify_history
-from .common import auth_required, success
+from ..extensions import db
+from ..models_habits import EventHistory
+from ..services.time_service import get_clock
+from .common import auth_required, failure, success
 
 logger = logging.getLogger(__name__)
 
 notify_bp = Blueprint("notifications", __name__)
+
+
+@notify_bp.post("/notify/decision")
+@auth_required
+def notify_decision():
+    """Persist a smart-notification action across app restarts and devices."""
+    payload = request.get_json(silent=True) or {}
+    dedupe_key = str(payload.get("dedupe_key") or "").strip()
+    action = str(payload.get("action") or "").strip()
+    if not dedupe_key or action not in {"snooze", "dismiss_today", "completed"}:
+        return failure("validation_error", "dedupe_key and a valid action are required", status=422)
+
+    now = get_clock().now_local()
+    try:
+        minutes = max(1, min(int(payload.get("minutes") or 30), 24 * 60))
+    except (TypeError, ValueError):
+        return failure("validation_error", "minutes must be an integer", status=422)
+    entry = EventHistory(
+        user_id=g.current_user.id,
+        notify_type=f"insight:{dedupe_key}",
+        planned_time=now + timedelta(minutes=minutes) if action == "snooze" else now,
+        reminded_at=now,
+        completed_at=now if action == "completed" else None,
+        skipped=action == "dismiss_today",
+        delayed_count=1 if action == "snooze" else 0,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    return success({"accepted": True, "action": action, "resume_at": entry.planned_time.isoformat()})
 
 
 # ---------------------------------------------------------------------------

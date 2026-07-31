@@ -86,8 +86,9 @@ def generate_insights(user_id: int) -> dict[str, Any]:
     # Sort by priority: high → medium → low
     priority_order = {"high": 0, "medium": 1, "low": 2}
     insights.sort(key=lambda i: priority_order.get(i.get("priority", "low"), 99))
-    insights = [i for i in insights if _notification_allowed(i, prefs, now)][:3]
+    insights = [i for i in insights if _notification_allowed(i, prefs, now)]
     insights = [_with_presentation(insight, now) for insight in insights]
+    insights = [i for i in insights if not _is_suppressed(user_id, i["dedupe_key"], now)][:3]
 
     return {
         "user_id": user_id,
@@ -116,6 +117,25 @@ def _notification_allowed(insight: dict[str, Any], prefs: dict[str, dict[str, An
     if start_minutes < end_minutes:
         return not (start_minutes <= current < end_minutes)
     return not (current >= start_minutes or current < end_minutes)
+
+
+def _is_suppressed(user_id: int, dedupe_key: str, now: datetime) -> bool:
+    decision = (
+        EventHistory.query
+        .filter(
+            EventHistory.user_id == user_id,
+            EventHistory.notify_type == f"insight:{dedupe_key}",
+        )
+        .order_by(EventHistory.created_at.desc())
+        .first()
+    )
+    if decision is None:
+        return False
+    if decision.completed_at is not None:
+        return True
+    if decision.skipped:
+        return decision.created_at.date() == now.date()
+    return decision.planned_time > now
 
 
 def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]:
