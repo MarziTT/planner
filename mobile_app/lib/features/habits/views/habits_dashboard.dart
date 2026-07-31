@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/dashboard.dart';
 import '../state/dashboard_controller.dart';
+import '../../home/state/daily_brief_provider.dart';
 
 /// Habits Dashboard — Phase 2 six-domain overview page.
 ///
@@ -52,12 +53,61 @@ class _HabitsDashboardState extends ConsumerState<HabitsDashboard> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
         _buildHeader(context, data),
+        const SizedBox(height: 12),
+        _buildDailyBrief(context),
         const SizedBox(height: 20),
         _buildCardGrid(context, data),
         const SizedBox(height: 24),
         if (data.patternAnnouncement != null)
           _buildAnnouncement(data.patternAnnouncement!),
       ],
+    );
+  }
+
+  Widget _buildDailyBrief(BuildContext context) {
+    final brief = ref.watch(dailyBriefProvider);
+    return brief.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: LinearProgressIndicator(),
+        ),
+      ),
+      error: (_, __) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.auto_awesome_outlined),
+          title: const Text('今日生活简报暂时不可用'),
+          trailing: IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => ref.invalidate(dailyBriefProvider),
+          ),
+        ),
+      ),
+      data: (data) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text('今日生活简报', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  IconButton(
+                    tooltip: '刷新简报',
+                    icon: const Icon(Icons.refresh, size: 20),
+                    onPressed: () => ref.invalidate(dailyBriefProvider),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(data.summary, style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
