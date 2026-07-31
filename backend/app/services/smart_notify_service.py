@@ -130,6 +130,12 @@ def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]
         "sleep_reminder": {"label": "查看睡眠", "route": "/health", "action": "open_sleep"},
     }
     action = action_map.get(insight_type, {"label": "打开管家", "route": "/agent", "action": "open_agent"})
+    actions = [action]
+    if priority != "high":
+        actions.extend([
+            {"label": "稍后提醒", "action": "snooze", "minutes": 30},
+            {"label": "今天不再提醒", "action": "dismiss_today"},
+        ])
     lifetime = 6 * 60 * 60 if priority == "high" else 2 * 60 * 60
     cooldown_minutes = {
         "wake_deviation": 12 * 60,
@@ -156,7 +162,7 @@ def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]
         "compact_title": str(insight.get("title") or "Pixel Planner")[:32],
         "compact_body": str(insight.get("body") or "")[:80],
         "progress": None,
-        "actions": [action],
+        "actions": actions,
         "route": action["route"],
         "expires_at": (now + timedelta(seconds=lifetime)).isoformat(),
         "ongoing": priority == "high",
