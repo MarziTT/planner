@@ -14,6 +14,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 _COOLDOWN_SECONDS = 30.0
+_RATE_LIMIT_COOLDOWN_SECONDS = 60.0
 _provider_cooldowns: dict[str, float] = {}
 _cooldown_lock = threading.Lock()
 
@@ -107,6 +108,15 @@ def chat_completion(
                 if response.status_code in (400, 404, 422):
                     logger.warning("LLM model %s unavailable on provider %s", model, target.name)
                     continue
+                if response.status_code == 429:
+                    cooldown = _retry_after_seconds(response) or _RATE_LIMIT_COOLDOWN_SECONDS
+                    _mark_cooldown(target, cooldown)
+                    logger.warning("LLM provider %s is rate limited; cooling down %.0fs", target.name, cooldown)
+                    break
+                if response.status_code >= 500:
+                    _mark_cooldown(target)
+                    logger.warning("LLM provider %s returned %s; cooling down", target.name, response.status_code)
+                    break
                 response.raise_for_status()
                 content = response.json()["choices"][0]["message"]["content"]
                 if isinstance(content, str) and content.strip():
@@ -136,6 +146,15 @@ def _is_cooling_down(target: LlmTarget) -> bool:
         return True
 
 
-def _mark_cooldown(target: LlmTarget) -> None:
+def _retry_after_seconds(response: requests.Response) -> float | None:
+    value = response.headers.get("Retry-After")
+    try:
+        seconds = float(value)
+        return max(0.0, min(seconds, 300.0))
+    except (TypeError, ValueError):
+        return None
+
+
+def _mark_cooldown(target: LlmTarget, seconds: float = _COOLDOWN_SECONDS) -> None:
     with _cooldown_lock:
-        _provider_cooldowns[_target_key(target)] = time.monotonic() + _COOLDOWN_SECONDS
+        _provider_cooldowns[_target_key(target)] = time.monotonic() + max(0.0, seconds)

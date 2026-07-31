@@ -72,3 +72,23 @@ def test_unreachable_provider_is_temporarily_cooled_down(mock_post):
     assert chat_completion([], config) is None
     assert chat_completion([], config) is None
     assert mock_post.call_count == 1
+
+
+@patch("app.services.llm_gateway.requests.post")
+def test_rate_limited_provider_is_cooled_down_and_backup_takes_over(mock_post):
+    llm_gateway._provider_cooldowns.clear()
+    limited = Mock(status_code=429, headers={"Retry-After": "120"})
+    backup = Mock(status_code=200)
+    backup.raise_for_status.return_value = None
+    backup.json.return_value = {"choices": [{"message": {"content": "backup"}}]}
+    mock_post.side_effect = [limited, backup]
+
+    result = chat_completion([], {
+        "OPENAI_API_KEY": "primary",
+        "OPENAI_BASE_URL": "https://primary.example/v1",
+        "OPENAI_MODEL": "primary-model",
+        "LLM_PROVIDERS": [{"name": "backup", "api_key": "backup", "base_url": "https://backup.example/v1", "model": "backup-model"}],
+    })
+
+    assert result == "backup"
+    assert mock_post.call_count == 2
