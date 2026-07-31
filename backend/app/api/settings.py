@@ -17,6 +17,13 @@ _BASE_THEMES = ["sakuraSeason", "ocean", "forest", "desertDusk", "aurora"]
 _ZZZ_THEME = "kamenRiderZzz"
 
 
+def _mask_secret(value: str | None) -> str:
+    """Expose only a short suffix so API responses never contain an LLM key."""
+    if not value:
+        return ""
+    return f"****{value[-4:]}" if len(value) > 4 else "****"
+
+
 def _get_or_create_settings() -> AppSetting:
     """获取当前用户的设置记录，不存在时自动创建默认记录。"""
     settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
@@ -39,7 +46,8 @@ def _settings_to_dict(settings: AppSetting):
         "updateChannel": settings.update_channel,
         "availableThemes": available,
         "zzzEnabled": settings.zzz_enabled,
-        "llmApiKey": settings.llm_api_key or "",
+        "llmApiKey": _mask_secret(settings.llm_api_key),
+        "llmApiKeyConfigured": bool(settings.llm_api_key),
         "llmBaseUrl": settings.llm_base_url or "",
         "llmModel": settings.llm_model or "",
     }
@@ -75,7 +83,12 @@ def update_settings():
     if "zzzEnabled" in payload:
         settings.zzz_enabled = bool(payload["zzzEnabled"])
     if "llmApiKey" in payload:
-        settings.llm_api_key = payload["llmApiKey"] or None
+        # Keep the stored secret when the client sends back our masked value.
+        incoming_key = str(payload["llmApiKey"] or "").strip()
+        if incoming_key and not incoming_key.startswith("****"):
+            settings.llm_api_key = incoming_key
+        elif not incoming_key:
+            settings.llm_api_key = None
     if "llmBaseUrl" in payload:
         settings.llm_base_url = payload["llmBaseUrl"] or None
     if "llmModel" in payload:
