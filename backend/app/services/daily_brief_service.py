@@ -6,9 +6,16 @@ from typing import Any
 from datetime import date
 
 from .dashboard_service import get_dashboard_overview
+from ..models import AppSetting, User
 
 
-def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | None = None) -> dict[str, Any]:
+def build_daily_brief(
+    user_id: int,
+    *,
+    lat: float | None = None,
+    lon: float | None = None,
+    butler_name: str | None = None,
+) -> dict[str, Any]:
     overview = get_dashboard_overview(user_id, lat=lat, lon=lon)
     weather = overview.get("weather") or {}
     schedule = overview.get("schedule") or {}
@@ -85,7 +92,9 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
     if travel:
         parts.append("出行提示：" + "，".join(travel) + "。")
 
-    summary = "".join(parts) or "今天一切平稳，按自己的节奏推进就好。"
+    summary = "".join(parts) or "今天没什么特别需要操心的，按自己的节奏来就好。"
+    persona = _load_persona(user_id, butler_name)
+    summary = _apply_persona(summary, persona)
     return {
         "date": overview.get("date"),
         "summary": summary,
@@ -100,6 +109,7 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
             "meals": meals,
             "routine": routine,
         },
+        "persona": {"butler_name": persona["butler_name"], "user_name": persona["user_name"]},
     }
 
 
@@ -121,3 +131,29 @@ def _is_weekend(value: Any) -> bool:
         return date.fromisoformat(str(value)).weekday() >= 5
     except (TypeError, ValueError):
         return False
+
+
+def _load_persona(user_id: int, butler_name: str | None) -> dict[str, str]:
+    try:
+        user = User.query.filter_by(id=user_id).first()
+        setting = AppSetting.query.filter_by(user_id=user_id).first()
+    except Exception:
+        user = None
+        setting = None
+    return {
+        "butler_name": (butler_name or "管家").strip()[:20] or "管家",
+        "user_name": (user.nickname if user else "").strip(),
+        "tone": (setting.weather_tone if setting and setting.weather_tone else "").strip(),
+    }
+
+
+def _apply_persona(summary: str, persona: dict[str, str]) -> str:
+    """Keep the brief conversational without pretending to be a generic AI."""
+    user_name = persona["user_name"]
+    tone = persona["tone"].lower()
+    greeting = f"{user_name}，" if user_name and user_name not in {"用户", "testuser"} else ""
+    if any(word in tone for word in ("简洁", "冷静", "克制", "专业")):
+        return f"{greeting}{summary}"
+    if any(word in tone for word in ("活泼", "可爱", "幽默", "朋友")):
+        return f"{greeting}{summary}别把自己排得太满，有事叫我。"
+    return f"{greeting}{summary}需要调整安排的话，跟我说一声就行。"

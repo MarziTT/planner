@@ -29,7 +29,13 @@ def brief():
     """Return a compact personalized daily life brief for notifications."""
     lat = request.args.get("lat", type=float)
     lon = request.args.get("lon", type=float)
-    return success(build_daily_brief(g.current_user.id, lat=lat, lon=lon))
+    butler_name = request.args.get("butler_name", "", type=str).strip() or None
+    return success(build_daily_brief(
+        g.current_user.id,
+        lat=lat,
+        lon=lon,
+        butler_name=butler_name,
+    ))
 
 
 @dashboard_bp.get("/dashboard/overview")

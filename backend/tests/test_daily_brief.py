@@ -3,8 +3,9 @@ from unittest.mock import patch
 from app.services.daily_brief_service import build_daily_brief
 
 
+@patch("app.services.daily_brief_service._load_persona", return_value={"butler_name": "阿福", "user_name": "小林", "tone": "温和朋友"})
 @patch("app.services.daily_brief_service.get_dashboard_overview")
-def test_daily_brief_combines_life_domains(mock_overview):
+def test_daily_brief_combines_life_domains(mock_overview, mock_persona):
     mock_overview.return_value = {
         "date": "2026-07-31",
         "weather": {"available": True, "condition": "晴", "high": 30, "low": 22},
@@ -20,6 +21,8 @@ def test_daily_brief_combines_life_domains(mock_overview):
     assert "晨会" in result["summary"]
     assert "达标" in result["summary"]
     assert result["compact_summary"]
+    assert result["summary"].startswith("小林，")
+    assert "有事叫我" in result["summary"]
 
 
 @patch("app.services.daily_brief_service.get_dashboard_overview")
