@@ -2,6 +2,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
+from app.services import llm_gateway
 from app.services.llm_gateway import chat_completion, resolve_targets
 
 
@@ -56,3 +57,18 @@ def test_auth_failure_skips_remaining_models_on_same_provider(mock_post):
 
     assert result == "backup"
     assert mock_post.call_count == 2
+
+
+@patch("app.services.llm_gateway.requests.post")
+def test_unreachable_provider_is_temporarily_cooled_down(mock_post):
+    llm_gateway._provider_cooldowns.clear()
+    mock_post.side_effect = requests.ConnectionError("offline")
+    config = {
+        "OPENAI_API_KEY": "bad",
+        "OPENAI_BASE_URL": "https://offline.example/v1",
+        "OPENAI_MODEL": "model-a",
+    }
+
+    assert chat_completion([], config) is None
+    assert chat_completion([], config) is None
+    assert mock_post.call_count == 1

@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
+import time
 from dataclasses import dataclass
 from typing import Any
 
 import requests
 
 logger = logging.getLogger(__name__)
+
+_COOLDOWN_SECONDS = 30.0
+_provider_cooldowns: dict[str, float] = {}
+_cooldown_lock = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -80,6 +86,9 @@ def chat_completion(
 ) -> str | None:
     """Try providers and models in order, returning the first valid response."""
     for target in resolve_targets(config):
+        if _is_cooling_down(target):
+            logger.info("Skipping cooled-down LLM provider %s", target.name)
+            continue
         url = f"{target.base_url}/chat/completions"
         headers = {"Authorization": f"Bearer {target.api_key}", "Content-Type": "application/json"}
         for model in target.models:
@@ -105,8 +114,28 @@ def chat_completion(
                 logger.warning("LLM provider %s returned empty content", target.name)
             except (requests.Timeout, requests.ConnectionError):
                 logger.warning("LLM provider %s is unreachable", target.name)
+                _mark_cooldown(target)
                 break
             except (requests.RequestException, KeyError, TypeError, ValueError) as exc:
                 logger.warning("LLM request failed via %s/%s: %s", target.name, model, type(exc).__name__)
                 continue
     return None
+
+
+def _target_key(target: LlmTarget) -> str:
+    return f"{target.name}:{target.base_url}"
+
+
+def _is_cooling_down(target: LlmTarget) -> bool:
+    now = time.monotonic()
+    with _cooldown_lock:
+        until = _provider_cooldowns.get(_target_key(target), 0.0)
+        if until <= now:
+            _provider_cooldowns.pop(_target_key(target), None)
+            return False
+        return True
+
+
+def _mark_cooldown(target: LlmTarget) -> None:
+    with _cooldown_lock:
+        _provider_cooldowns[_target_key(target)] = time.monotonic() + _COOLDOWN_SECONDS
