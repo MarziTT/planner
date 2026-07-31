@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
+from datetime import date
 
 from .dashboard_service import get_dashboard_overview
 
@@ -14,10 +15,12 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
     exercise = overview.get("exercise") or {}
     meals = overview.get("meals") or {}
     routine = overview.get("routine") or {}
+    transit = overview.get("transit") or {}
 
     parts: list[str] = []
     comfort: list[str] = []
     travel: list[str] = []
+    food: list[str] = []
     if weather.get("available"):
         condition = weather.get("condition", "天气")
         high, low = weather.get("high", "--"), weather.get("low", "--")
@@ -45,6 +48,8 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
         parts.append(f"最近安排是 {first.get('time', '')} 的{first.get('title', '日程')}。")
         if first.get("time"):
             travel.append(f"至少提前 15 分钟准备 {first.get('title', '日程')}")
+        if len(upcoming) >= 3:
+            travel.append("今天安排较满，日程之间记得预留移动和休息时间")
     elif schedule.get("pending_count", 0) == 0:
         parts.append("今天暂时没有固定安排。")
     if exercise.get("total_minutes", 0) >= 30:
@@ -55,6 +60,18 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
         parts.append("今天还没有饮食记录，下一餐记得补充记录。")
     elif meals.get("total_calories", 0) > 0:
         parts.append(f"今天已记录约 {meals['total_calories']} kcal。")
+        calories = _number(meals.get("total_calories")) or 0
+        if calories >= 2200:
+            food.append("今天摄入偏高，下一餐清淡一些")
+        elif calories < 600 and now_hour() >= 14:
+            food.append("今天记录的摄入偏少，下一餐补充主食和蛋白质")
+    if transit.get("trip_count", 0):
+        next_trip = (transit.get("trips") or [])[0]
+        minutes = next_trip.get("minutes_to_departure")
+        if isinstance(minutes, (int, float)) and minutes <= 90:
+            travel.append(f"距离下一段出行约 {int(minutes)} 分钟，提前检查手机电量和随身物品")
+    if _is_weekend(overview.get("date")) and not upcoming:
+        travel.append("今天安排较松，可以安排短途散步、附近探店或轻量出游")
     sleep_hours = _number(routine.get("sleep_hours"))
     if sleep_hours is not None and sleep_hours < 6:
         parts.append("昨晚睡眠不足，今天运动以散步和拉伸为主。")
@@ -63,6 +80,8 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
         parts.append("站立提醒今天已自动停止，可以按需恢复。")
     if comfort:
         parts.append("；".join(comfort) + "。")
+    if food:
+        parts.append("饮食建议：" + "；".join(food) + "。")
     if travel:
         parts.append("出行提示：" + "，".join(travel) + "。")
 
@@ -73,6 +92,7 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
         "compact_summary": summary[:120],
         "comfort_tips": comfort,
         "travel_tips": travel,
+        "food_tips": food,
         "sections": {
             "weather": weather,
             "schedule": schedule,
@@ -88,3 +108,16 @@ def _number(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def now_hour() -> int:
+    """Return local hour without coupling the brief to a request context."""
+    from .time_service import get_clock
+    return get_clock().now_local().hour
+
+
+def _is_weekend(value: Any) -> bool:
+    try:
+        return date.fromisoformat(str(value)).weekday() >= 5
+    except (TypeError, ValueError):
+        return False

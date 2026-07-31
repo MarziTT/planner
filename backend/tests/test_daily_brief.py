@@ -64,3 +64,22 @@ def test_daily_brief_adapts_to_air_quality_uv_and_short_sleep(mock_overview):
     assert "优先补充休息" in result["comfort_tips"]
     assert "空气质量一般，减少户外剧烈运动" in result["travel_tips"]
     assert "睡眠不足" in result["summary"]
+
+
+@patch("app.services.daily_brief_service.get_dashboard_overview")
+@patch("app.services.daily_brief_service.now_hour", return_value=15)
+def test_daily_brief_covers_transit_food_and_weekend(mock_hour, mock_overview):
+    mock_overview.return_value = {
+        "date": "2026-08-01",
+        "weather": {"available": False},
+        "schedule": {"pending_count": 0, "upcoming": []},
+        "transit": {"trip_count": 1, "trips": [{"minutes_to_departure": 45}]},
+        "exercise": {"total_minutes": 0},
+        "meals": {"meal_count": 1, "total_calories": 400},
+        "routine": {"auto_stopped": False},
+    }
+
+    result = build_daily_brief(1)
+    assert any("手机电量" in tip for tip in result["travel_tips"])
+    assert any("摄入偏少" in tip for tip in result["food_tips"])
+    assert any("短途散步" in tip for tip in result["travel_tips"])
