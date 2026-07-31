@@ -16,16 +16,26 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
     routine = overview.get("routine") or {}
 
     parts: list[str] = []
+    comfort: list[str] = []
+    travel: list[str] = []
     if weather.get("available"):
         condition = weather.get("condition", "天气")
         high, low = weather.get("high", "--"), weather.get("low", "--")
         parts.append(f"今天{condition}，{low}–{high}℃。")
         if weather.get("rain") or "雨" in str(condition):
-            parts.append("出门记得带伞。")
+            travel.append("带伞")
+        temp_high = _number(weather.get("high"))
+        temp_low = _number(weather.get("low"))
+        if temp_high is not None and temp_high >= 30:
+            comfort.append("天气偏热，注意补水")
+        if temp_low is not None and temp_low <= 10:
+            comfort.append("天气偏冷，出门加外套")
     upcoming = schedule.get("upcoming") or []
     if upcoming:
         first = upcoming[0]
         parts.append(f"最近安排是 {first.get('time', '')} 的{first.get('title', '日程')}。")
+        if first.get("time"):
+            travel.append(f"至少提前 15 分钟准备 {first.get('title', '日程')}")
     elif schedule.get("pending_count", 0) == 0:
         parts.append("今天暂时没有固定安排。")
     if exercise.get("total_minutes", 0) >= 30:
@@ -38,12 +48,18 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
         parts.append(f"今天已记录约 {meals['total_calories']} kcal。")
     if routine.get("auto_stopped"):
         parts.append("站立提醒今天已自动停止，可以按需恢复。")
+    if comfort:
+        parts.append("；".join(comfort) + "。")
+    if travel:
+        parts.append("出行提示：" + "，".join(travel) + "。")
 
     summary = "".join(parts) or "今天一切平稳，按自己的节奏推进就好。"
     return {
         "date": overview.get("date"),
         "summary": summary,
         "compact_summary": summary[:120],
+        "comfort_tips": comfort,
+        "travel_tips": travel,
         "sections": {
             "weather": weather,
             "schedule": schedule,
@@ -52,3 +68,10 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
             "routine": routine,
         },
     }
+
+
+def _number(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
