@@ -84,6 +84,7 @@ def generate_insights(user_id: int) -> dict[str, Any]:
     # Sort by priority: high → medium → low
     priority_order = {"high": 0, "medium": 1, "low": 2}
     insights.sort(key=lambda i: priority_order.get(i.get("priority", "low"), 99))
+    insights = [_with_presentation(insight, now) for insight in insights]
 
     return {
         "user_id": user_id,
@@ -91,6 +92,35 @@ def generate_insights(user_id: int) -> dict[str, Any]:
         "count": len(insights),
         "insights": insights,
     }
+
+
+def _with_presentation(insight: dict[str, Any], now: datetime) -> dict[str, Any]:
+    """Attach a stable notification-bar/Live Activity presentation contract."""
+    insight_type = str(insight.get("insight_type") or "general")
+    priority = str(insight.get("priority") or "low")
+    action_map = {
+        "wake_deviation": {"label": "查看作息", "route": "/health", "action": "open_health"},
+        "standing_nudge": {"label": "记录站立", "route": "/habits", "action": "log_standing"},
+        "exercise_drop": {"label": "开始运动", "route": "/exercise", "action": "open_exercise"},
+        "meal_sync": {"label": "记录餐食", "route": "/meals", "action": "log_meal"},
+        "sleep_reminder": {"label": "查看睡眠", "route": "/health", "action": "open_sleep"},
+    }
+    action = action_map.get(insight_type, {"label": "打开管家", "route": "/agent", "action": "open_agent"})
+    lifetime = 6 * 60 * 60 if priority == "high" else 2 * 60 * 60
+    decorated = dict(insight)
+    decorated["presentation"] = {
+        "surface": "notification_and_live_activity",
+        "category": insight_type,
+        "priority": priority,
+        "compact_title": str(insight.get("title") or "Pixel Planner")[:32],
+        "compact_body": str(insight.get("body") or "")[:80],
+        "progress": None,
+        "actions": [action],
+        "route": action["route"],
+        "expires_at": (now + timedelta(seconds=lifetime)).isoformat(),
+        "ongoing": priority == "high",
+    }
+    return decorated
 
 
 def get_notify_history(
