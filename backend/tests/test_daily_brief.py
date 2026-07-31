@@ -37,3 +37,30 @@ def test_daily_brief_adds_weather_comfort_and_travel_tips(mock_overview):
     assert "带伞" in result["travel_tips"]
     assert any("客户会议" in tip for tip in result["travel_tips"])
     assert any("补水" in tip for tip in result["comfort_tips"])
+
+
+@patch("app.services.daily_brief_service.get_dashboard_overview")
+def test_daily_brief_adapts_to_air_quality_uv_and_short_sleep(mock_overview):
+    mock_overview.return_value = {
+        "date": "2026-07-31",
+        "weather": {
+            "available": True,
+            "condition": "晴",
+            "high": 28,
+            "low": 20,
+            "humidity": 85,
+            "uv_index": 8,
+            "air_quality_index": 120,
+        },
+        "schedule": {"pending_count": 0, "upcoming": []},
+        "exercise": {"total_minutes": 0},
+        "meals": {"meal_count": 0, "total_calories": 0},
+        "routine": {"auto_stopped": False, "sleep_hours": 5.5},
+    }
+
+    result = build_daily_brief(1)
+    assert "湿度较高，注意通风" in result["comfort_tips"]
+    assert "紫外线较强，注意防晒" in result["comfort_tips"]
+    assert "优先补充休息" in result["comfort_tips"]
+    assert "空气质量一般，减少户外剧烈运动" in result["travel_tips"]
+    assert "睡眠不足" in result["summary"]

@@ -30,6 +30,15 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
             comfort.append("天气偏热，注意补水")
         if temp_low is not None and temp_low <= 10:
             comfort.append("天气偏冷，出门加外套")
+        humidity = _number(weather.get("humidity"))
+        if humidity is not None and humidity >= 80:
+            comfort.append("湿度较高，注意通风")
+        uv = _number(weather.get("uv_index"))
+        if uv is not None and uv >= 6:
+            comfort.append("紫外线较强，注意防晒")
+        air_quality = _number(weather.get("air_quality_index"))
+        if air_quality is not None and air_quality >= 100:
+            travel.append("空气质量一般，减少户外剧烈运动")
     upcoming = schedule.get("upcoming") or []
     if upcoming:
         first = upcoming[0]
@@ -46,6 +55,10 @@ def build_daily_brief(user_id: int, *, lat: float | None = None, lon: float | No
         parts.append("今天还没有饮食记录，下一餐记得补充记录。")
     elif meals.get("total_calories", 0) > 0:
         parts.append(f"今天已记录约 {meals['total_calories']} kcal。")
+    sleep_hours = _number(routine.get("sleep_hours"))
+    if sleep_hours is not None and sleep_hours < 6:
+        parts.append("昨晚睡眠不足，今天运动以散步和拉伸为主。")
+        comfort.append("优先补充休息")
     if routine.get("auto_stopped"):
         parts.append("站立提醒今天已自动停止，可以按需恢复。")
     if comfort:
