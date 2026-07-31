@@ -34,7 +34,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (context, state) => const _SplashPage()),
       GoRoute(path: '/login', builder: (context, state) => const LoginPage()),
       GoRoute(path: '/profile-setup', builder: (context, state) => const ProfileSetupPage()),
-      GoRoute(path: '/home', builder: (context, state) => const HomeShellPage()),
+      GoRoute(
+        path: '/home',
+        builder: (context, state) => HomeShellPage(
+          initialTab: state.uri.queryParameters['tab'] ?? 'dashboard',
+        ),
+      ),
     ],
   );
 });

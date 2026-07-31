@@ -28,7 +28,9 @@ import '../../../widgets/zzz_gif_decoration.dart';
 import '../../widgets/widget_service.dart';
 
 class HomeShellPage extends ConsumerStatefulWidget {
-  const HomeShellPage({super.key});
+  const HomeShellPage({super.key, this.initialTab = 'dashboard'});
+
+  final String initialTab;
 
   @override
   ConsumerState<HomeShellPage> createState() => _HomeShellPageState();
@@ -36,13 +38,14 @@ class HomeShellPage extends ConsumerStatefulWidget {
 
 class _HomeShellPageState extends ConsumerState<HomeShellPage>
     with WidgetsBindingObserver {
-  int currentIndex = 0;
+  late int currentIndex;
   StreamSubscription<NotificationTapEvent>? _tapSubscription;
   bool _initialDashboardLoadRequested = false;
 
   @override
   void initState() {
     super.initState();
+    currentIndex = _tabIndex(widget.initialTab);
     WidgetsBinding.instance.addObserver(this);
 
     Future.microtask(() {
@@ -85,7 +88,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       ref.read(selectedPlannerEventIdProvider.notifier).state = event.eventId;
     }
     if (mounted) {
-      setState(() => currentIndex = 0);
+      setState(() => currentIndex = _tabIndex(event.routeTab ?? 'dashboard'));
       if (event.openQuickCapture) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('已打开速记，可以直接新增行程')),
@@ -93,6 +96,11 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       }
     }
   }
+
+  int _tabIndex(String tab) => const {
+        'dashboard': 0, 'habits': 0, 'transit': 1, 'meals': 2,
+        'exercise': 3, 'tags': 4, 'profile': 5, 'settings': 6,
+      }[tab] ?? 0;
 
   void _ensureDashboardLoadedForSession() {
     if (_initialDashboardLoadRequested) return;
