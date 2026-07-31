@@ -18,8 +18,18 @@ from flask import Blueprint, g, request, Response
 from .common import auth_required, success
 from ..services.dashboard_service import get_dashboard_overview
 from ..services.health_service import get_health_trends
+from ..services.daily_brief_service import build_daily_brief
 
 dashboard_bp = Blueprint("dashboard", __name__)
+
+
+@dashboard_bp.get("/dashboard/brief")
+@auth_required
+def brief():
+    """Return a compact personalized daily life brief for notifications."""
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+    return success(build_daily_brief(g.current_user.id, lat=lat, lon=lon))
 
 
 @dashboard_bp.get("/dashboard/overview")
