@@ -26,6 +26,7 @@ import requests
 
 from . import open_aq as oaq
 from . import open_meteo as om
+from .llm_gateway import chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -406,38 +407,17 @@ def _parse_advisory(text: str) -> dict[str, str]:
 
 def _call_openai(prompt: str, config: dict, system_prompt: str | None = None) -> str | None:
     """调用 OpenAI-compatible chat completion，返回文本或 None。"""
-    api_key = config.get("OPENAI_API_KEY", "")
-    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = config.get("OPENAI_MODEL", DEFAULT_MODEL)
-
-    if not api_key:
-        logger.warning("OPENAI_API_KEY not configured, skipping LLM synthesis")
-        return None
-
-    url = f"{base_url.rstrip('/')}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
     messages = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
-    payload: dict[str, Any] = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.7,
-        "max_tokens": MAX_TOKENS,
-    }
-
-    try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=LLM_TIMEOUT)
-        resp.raise_for_status()
-        body = resp.json()
-        return body["choices"][0]["message"]["content"].strip()
-    except Exception as exc:
-        logger.warning("LLM advisory call failed: %s", exc)
-        return None
+    return chat_completion(
+        messages,
+        config,
+        temperature=0.7,
+        max_tokens=MAX_TOKENS,
+        timeout=LLM_TIMEOUT,
+    )
 
 
 def clear_cache() -> None:

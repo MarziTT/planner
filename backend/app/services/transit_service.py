@@ -15,10 +15,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-import requests
-
 from ..extensions import db
 from ..models_habits import OcrCache
+from .llm_gateway import chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -150,32 +149,19 @@ def ocr_ticket(image_bytes: bytes, user_id: int, config: dict[str, str]) -> Pars
         logger.info("OCR cache hit for hash %s", image_hash)
         return ParsedTicket(**cached.parsed)
 
-    api_key = config.get("OPENAI_API_KEY", "")
-    base_url = config.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model = config.get("OPENAI_MODEL", "gpt-4o-mini")
-
-    if not api_key:
-        logger.warning("No OPENAI_API_KEY configured; returning empty ticket")
-        parsed = ParsedTicket()
-        _cache_ocr_result(user_id, image_hash, parsed)
-        return parsed
-
     import base64
     image_base64 = base64.b64encode(image_bytes).decode("ascii")
 
-    url = f"{base_url.rstrip('/')}/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}",
-    }
-    payload = _build_vision_payload(image_base64, api_key, base_url, model)
-
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=60)
-        resp.raise_for_status()
-        body = resp.json()
-
-        content = body.get("choices", [{}])[0].get("message", {}).get("content", "{}")
+        content = chat_completion(
+            _build_vision_payload(image_base64, "", "", "")["messages"],
+            config,
+            temperature=0.0,
+            max_tokens=512,
+            timeout=60,
+        )
+        if content is None:
+            raise ValueError("No OCR provider returned a response")
         # Strip markdown fences if present
         content = content.strip()
         if content.startswith("```"):
