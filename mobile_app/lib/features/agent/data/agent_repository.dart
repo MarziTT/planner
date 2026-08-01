@@ -15,7 +15,8 @@ class AgentRepositoryImpl implements domain.AgentRepository {
   Future<ParseResult> parse(String text) => _apiClient.parse(text);
 
   @override
-  Future<ParseResult> parseMulti(String text) => _apiClient.parseMulti(text);
+  Future<ParseResult> parseMulti(String text, {String? personaPreset}) =>
+      _apiClient.parseMulti(text, personaPreset: personaPreset);
 
   @override
   Future<ParseResult> execute(ParseResult parsed) => _apiClient.execute(parsed);

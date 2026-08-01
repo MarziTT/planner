@@ -867,7 +867,7 @@ Night (10pm-7am): ["帮我记录今天的睡眠", "明天几点起床好", "安�
 IMPORTANT: VARY the suggestions — use different wording, different topics, different angles. Don't pick the same suggestions from the examples above. Be creative within the user's context."""
 
 
-def _build_suggest_prompt(butler_name: str = "贾维斯") -> str:
+def _build_suggest_prompt(butler_name: str = "贾维斯", persona_preset: str | None = None) -> str:
     now = datetime.now(TZ)
     hour = now.hour
 
@@ -887,14 +887,18 @@ def _build_suggest_prompt(butler_name: str = "贾维斯") -> str:
     weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
     weekday = weekdays[now.weekday()]
 
-    return SUGGEST_SYSTEM_PROMPT.format(
+    prompt = SUGGEST_SYSTEM_PROMPT.format(
         butler_name=butler_name,
         time_of_day=time_of_day,
         weekday=weekday,
     )
+    if persona_preset in {"zzz", "zzzTheme", "zzz_zero", "zero"}:
+        prompt += "\nPersona: 零号。使用冷静、克制、短句、任务导向的表达；不要使用热情寒暄、emoji或泛泛的鼓励。"
+    return prompt
 
 
-def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None) -> list[str]:
+def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None,
+                     persona_preset: str | None = None) -> list[str]:
     """Generate 5-6 contextual quick-command suggestions.
 
     Primary: call OpenAI-compatible LLM with suggest prompt.
@@ -909,7 +913,7 @@ def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None)
 
     # Try LLM
     if resolve_targets(config):
-        result = _call_openai_suggest(butler_name, config)
+        result = _call_openai_suggest(butler_name, config, persona_preset)
         if result is not None and isinstance(result, list) and len(result) > 0:
             return [s for s in result if isinstance(s, str) and s.strip()][:6]
 
@@ -918,10 +922,10 @@ def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None)
     return _fallback_suggest()
 
 
-def _call_openai_suggest(butler_name: str, config: dict) -> list[str] | None:
+def _call_openai_suggest(butler_name: str, config: dict, persona_preset: str | None = None) -> list[str] | None:
     raw = chat_completion(
         [
-            {"role": "system", "content": _build_suggest_prompt(butler_name)},
+            {"role": "system", "content": _build_suggest_prompt(butler_name, persona_preset)},
             {"role": "user", "content": "生成一组建议"},
         ],
         config,

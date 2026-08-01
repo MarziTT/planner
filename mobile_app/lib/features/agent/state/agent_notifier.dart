@@ -4,6 +4,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/butler/butler_persona.dart';
+import '../../../core/theme/theme_controller.dart';
 import '../../../core/voice/voice_output_service.dart';
 import '../../fast_capture/data/speech_capture_gateway.dart';
 import '../data/agent_repository.dart';
@@ -78,11 +80,13 @@ class AgentNotifier extends StateNotifier<AgentState> {
     this._repository,
     this._speechGateway,
     this._voiceOutput,
+    this._personaPreset,
   ) : super(const AgentState());
 
   final domain.AgentRepository _repository;
   final SpeechCaptureGateway? _speechGateway;
   final VoiceOutputService _voiceOutput;
+  final String _personaPreset;
 
   static int _nextId = 0;
 
@@ -151,7 +155,10 @@ class AgentNotifier extends StateNotifier<AgentState> {
 
   Future<void> _parseText(String text) async {
     try {
-      final result = await _repository.parseMulti(text);
+      final result = await _repository.parseMulti(
+        text,
+        personaPreset: _personaPreset,
+      );
 
       // Query intent — auto-execute and show answer immediately
       if (result.intent == 'query') {
@@ -164,7 +171,10 @@ class AgentNotifier extends StateNotifier<AgentState> {
         final systemMsg = ChatMessage(
           id: _generateId(),
           type: ChatMessageType.system,
-          text: '没太理解，试试说得更具体些？比如"我吃了一碗面"或"今天有什么安排"',
+          text: _personaText(
+            standard: '没太理解，试试说得更具体些？比如"我吃了一碗面"或"今天有什么安排"',
+            zero: '指令不够明确。可以说“记录一碗面”或“查看今天安排”。',
+          ),
           isParsing: false,
         );
         state = state.copyWith(
@@ -191,7 +201,10 @@ class AgentNotifier extends StateNotifier<AgentState> {
       final errorMsg = ChatMessage(
         id: _generateId(),
         type: ChatMessageType.error,
-        text: '智能解析暂不可用，请稍后重试。',
+        text: _personaText(
+          standard: '智能解析暂不可用，请稍后重试。',
+          zero: '连接异常。稍后重试。',
+        ),
       );
       state = state.copyWith(
         messages: [...state.messages, errorMsg],
@@ -202,7 +215,10 @@ class AgentNotifier extends StateNotifier<AgentState> {
       final errorMsg = ChatMessage(
         id: _generateId(),
         type: ChatMessageType.error,
-        text: '解析失败：${e.toString()}',
+        text: _personaText(
+          standard: '解析失败：${e.toString()}',
+          zero: '任务解析失败。请重新下达指令。',
+        ),
       );
       state = state.copyWith(
         messages: [...state.messages, errorMsg],
@@ -358,6 +374,10 @@ class AgentNotifier extends StateNotifier<AgentState> {
         return '确认安排';
     }
   }
+
+  String _personaText({required String standard, required String zero}) {
+    return _personaPreset == 'zzz_zero' ? zero : standard;
+  }
 }
 
 final agentControllerProvider =
@@ -365,5 +385,11 @@ final agentControllerProvider =
   final repository = ref.watch(agentRepositoryProvider);
   final gateway = ref.watch(speechCaptureGatewayProvider);
   final voiceOutput = ref.watch(voiceOutputProvider);
-  return AgentNotifier(repository, gateway, voiceOutput);
+  final persona = ButlerPersona.forTheme(
+    ref.watch(themeControllerProvider).preset,
+  );
+  final personaPreset = persona.preset == ButlerPersonaPreset.zzzTheme
+      ? 'zzz_zero'
+      : 'default';
+  return AgentNotifier(repository, gateway, voiceOutput, personaPreset);
 });

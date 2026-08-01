@@ -413,7 +413,8 @@ def suggest():
     """
     payload = request.get_json(silent=True) or {}
     butler_name = (payload.get("butler_name") or "贾维斯").strip()
+    persona_preset = (payload.get("persona_preset") or "default").strip()
 
     config = _read_llm_config()
-    suggestions = suggest_commands(butler_name=butler_name, config=config)
+    suggestions = suggest_commands(butler_name=butler_name, config=config, persona_preset=persona_preset)
     return success({"suggestions": suggestions})
