@@ -19,7 +19,12 @@ void main() async {
 
   // Phase 2 锁屏通知增强：注入 SharedPreferences + 注册全部 Channel
   NotifyManager.setSharedPreferences(prefs);
-  await NotifyManager.ensureChannels();
+  // Notification channels are optional on OHOS; never block the first frame.
+  try {
+    await NotifyManager.ensureChannels();
+  } catch (_) {
+    // Native notification support may not be registered in every build.
+  }
 
   runApp(
     ProviderScope(
