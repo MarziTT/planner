@@ -3,25 +3,25 @@
     // TODO: 替换为真实签名配置（注册华为开发者联盟后获取证书）
     "signingConfigs": [
       // 示例签名配置（占位，待替换）
-      // {
-      //   "name": "default",
-      //   "type": "HarmonyOS",
-      //   "material": {
-      //     "certpath": ".ohos/config/PixelPlanner.cer",
-      //     "storePassword": "0000001A2B3C4D5E6F7A8B9C0D1E2F3A",
-      //     "keyAlias": "debugKey",
-      //     "keyPassword": "0000001A2B3C4D5E6F7A8B9C0D1E2F3A",
-      //     "profile": ".ohos/config/PixelPlanner.p7b",
-      //     "signAlg": "SHA256withECDSA",
-      //     "storeFile": ".ohos/config/PixelPlanner.p12"
-      //   }
-      // }
+      {
+        "name": "default",
+        "type": "HarmonyOS",
+        "material": {
+          "certpath": ".ohos/config/1.cer",
+          "storePassword": "0000001A2B3C4D5E6F7A8B9C0D1E2F3A",
+          "keyAlias": "debugKey",
+          "keyPassword": "0000001A2B3C4D5E6F7A8B9C0D1E2F3A",
+          "profile": ".ohos/config/2Debug.p7b",
+          "signAlg": "SHA256withECDSA",
+          "storeFile": ".ohos/config/PixelPlanner.p12"
+        }
+      }
     ],
     "products": [
       {
         "name": "default",
         // 未配置签名：移除引用避免构建异常，正式发布前必须配置
-        // "signingConfig": "default",
+        "signingConfig": "default",
         "compatibleSdkVersion": "5.0.0(12)",
         "compileSdkVersion": "6.1.1(24)",
         "runtimeOS": "HarmonyOS",
