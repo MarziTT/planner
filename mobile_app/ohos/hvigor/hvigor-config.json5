@@ -1,5 +1,7 @@
 {
   "modelVersion": "5.0.0",
-  // 后续如引入 hvigor 插件（如 ohos-router-plugin）在此声明依赖
-  "dependencies": {},
+  "dependencies": {
+    "@ohos/hvigor-ohos-plugin": "file:D:/DevEco Studio/tools/hvigor/hvigor-ohos-plugin",
+    "flutter-hvigor-plugin": "file:D:/flutter_ohos_latest/packages/flutter_tools/hvigor"
+  }
 }

@@ -3,5 +3,7 @@
   "version": "1.0.0",
   "description": "PixelPlanner entry module",
   "main": "",
-  "dependencies": {}
+  "dependencies": {
+    "@ohos/flutter_ohos": "har/flutter.har"
+  }
 }

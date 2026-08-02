@@ -1,7 +1,8 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 
 class FitnessPanel extends ConsumerWidget {
   const FitnessPanel({
@@ -27,23 +28,22 @@ class FitnessPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     final isZzz = ref.watch(themeControllerProvider).preset ==
         PlannerThemePreset.kamenRiderZzz;
 
-    final bgColor = isZzz
-        ? const Color(0xFF0D0B12)
-        : theme.colorScheme.surfaceContainerLow;
+    final bgColor =
+        isZzz ? zzz?.surfaceLow : theme.colorScheme.surfaceContainerLow;
     final borderColor = isZzz
-        ? const Color(0xFF00FF41).withValues(alpha: 0.3)
+        ? zzz?.borderGlow ?? theme.colorScheme.outlineVariant
         : theme.colorScheme.outlineVariant;
-    final accentColor = isZzz ? const Color(0xFF00FF41) : theme.colorScheme.primary;
-    final textColor = isZzz ? const Color(0xFFE0F0E0) : null;
-    final dimTextColor = isZzz
-        ? const Color(0xFFC8C8D8)
-        : theme.colorScheme.onSurfaceVariant;
-    final surfaceColor = isZzz
-        ? const Color(0xFF0A0A0F)
-        : theme.colorScheme.surface;
+    final accentColor = isZzz
+        ? zzz?.accent ?? theme.colorScheme.primary
+        : theme.colorScheme.primary;
+    final textColor = isZzz ? zzz?.textPrimary : null;
+    final dimTextColor =
+        isZzz ? zzz?.textSecondary : theme.colorScheme.onSurfaceVariant;
+    final surfaceColor = isZzz ? zzz?.surface : theme.colorScheme.surface;
 
     final items = [
       _FitnessDetail(
@@ -71,12 +71,12 @@ class FitnessPanel extends ConsumerWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(isZzz ? 2 : 16),
+        borderRadius: BorderRadius.circular(isZzz ? 8 : 16),
         border: Border.all(color: borderColor),
         boxShadow: isZzz
             ? [
                 BoxShadow(
-                  color: const Color(0xFF00FF41).withValues(alpha: 0.04),
+                  color: accentColor.withValues(alpha: 0.08),
                   blurRadius: 8,
                 )
               ]
@@ -93,11 +93,11 @@ class FitnessPanel extends ConsumerWidget {
                 child: Text(
                   isZzz ? '> TRAINING_MODULE' : '训练模块',
                   style: isZzz
-                      ? const TextStyle(
-                          color: Color(0xFF00FF41),
+                      ? TextStyle(
+                          color: accentColor,
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
-                          fontFamily: 'monospace',
+                          fontFamily: zzz?.terminalFontFamily,
                         )
                       : theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
@@ -122,10 +122,11 @@ class FitnessPanel extends ConsumerWidget {
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: surfaceColor,
-                  borderRadius: BorderRadius.circular(isZzz ? 2 : 10),
+                  borderRadius: BorderRadius.circular(isZzz ? 8 : 10),
                   border: isZzz
                       ? Border.all(
-                          color: const Color(0xFF00FF41).withValues(alpha: 0.12))
+                          color: zzz?.borderColor ??
+                              accentColor.withValues(alpha: 0.12))
                       : null,
                 ),
                 child: Row(
@@ -136,7 +137,7 @@ class FitnessPanel extends ConsumerWidget {
                       height: 32,
                       decoration: BoxDecoration(
                         color: item.accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(isZzz ? 2 : 8),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(item.icon, size: 16, color: item.accent),
                     ),

@@ -7,6 +7,7 @@
     "deviceTypes": ["phone", "tablet"],
     "deliveryWithInstall": true,
     "installationFree": false,
+    "pages": "$profile:main_pages",
     "abilities": [
       {
         "name": "EntryAbility",
@@ -31,10 +32,6 @@
         "name": "ohos.permission.MICROPHONE",
         "reason": "$string:microphone_permission_reason",
         "usedScene": {"abilities": ["EntryAbility"], "when": "inuse"}
-      },
-      {
-        "name": "ohos.permission.NOTIFICATION",
-        "reason": "$string:notification_permission_reason"
       }
     ]
   }

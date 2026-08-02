@@ -5,20 +5,23 @@
 @rem -------------------------------------------------------------------------------
 
 set DIR=%~dp0
+set DEVECO_HVIGORW=D:\DevEco Studio\tools\hvigor\bin\hvigorw.bat
+
+if not exist "%DEVECO_HVIGORW%" (
+  echo ERROR: Cannot find DevEco Hvigor at '%DEVECO_HVIGORW%'.
+  exit /b 1
+)
+
 set HVIGOR_DIR=%DIR%hvigor
+set HVIGOR_NODE16_POLYFILLS=%HVIGOR_DIR%\node16-polyfills.js
+set HVIGOR_NODE16_POLYFILLS_OPTION=%HVIGOR_NODE16_POLYFILLS:\=/%
 
-if not exist "%HVIGOR_DIR%" (
-  echo ERROR: Cannot find Hvigor directory '%HVIGOR_DIR%'.
-  echo Please install DevEco Studio and ensure the HarmonyOS SDK is configured.
-  exit /b 1
+pushd "%DIR%"
+set NODE_PATH=%DIR%node_modules;%NODE_PATH%
+if exist "%HVIGOR_NODE16_POLYFILLS%" (
+  set NODE_OPTIONS=--require "%HVIGOR_NODE16_POLYFILLS_OPTION%" %NODE_OPTIONS%
 )
-
-set HVIGOR_WRAPPER_PATH=%HVIGOR_DIR%\hvigor-wrapper.js
-
-if exist "%HVIGOR_WRAPPER_PATH%" (
-  node "%HVIGOR_WRAPPER_PATH%" %*
-) else (
-  echo Hvigor wrapper not found at %HVIGOR_WRAPPER_PATH%
-  echo Run 'hvigorw install' or check your DevEco Studio installation.
-  exit /b 1
-)
+call "%DEVECO_HVIGORW%" %*
+set HVIGOR_EXIT_CODE=%ERRORLEVEL%
+popd
+exit /b %HVIGOR_EXIT_CODE%

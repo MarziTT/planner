@@ -2,17 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../models/smart_advisory.dart';
 import '../models/timeline_item.dart';
 import '../weather_provider.dart';
 
-/// Weather timeline overview card — 3–4 time-slot preview.
-///
-/// Shows:
-/// - One-line summary
-/// - Timeline items with time / event / advice
-/// - High-priority events (sports/outdoors) highlighted
-/// - Extreme weather (feelsLike > 38°C / precipitation > 50%) red warning
+/// Weather timeline overview card with a compact time-slot preview.
 class WeatherTimelineCard extends ConsumerWidget {
   const WeatherTimelineCard({super.key});
 
@@ -23,55 +18,52 @@ class WeatherTimelineCard extends ConsumerWidget {
     final themeState = ref.watch(themeControllerProvider);
     final isZzz = themeState.preset == PlannerThemePreset.kamenRiderZzz;
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     final brightness = theme.brightness;
 
-    // Trigger initial load
     if (state.data == null && !state.loading && state.error == null) {
       Future.microtask(() => controller.loadAdvisory());
     }
 
-    // ZZZ theme colors
     final cardBg = isZzz
-        ? const Color(0xFF1A1A2E).withValues(alpha: 0.85)
+        ? zzz?.surface.withValues(alpha: 0.92)
         : (brightness == Brightness.dark
             ? theme.colorScheme.surface.withValues(alpha: 0.6)
             : theme.colorScheme.surface);
     final borderColor = isZzz
-        ? const Color(0xFF00FF41).withValues(alpha: 0.18)
+        ? zzz?.borderColor ?? theme.colorScheme.outlineVariant
         : theme.dividerColor.withValues(alpha: 0.3);
     final textPrimary = isZzz
-        ? const Color(0xFFE0FFE0)
+        ? zzz?.textPrimary ?? theme.colorScheme.onSurface
         : theme.colorScheme.onSurface;
     final textSecondary = isZzz
-        ? const Color(0xFF7A8A7A)
+        ? zzz?.textSecondary ?? theme.colorScheme.onSurfaceVariant
         : theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final highlightBg = isZzz
-        ? const Color(0xFF00FF41).withValues(alpha: 0.08)
+        ? (zzz?.signal ?? theme.colorScheme.primary).withValues(alpha: 0.08)
         : theme.colorScheme.primary.withValues(alpha: 0.06);
-    final warningColor = isZzz
-        ? const Color(0xFFFF4444)
-        : Colors.red.shade400;
+    final warningColor =
+        isZzz ? zzz?.warning ?? theme.colorScheme.error : Colors.red.shade400;
+    final accentColor =
+        isZzz ? zzz?.signal ?? theme.colorScheme.primary : textPrimary;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isZzz ? 10 : 16),
         border: Border.all(color: borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           _buildHeader(
-            context,
             state,
             controller,
             textPrimary,
             textSecondary,
-            isZzz,
+            accentColor,
           ),
-          // Body
           if (state.loading && state.data == null)
             _buildSkeleton(textPrimary)
           else if (state.error != null && state.data == null)
@@ -94,22 +86,17 @@ class WeatherTimelineCard extends ConsumerWidget {
   }
 
   Widget _buildHeader(
-    BuildContext context,
     SmartAdvisoryState state,
     SmartAdvisoryController controller,
     Color textPrimary,
     Color textSecondary,
-    bool isZzz,
+    Color accentColor,
   ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 12, 8),
       child: Row(
         children: [
-          Icon(
-            Icons.wb_sunny_outlined,
-            size: 20,
-            color: isZzz ? const Color(0xFF00FF41) : textPrimary,
-          ),
+          Icon(Icons.wb_sunny_outlined, size: 20, color: accentColor),
           const SizedBox(width: 8),
           Text(
             '天气管家',
@@ -162,7 +149,6 @@ class WeatherTimelineCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(10),
@@ -180,7 +166,6 @@ class WeatherTimelineCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 10),
-          // Timeline items
           ...items.map((item) => _buildTimelineItem(
                 item,
                 textPrimary,
@@ -225,7 +210,6 @@ class WeatherTimelineCard extends ConsumerWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Time badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
@@ -244,7 +228,6 @@ class WeatherTimelineCard extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,13 +235,17 @@ class WeatherTimelineCard extends ConsumerWidget {
                 if (item.event != null && item.event!.isNotEmpty)
                   Row(
                     children: [
-                      Text(
-                        item.event!,
-                        style: TextStyle(
-                          color: textPrimary,
-                          fontSize: 13,
-                          fontWeight:
-                              isHighPriority ? FontWeight.w600 : FontWeight.w500,
+                      Expanded(
+                        child: Text(
+                          item.event!,
+                          style: TextStyle(
+                            color: textPrimary,
+                            fontSize: 13,
+                            fontWeight: isHighPriority
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isHighPriority) ...[
@@ -266,9 +253,7 @@ class WeatherTimelineCard extends ConsumerWidget {
                         Icon(
                           Icons.priority_high,
                           size: 14,
-                          color: isZzz
-                              ? const Color(0xFF00FF41)
-                              : Colors.orange,
+                          color: isZzz ? warningColor : Colors.orange,
                         ),
                       ],
                       if (isExtreme) ...[
@@ -290,7 +275,6 @@ class WeatherTimelineCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                // Weather brief
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
@@ -367,7 +351,10 @@ class WeatherTimelineCard extends ConsumerWidget {
   String _weatherBrief(TimelineItem item) {
     final w = item.weather;
     final buf = StringBuffer();
-    buf.write('${w.temp.round()}°${w.feelsLike != null ? ' 体感${w.feelsLike!.round()}°' : ''}');
+    buf.write('${w.temp.round()}°');
+    if (w.feelsLike != null) {
+      buf.write(' 体感${w.feelsLike!.round()}°');
+    }
     buf.write(' · ${w.condition}');
     if (w.precipitation > 0) {
       buf.write(' · 降水${w.precipitation.toStringAsFixed(0)}%');

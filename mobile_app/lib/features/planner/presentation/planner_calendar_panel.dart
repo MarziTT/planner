@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../domain/planner_models.dart';
-
-const _zzzBgColor = Color(0xFF0A0A0F);
-const _zzzGreen = Color(0xFF00FF41);
-const _zzzSurface = Color(0xFF0D0B12);
 
 class PlannerCalendarPanel extends StatelessWidget {
   const PlannerCalendarPanel({
@@ -20,7 +17,6 @@ class PlannerCalendarPanel extends StatelessWidget {
   });
 
   final bool isZzz;
-
   final DateTime visibleMonth;
   final DateTime selectedDay;
   final DateTime today;
@@ -32,6 +28,13 @@ class PlannerCalendarPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
+    final accent = zzz?.accent ?? theme.colorScheme.primary;
+    final surface = zzz?.surface ?? theme.colorScheme.surfaceContainerLow;
+    final borderColor = zzz?.borderColor ??
+        theme.colorScheme.outlineVariant.withValues(alpha: 0.35);
+    final secondaryText =
+        zzz?.textSecondary ?? theme.colorScheme.onSurfaceVariant;
     final monthStart = DateTime(visibleMonth.year, visibleMonth.month);
     final gridStart =
         monthStart.subtract(Duration(days: monthStart.weekday - 1));
@@ -44,17 +47,15 @@ class PlannerCalendarPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isZzz ? _zzzSurface : theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(18),
+        color: isZzz ? surface : theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(isZzz ? 10 : 18),
         border: Border.all(
-          color: isZzz
-              ? _zzzGreen.withValues(alpha: 0.3)
-              : theme.colorScheme.outlineVariant.withValues(alpha: 0.35),
+          color: isZzz ? borderColor : borderColor,
         ),
         boxShadow: isZzz
             ? [
                 BoxShadow(
-                  color: _zzzGreen.withValues(alpha: 0.06),
+                  color: accent.withValues(alpha: 0.08),
                   blurRadius: 12,
                   spreadRadius: 0,
                 ),
@@ -74,15 +75,16 @@ class PlannerCalendarPanel extends StatelessWidget {
                       '${visibleMonth.year}年${visibleMonth.month}月',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: isZzz ? _zzzGreen : null,
+                        color: isZzz ? accent : null,
+                        fontFamily: isZzz ? zzz?.terminalFontFamily : null,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '点日期直接看当天，节假日和有安排的日子会标出来。',
+                      '点日期查看当天安排，节假日和已有安排的日子会标出来。',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: isZzz
-                            ? const Color(0xFFC8C8D8).withValues(alpha: 0.7)
+                            ? secondaryText
                             : theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
@@ -100,15 +102,15 @@ class PlannerCalendarPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
+          const Row(
             children: [
-              _WeekdayLabel('一', isZzz: isZzz),
-              _WeekdayLabel('二', isZzz: isZzz),
-              _WeekdayLabel('三', isZzz: isZzz),
-              _WeekdayLabel('四', isZzz: isZzz),
-              _WeekdayLabel('五', isZzz: isZzz),
-              _WeekdayLabel('六', weekend: true, isZzz: isZzz),
-              _WeekdayLabel('日', weekend: true, isZzz: isZzz),
+              _WeekdayLabel('一'),
+              _WeekdayLabel('二'),
+              _WeekdayLabel('三'),
+              _WeekdayLabel('四'),
+              _WeekdayLabel('五'),
+              _WeekdayLabel('六', weekend: true),
+              _WeekdayLabel('日', weekend: true),
             ],
           ),
           const SizedBox(height: 8),
@@ -153,23 +155,24 @@ class PlannerCalendarPanel extends StatelessWidget {
 }
 
 class _WeekdayLabel extends StatelessWidget {
-  const _WeekdayLabel(this.label, {this.weekend = false, this.isZzz = false});
+  const _WeekdayLabel(this.label, {this.weekend = false});
 
   final String label;
   final bool weekend;
-  final bool isZzz;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     return Expanded(
       child: Center(
         child: Text(
           label,
           style: theme.textTheme.labelSmall?.copyWith(
             color: weekend
-                ? theme.colorScheme.error.withValues(alpha: 0.88)
-                : (isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.onSurfaceVariant),
+                ? (zzz?.danger ?? theme.colorScheme.error)
+                    .withValues(alpha: 0.88)
+                : zzz?.textSecondary ?? theme.colorScheme.onSurfaceVariant,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -202,25 +205,35 @@ class _CalendarDayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final zzz = context.zzz;
     final weekend =
         day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
-    final red = isZzz ? const Color(0xFFFF1744) : theme.colorScheme.error;
-    final primaryColor = isZzz ? _zzzGreen : theme.colorScheme.primary;
+    final danger = isZzz
+        ? zzz?.danger ?? theme.colorScheme.error
+        : theme.colorScheme.error;
+    final primaryColor = isZzz
+        ? zzz?.accent ?? theme.colorScheme.primary
+        : theme.colorScheme.primary;
+    final zzzBg = zzz?.bg ?? const Color(0xFF080A10);
+    final selectedFg = isZzz ? zzzBg : theme.colorScheme.onPrimary;
     final foreground = isSelected
-        ? (isZzz ? _zzzBgColor : theme.colorScheme.onPrimary)
+        ? selectedFg
         : weekend
-            ? red.withValues(alpha: inMonth ? 0.92 : 0.52)
+            ? danger.withValues(alpha: inMonth ? 0.92 : 0.52)
             : inMonth
-                ? (isZzz ? const Color(0xFFE0E0E0) : theme.colorScheme.onSurface)
-                : (isZzz ? const Color(0xFFC8C8D8).withValues(alpha: 0.55) : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.55));
-    final markerLabel = holidayLabel ?? (isToday ? '\u4eca' : null);
+                ? zzz?.textPrimary ?? theme.colorScheme.onSurface
+                : (zzz?.textTertiary ?? theme.colorScheme.onSurfaceVariant)
+                    .withValues(alpha: 0.55);
+    final markerLabel = holidayLabel ?? (isToday ? '今' : null);
     final markerColor = isSelected
-        ? (isZzz ? _zzzBgColor.withValues(alpha: 0.88) : theme.colorScheme.onPrimary.withValues(alpha: 0.88))
+        ? selectedFg.withValues(alpha: 0.88)
         : holidayLabel != null
             ? primaryColor
-            : (isZzz ? const Color(0xFFC8C8D8) : theme.colorScheme.onSurfaceVariant);
-    final selectedBg = isZzz ? _zzzGreen : theme.colorScheme.primary;
-    final todayBg = isZzz ? _zzzGreen.withValues(alpha: 0.18) : theme.colorScheme.primaryContainer.withValues(alpha: 0.72);
+            : zzz?.textSecondary ?? theme.colorScheme.onSurfaceVariant;
+    final selectedBg = primaryColor;
+    final todayBg = isZzz
+        ? primaryColor.withValues(alpha: 0.16)
+        : theme.colorScheme.primaryContainer.withValues(alpha: 0.72);
 
     return Material(
       color: isSelected
@@ -228,10 +241,10 @@ class _CalendarDayCell extends StatelessWidget {
           : isToday
               ? todayBg
               : (isZzz ? Colors.transparent : theme.colorScheme.surface),
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(isZzz ? 8 : 14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(isZzz ? 8 : 14),
         child: Stack(
           fit: StackFit.expand,
           clipBehavior: Clip.none,
@@ -279,9 +292,7 @@ class _CalendarDayCell extends StatelessWidget {
                     width: 4,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? (isZzz ? _zzzBgColor : theme.colorScheme.onPrimary)
-                          : primaryColor,
+                      color: isSelected ? selectedFg : primaryColor,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),

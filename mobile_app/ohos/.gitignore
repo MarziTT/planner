@@ -1,5 +1,9 @@
 /build/
 /.hvigor/
+/.ohos/
+/oh_modules/
+/har/
+/entry/src/main/resources/rawfile/flutter_assets/
 /local.properties
 /.idea/
 *.iml

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
+import '../../../core/theme/zzz_theme_extension.dart';
 import '../domain/weather_models.dart';
 import '../state/weather_controller.dart';
 
-/// Weather condition code → icon mapping (aligned with backend condition.code)
+/// Weather condition code to icon mapping, aligned with backend condition.code.
 IconData _iconForCode(int code) {
   if (code >= 200 && code < 300) return Icons.thunderstorm;
   if (code >= 300 && code < 400) return Icons.grain;
@@ -17,61 +18,49 @@ IconData _iconForCode(int code) {
   return Icons.wb_cloudy;
 }
 
-/// Gradient stop for a weather condition code, indexed by brightness.
-///
-/// Dark mode: deep saturated atmospheres. Light mode: airy pastel moods.
 List<Color> _gradientForCode(int code, Brightness brightness) {
   final isDark = brightness == Brightness.dark;
 
   if (code >= 200 && code < 300) {
-    // Thunderstorm
     return isDark
         ? [const Color(0xFF2A1B4D), const Color(0xFF1A2A4D)]
         : [const Color(0xFFE8DFF5), const Color(0xFFD0E0F5)];
   }
   if (code >= 300 && code < 600) {
-    // Rain
     return isDark
         ? [const Color(0xFF1E3A5F), const Color(0xFF0F3A3A)]
         : [const Color(0xFFD5E8F5), const Color(0xFFC8EBE8)];
   }
   if (code >= 600 && code < 700) {
-    // Snow
     return isDark
         ? [const Color(0xFF5A7A8A), const Color(0xFFB8C4CC)]
         : [const Color(0xFFD8E8F0), const Color(0xFFE8F0F5)];
   }
   if (code >= 700 && code < 800) {
-    // Fog
     return isDark
         ? [const Color(0xFF8A8A8A), const Color(0xFF4A4A4A)]
         : [const Color(0xFFE0E0E0), const Color(0xFFC8C8C8)];
   }
   if (code == 800) {
-    // Clear
     return isDark
         ? [const Color(0xFFE8893B), const Color(0xFFF4C95D)]
         : [const Color(0xFFFDEBD0), const Color(0xFFF9E4B7)];
   }
-  // Cloudy (> 800 or default)
   return isDark
       ? [const Color(0xFF4A5A6A), const Color(0xFF1E2A3A)]
       : [const Color(0xFFD8E0E8), const Color(0xFFC0D0E0)];
 }
 
-/// Text colors for content rendered on top of the weather gradient.
-///
-/// Dark gradient → light text; light gradient → dark text.
 class _GradientTextColors {
-  final Color primary;
-  final Color secondary;
-  final Color icon;
-
   const _GradientTextColors({
     required this.primary,
     required this.secondary,
     required this.icon,
   });
+
+  final Color primary;
+  final Color secondary;
+  final Color icon;
 }
 
 _GradientTextColors _textColorsForGradient(Brightness brightness) {
@@ -97,24 +86,39 @@ class WeatherCard extends ConsumerWidget {
     final controller = ref.read(weatherControllerProvider.notifier);
     final themeState = ref.watch(themeControllerProvider);
     final isZzz = themeState.preset == PlannerThemePreset.kamenRiderZzz;
-    final brightness = Theme.of(context).brightness;
+    final theme = Theme.of(context);
+    final zzz = context.zzz;
+    final brightness = theme.brightness;
 
-    final gradient = state.data != null
-        ? _gradientForCode(state.data!.current.condition.code, brightness)
-        : _gradientForCode(999, brightness);
+    final gradient = isZzz
+        ? [
+            zzz?.surfaceHigh ?? const Color(0xFF1A2130),
+            zzz?.surfaceLow ?? const Color(0xFF0D111B),
+          ]
+        : state.data != null
+            ? _gradientForCode(state.data!.current.condition.code, brightness)
+            : _gradientForCode(999, brightness);
 
-    final textColors = _textColorsForGradient(brightness);
+    final textColors = isZzz
+        ? _GradientTextColors(
+            primary: zzz?.textPrimary ?? theme.colorScheme.onSurface,
+            secondary: zzz?.textSecondary ?? theme.colorScheme.onSurfaceVariant,
+            icon: zzz?.signal ?? theme.colorScheme.primary,
+          )
+        : _textColorsForGradient(brightness);
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(isZzz ? 10 : 18),
         border: isZzz
-            ? Border.all(color: const Color(0xFF00FF41).withValues(alpha: 0.18))
+            ? Border.all(
+                color: zzz?.borderColor ?? theme.colorScheme.outlineVariant)
             : null,
         boxShadow: isZzz
             ? [
                 BoxShadow(
-                  color: const Color(0xFF00FF41).withValues(alpha: 0.04),
+                  color: (zzz?.accent ?? theme.colorScheme.primary)
+                      .withValues(alpha: 0.08),
                   blurRadius: 10,
                 ),
               ]
@@ -126,12 +130,11 @@ class WeatherCard extends ConsumerWidget {
         ),
       ),
       padding: const EdgeInsets.all(16),
-      child: _buildBody(context, state, controller, textColors),
+      child: _buildBody(state, controller, textColors),
     );
   }
 
   Widget _buildBody(
-    BuildContext context,
     WeatherState state,
     WeatherController controller,
     _GradientTextColors textColors,
@@ -163,12 +166,6 @@ class WeatherCard extends ConsumerWidget {
 }
 
 class _WeatherContent extends StatelessWidget {
-  final WeatherData data;
-  final DateTime? lastFetchedAt;
-  final VoidCallback onRefresh;
-  final bool isRefreshing;
-  final _GradientTextColors textColors;
-
   const _WeatherContent({
     required this.data,
     required this.lastFetchedAt,
@@ -176,6 +173,12 @@ class _WeatherContent extends StatelessWidget {
     required this.isRefreshing,
     required this.textColors,
   });
+
+  final WeatherData data;
+  final DateTime? lastFetchedAt;
+  final VoidCallback onRefresh;
+  final bool isRefreshing;
+  final _GradientTextColors textColors;
 
   String _lastUpdatedText() {
     if (lastFetchedAt == null) return '';
@@ -189,16 +192,13 @@ class _WeatherContent extends StatelessWidget {
     final current = data.current;
     final daily = data.daily;
     final hourly = data.hourly;
-
     final todayHigh = daily.isNotEmpty ? daily.first.tempMax : null;
     final todayLow = daily.isNotEmpty ? daily.first.tempMin : null;
-
     final next3 = hourly.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Top row: location + last update + refresh
         Row(
           children: [
             Text(
@@ -227,7 +227,8 @@ class _WeatherContent extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(textColors.icon),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(textColors.icon),
                     ),
                   )
                 : IconButton(
@@ -240,7 +241,6 @@ class _WeatherContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // Hero: large temp + icon + condition
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -274,7 +274,6 @@ class _WeatherContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        // Secondary: feels like · humidity · wind
         Text(
           '体感 ${current.feelsLike.round()}° · 湿度 ${current.humidity}% · 风速 ${current.windSpeed.toStringAsFixed(1)}m/s',
           style: TextStyle(
@@ -283,7 +282,6 @@ class _WeatherContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        // Bottom: today H/L + next 3h forecast
         Row(
           children: [
             if (todayHigh != null && todayLow != null)
@@ -341,9 +339,9 @@ class _WeatherContent extends StatelessWidget {
 }
 
 class _WeatherSkeleton extends StatelessWidget {
-  final _GradientTextColors textColors;
-
   const _WeatherSkeleton({required this.textColors});
+
+  final _GradientTextColors textColors;
 
   @override
   Widget build(BuildContext context) {
@@ -431,15 +429,15 @@ class _WeatherSkeleton extends StatelessWidget {
 }
 
 class _WeatherError extends StatelessWidget {
-  final String message;
-  final VoidCallback? onRetry;
-  final _GradientTextColors textColors;
-
   const _WeatherError({
     required this.message,
     this.onRetry,
     required this.textColors,
   });
+
+  final String message;
+  final VoidCallback? onRetry;
+  final _GradientTextColors textColors;
 
   @override
   Widget build(BuildContext context) {
