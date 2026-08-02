@@ -23,7 +23,7 @@
         // 未配置签名：移除引用避免构建异常，正式发布前必须配置
         // "signingConfig": "default",
         "compatibleSdkVersion": "5.0.0(12)",
-        "compileSdkVersion": "5.0.0(12)",
+        "compileSdkVersion": "6.1.1(24)",
         "runtimeOS": "HarmonyOS",
       },
     ],
