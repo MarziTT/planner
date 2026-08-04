@@ -157,13 +157,41 @@ _RELATIVE_DAYS: list[tuple[str, int]] = [
 
 _WEEKDAY_PATTERN = re.compile(r"下周([一二三四五六日天])")
 _MONTH_DAY_PATTERN = re.compile(r"(\d{1,2})月(\d{1,2})[日号]")
+_TIME_TOKEN = r"[零〇一二两三四五六七八九十\d]{1,3}"
 _TIME_HHMM = re.compile(r"(\d{1,2})[:：](\d{2})")
-_TIME_HOUR = re.compile(r"(\d{1,2})点(半|(\d{1,2})分)?")
+_TIME_HOUR = re.compile(rf"({_TIME_TOKEN})点(半|({_TIME_TOKEN})分)?")
 _PERSON_PATTERN = re.compile(r"[跟和与同](.+?)(?:在[^A-Za-z0-9]|去|到|$)")
 _LOCATION_PATTERN = re.compile(r"在(.+?)(?:开会|见面|碰头|讨论|谈|写|做|喝|吃|去|$)")
 
 # Words to strip when extracting event name
-_NOISE_WORDS = {"一下", "一个", "帮我", "我要", "我想", "安排", "记得", "提醒我", "提醒"}
+_NOISE_WORDS = {
+    "一下", "一个", "帮我", "我要", "我想", "安排", "记录日程", "添加日程",
+    "新增日程", "日程", "行程", "记录", "添加", "新增", "记得", "提醒我", "提醒",
+}
+
+_CHINESE_NUMBER_MAP = {
+    "零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+    "五": 5, "六": 6, "七": 7, "八": 8, "九": 9,
+}
+
+
+def _parse_number_token(token: str) -> int | None:
+    if token.isdigit():
+        return int(token)
+    if token == "十":
+        return 10
+    if token.startswith("十"):
+        ones = _CHINESE_NUMBER_MAP.get(token[1:], 0)
+        return 10 + ones
+    if token.endswith("十"):
+        tens = _CHINESE_NUMBER_MAP.get(token[:-1])
+        return None if tens is None else tens * 10
+    if "十" in token:
+        tens_token, ones_token = token.split("十", 1)
+        tens = _CHINESE_NUMBER_MAP.get(tens_token)
+        ones = _CHINESE_NUMBER_MAP.get(ones_token, 0)
+        return None if tens is None else tens * 10 + ones
+    return _CHINESE_NUMBER_MAP.get(token)
 
 
 def _resolve_date(text: str) -> date | None:
@@ -245,14 +273,20 @@ def _resolve_time(text: str) -> tuple[int | None, int | None, int | None, int | 
     # X点半 / X点XX分
     m = _TIME_HOUR.search(text)
     if m:
-        h = int(m.group(1))
+        parsed_hour = _parse_number_token(m.group(1))
+        if parsed_hour is None:
+            return None, None, None, None, False
+        h = parsed_hour
         if 0 <= h <= 23:
             # group(2) is the full alternation capture: "半" or "XX分" or None
             captured = m.group(2)
             if captured == "半":
                 minute = 30
             elif captured and captured.endswith("分"):
-                minute = int(captured.replace("分", ""))
+                parsed_minute = _parse_number_token(captured.replace("分", ""))
+                if parsed_minute is None:
+                    return None, None, None, None, False
+                minute = parsed_minute
             else:
                 minute = 0
             if tod_modifier and h < 12:
@@ -585,7 +619,17 @@ _CALORIE_QUERY = re.compile(r"(?:多少|几个|几).*(?:卡路里|热量|大卡|
 _EXERCISE_QUERY = re.compile(r"运动.*(?:怎么样|达标|多少|够)")
 _SCHEDULE_QUERY = re.compile(r"(?:今天|今日|明天).*(?:安排|计划|日程|行程|做什么)")
 _HEALTH_QUERY = re.compile(r"(?:健康|身体)|(?:今天|最近).*(?:状态|状况|情况)")
-_TIME_PATTERN = re.compile(r"(\d{1,2})[点:：](\d{2})?")
+_TIME_PATTERN = re.compile(rf"({_TIME_TOKEN})[点:：](\d{{2}})?")
+
+
+def _looks_like_schedule_command(text: str) -> bool:
+    """Return true when a lifestyle keyword is being scheduled, not logged."""
+    schedule_markers = ["日程", "行程", "安排", "排个", "约", "预约"]
+    has_schedule_marker = any(marker in text for marker in schedule_markers)
+    has_time = bool(_TIME_PATTERN.search(text)) or any(
+        w in text for w in ["今天", "明天", "后天", "上午", "下午", "晚上", "周"]
+    )
+    return has_schedule_marker and has_time
 
 
 def _detect_intent_regex(text: str) -> str:
@@ -607,6 +651,10 @@ def _detect_intent_regex(text: str) -> str:
     # Reminder
     if any(kw in text for kw in _REMINDER_KEYWORDS):
         return "create_reminder"
+
+    # Explicit scheduling language wins over domain keywords such as "健身".
+    if _looks_like_schedule_command(text):
+        return "create_event"
 
     # Meal
     if any(kw in text for kw in _MEAL_KEYWORDS):
@@ -727,7 +775,15 @@ def _parse_routine_regex(text: str) -> dict:
     if routine_type in ("wake", "sleep"):
         tm = _TIME_PATTERN.search(text)
         if tm:
-            h = int(tm.group(1))
+            parsed_hour = _parse_number_token(tm.group(1))
+            if parsed_hour is None:
+                return {
+                    "intent": "log_routine",
+                    "routine_type": routine_type,
+                    "routine_value": routine_value,
+                    "confidence": 0.2,
+                }
+            h = parsed_hour
             m = int(tm.group(2)) if tm.group(2) else 0
             routine_value = f"{h:02d}:{m:02d}"
 

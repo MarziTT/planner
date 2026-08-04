@@ -8,11 +8,17 @@ import '../features/home/presentation/home_shell_page.dart';
 import '../features/onboarding/presentation/profile_setup_page.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authControllerProvider);
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.listen<AuthState>(authControllerProvider, (_, __) {
+    refreshNotifier.notify();
+  });
+  ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
     initialLocation: '/login',
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
+      final authState = ref.read(authControllerProvider);
       if (authState.restoring) return state.matchedLocation == '/splash' ? null : '/splash';
 
       final loggedIn = authState.session != null;
@@ -43,6 +49,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void notify() => notifyListeners();
+}
 
 class _SplashPage extends StatelessWidget {
   const _SplashPage();

@@ -8,7 +8,7 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../notifications/data/harmony_notification_service.dart';
 
-const bool isOhos = bool.fromEnvironment('dart.library.ohos');
+bool get isOhos => Platform.operatingSystem == 'ohos';
 
 /// 通知三级优先级
 enum NotifyPriority {

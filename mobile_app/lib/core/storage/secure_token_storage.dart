@@ -1,15 +1,14 @@
 ﻿import 'dart:async';
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-const bool _isOhos = bool.fromEnvironment('dart.library.ohos');
-
 final tokenStorageProvider = Provider<TokenStorage>((ref) {
-  if (_isOhos) {
+  if (Platform.operatingSystem == 'ohos') {
     return HarmonyTokenStorage();
   }
   return TokenStorage(const FlutterSecureStorage(

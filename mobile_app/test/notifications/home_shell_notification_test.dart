@@ -92,7 +92,7 @@ const _defaultSettings = PlannerSettings(
 );
 
 void main() {
-  testWidgets('notification tap navigates to planner tab and highlights event',
+  testWidgets('notification tap opens dashboard module and highlights event',
       (tester) async {
     final event = PlannerEvent(
       id: 42,
@@ -146,7 +146,8 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // Before tap, no event should be highlighted
     expect(
@@ -155,8 +156,9 @@ void main() {
     );
 
     // Emulate notification tap
-    tapGateway.emitTap(const NotificationTapEvent(eventId: 42));
-    await tester.pumpAndSettle();
+    tapGateway.emitTap(const NotificationTapEvent.event(eventId: 42));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // After tap, the event should be highlighted
     expect(
@@ -164,12 +166,9 @@ void main() {
       42,
     );
 
-    // Dashboard should show the highlighted event with "从提醒返回"
-    expect(find.text('\u4ece\u63d0\u9192\u8fd4\u56de'), findsOneWidget);
-    expect(
-      find.textContaining('\u4e0a\u5348\u5341\u70b9\u4f1a\u8bae'),
-      findsWidgets,
-    );
+    // The chat-first home keeps the event selection and opens the dashboard
+    // module on demand.
+    expect(find.text('\u4eca\u65e5\u603b\u89c8'), findsOneWidget);
   });
 
   testWidgets('launch tap highlights event on startup', (tester) async {
@@ -182,7 +181,7 @@ void main() {
     );
 
     final tapGateway = _ControllableTapGateway()
-      ..launchTap = const NotificationTapEvent(eventId: 7);
+      ..launchTap = const NotificationTapEvent.event(eventId: 7);
 
     final plannerController = _SeededPlannerController(
       _FakePlannerRepository(events: [event], todos: const []),
@@ -226,7 +225,8 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     // On startup with launchTap, event should be highlighted
     expect(
@@ -234,6 +234,6 @@ void main() {
       7,
     );
 
-    expect(find.text('\u4ece\u63d0\u9192\u8fd4\u56de'), findsOneWidget);
+    expect(find.text('\u4eca\u65e5\u603b\u89c8'), findsOneWidget);
   });
 }

@@ -50,6 +50,20 @@ class HarmonyHealthService {
         false;
   }
 
+  Future<bool> requestActivityAuthorization() async {
+    if (!await isAvailable()) return false;
+    return await _channel.invokeMethod<bool>(
+          'requestActivityAuthorization',
+          const <String, Object>{
+            'dataTypes': <String>[
+              'dailyActivities',
+              'workout',
+            ],
+          },
+        ) ??
+        false;
+  }
+
   Future<List<BodyMeasurement>> readBodyMeasurements({
     required DateTime start,
     required DateTime end,
@@ -77,4 +91,67 @@ class HarmonyHealthService {
     measurements.sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
     return measurements;
   }
+
+  Future<BodyMeasurement?> readLatestBodyMeasurement({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final measurements = await readBodyMeasurements(start: start, end: end);
+    return measurements.isEmpty ? null : measurements.first;
+  }
+
+  Future<HealthActivityReport?> readTodayActivityReport() async {
+    if (!await isAvailable()) return null;
+    try {
+      final value = await _channel.invokeMapMethod<Object?, Object?>(
+        'readTodayActivityReport',
+      );
+      if (value == null) return null;
+      final json = value.map((key, value) => MapEntry(key.toString(), value));
+      return HealthActivityReport.fromJson(json);
+    } on MissingPluginException {
+      return null;
+    }
+  }
+}
+
+class HealthActivityReport {
+  final int steps;
+  final int? stepsGoal;
+  final int activeCalories;
+  final int? activeCaloriesGoal;
+  final int exerciseMinutes;
+  final int? exerciseGoalMinutes;
+  final int activeHours;
+  final int? activeHoursGoal;
+  final String source;
+
+  const HealthActivityReport({
+    required this.steps,
+    this.stepsGoal,
+    required this.activeCalories,
+    this.activeCaloriesGoal,
+    required this.exerciseMinutes,
+    this.exerciseGoalMinutes,
+    required this.activeHours,
+    this.activeHoursGoal,
+    this.source = 'huawei_health',
+  });
+
+  factory HealthActivityReport.fromJson(Map<String, dynamic> json) {
+    return HealthActivityReport(
+      steps: (json['steps'] as num?)?.toInt() ?? 0,
+      stepsGoal: _optionalInt(json['stepsGoal']),
+      activeCalories: (json['activeCalories'] as num?)?.toInt() ?? 0,
+      activeCaloriesGoal: _optionalInt(json['activeCaloriesGoal']),
+      exerciseMinutes: (json['exerciseMinutes'] as num?)?.toInt() ?? 0,
+      exerciseGoalMinutes: _optionalInt(json['exerciseGoalMinutes']),
+      activeHours: (json['activeHours'] as num?)?.toInt() ?? 0,
+      activeHoursGoal: _optionalInt(json['activeHoursGoal']),
+      source: json['source'] as String? ?? 'huawei_health',
+    );
+  }
+
+  static int? _optionalInt(Object? value) =>
+      value == null ? null : (value as num).toInt();
 }

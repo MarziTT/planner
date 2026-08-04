@@ -19,6 +19,7 @@ from app.services.agent import (
     _resolve_date,
     _resolve_time,
     parse_schedule,
+    parse_text,
 )
 
 # ===========================================================================
@@ -355,6 +356,28 @@ class TestParseSchedulePublic:
     def test_default_config_uses_env(self):
         result = parse_schedule("今天下午开会", config=None)
         assert "intent" in result
+
+
+# ===========================================================================
+# parse_text — multi-intent regex path
+# ===========================================================================
+
+
+class TestParseTextPublic:
+
+    @patch("app.services.agent.datetime")
+    def test_schedule_marker_wins_over_exercise_keyword(self, mock_dt):
+        _configure_dt_mock(mock_dt)
+        result = parse_text("记录日程七点健身", config={})
+        assert result["intent"] == "create_event"
+        assert result["event_name"] == "健身"
+        assert result["datetime_range"] is not None
+
+    @patch("app.services.agent.datetime")
+    def test_plain_exercise_still_logs_exercise(self, mock_dt):
+        _configure_dt_mock(mock_dt)
+        result = parse_text("记录健身30分钟", config={})
+        assert result["intent"] == "log_exercise"
 
 
 # ===========================================================================

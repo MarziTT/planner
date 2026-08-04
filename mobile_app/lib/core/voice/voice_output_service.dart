@@ -1,17 +1,22 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/theme_controller.dart';
 import '../butler/butler_persona.dart';
 import 'voice_output_platform.dart';
 import 'voice_profile.dart';
-import 'voice_output_platform_io.dart'
-    if (dart.library.ohos) 'voice_output_platform_ohos.dart';
+import 'voice_output_platform_io.dart' as io_voice;
+import 'voice_output_platform_ohos.dart' as ohos_voice;
 
 class VoiceOutputService {
   VoiceOutputService({
     VoiceOutputPlatform? platform,
     ButlerVoiceProfile profile = const ButlerVoiceProfile(),
-  })  : _platform = platform ?? DeviceVoiceOutputPlatform(),
+  })  : _platform = platform ??
+            (Platform.operatingSystem == 'ohos'
+                ? ohos_voice.DeviceVoiceOutputPlatform()
+                : io_voice.DeviceVoiceOutputPlatform()),
         _profile = profile;
 
   final VoiceOutputPlatform _platform;

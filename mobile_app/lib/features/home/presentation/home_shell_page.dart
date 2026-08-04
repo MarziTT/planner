@@ -38,14 +38,57 @@ class HomeShellPage extends ConsumerStatefulWidget {
 
 class _HomeShellPageState extends ConsumerState<HomeShellPage>
     with WidgetsBindingObserver {
-  late int currentIndex;
   StreamSubscription<NotificationTapEvent>? _tapSubscription;
   bool _initialDashboardLoadRequested = false;
+
+  static final List<_HomeModule> _modules = [
+    _HomeModule(
+      id: 'dashboard',
+      label: '今日总览',
+      icon: Icons.dashboard_outlined,
+      builder: () => const HabitsDashboard(),
+    ),
+    _HomeModule(
+      id: 'transit',
+      label: '出行',
+      icon: Icons.directions_subway_outlined,
+      builder: () => const TransitPage(),
+    ),
+    _HomeModule(
+      id: 'meals',
+      label: '饮食',
+      icon: Icons.restaurant_outlined,
+      builder: () => const MealPage(),
+    ),
+    _HomeModule(
+      id: 'exercise',
+      label: '运动',
+      icon: Icons.fitness_center_outlined,
+      builder: () => const ExercisePage(),
+    ),
+    _HomeModule(
+      id: 'tags',
+      label: '标签',
+      icon: Icons.sell_outlined,
+      builder: () => const TagsPage(),
+    ),
+    _HomeModule(
+      id: 'profile',
+      label: '账号',
+      icon: Icons.person_outline,
+      builder: () => const ProfilePage(),
+    ),
+    _HomeModule(
+      id: 'settings',
+      label: '设置',
+      icon: Icons.settings_outlined,
+      builder: () => const SettingsPage(),
+    ),
+  ];
 
   @override
   void initState() {
     super.initState();
-    currentIndex = _tabIndex(widget.initialTab);
     WidgetsBinding.instance.addObserver(this);
 
     Future.microtask(() {
@@ -64,6 +107,13 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         }
       });
     });
+
+    if (widget.initialTab != 'dashboard') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showModuleById(widget.initialTab);
+      });
+    }
   }
 
   @override
@@ -88,7 +138,7 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       ref.read(selectedPlannerEventIdProvider.notifier).state = event.eventId;
     }
     if (mounted) {
-      setState(() => currentIndex = _tabIndex(event.routeTab ?? 'dashboard'));
+      _showModuleById(event.routeTab ?? 'dashboard');
       if (event.openQuickCapture) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('已打开速记，可以直接新增行程')),
@@ -96,11 +146,6 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       }
     }
   }
-
-  int _tabIndex(String tab) => const {
-        'dashboard': 0, 'habits': 0, 'transit': 1, 'meals': 2,
-        'exercise': 3, 'tags': 4, 'profile': 5, 'settings': 6,
-      }[tab] ?? 0;
 
   void _ensureDashboardLoadedForSession() {
     if (_initialDashboardLoadRequested) return;
@@ -203,26 +248,13 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
           ref.read(plannerControllerProvider), next.settings);
     });
 
-    const pages = [
-      HabitsDashboard(),
-      TransitPage(),
-      MealPage(),
-      ExercisePage(),
-      TagsPage(),
-      ProfilePage(),
-      SettingsPage(),
-    ];
-
     final theme = Theme.of(context);
     final isZzz = ref.watch(themeControllerProvider).preset ==
         PlannerThemePreset.kamenRiderZzz;
     final zzzTokens = context.zzz;
-    final zzzSurface = zzzTokens?.surface ?? zzzSurfaceColor;
     final zzzBg = zzzTokens?.bg ?? zzzBgColor;
-    final zzzAccent = zzzTokens?.accent ?? zzzRed;
     final zzzSignal = zzzTokens?.signal ?? zzzGreen;
     final zzzText = zzzTokens?.textPrimary ?? zzzGreenLight;
-    final zzzMuted = zzzTokens?.textTertiary ?? zzzSilver;
     final butlerName = ref.watch(butlerNameProvider);
 
     PreferredSizeWidget appBar = AppBar(
@@ -260,6 +292,11 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       ),
       actions: [
         IconButton(
+          onPressed: _showModulePicker,
+          icon: Icon(Icons.apps_outlined, color: isZzz ? zzzSignal : null),
+          tooltip: '打开模块',
+        ),
+        IconButton(
           onPressed: () => ref.read(authControllerProvider.notifier).logout(),
           icon: Icon(Icons.logout, color: isZzz ? zzzSignal : null),
         ),
@@ -285,98 +322,16 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
             children: [
               const UpdateBanner(),
               const _OfflineBanner(),
-              if (currentIndex == 0) QuickCaptureBar(isZzz: isZzz),
-              Expanded(child: pages[currentIndex]),
+              Expanded(
+                child: AgentDialogPanel(
+                  embedded: true,
+                  onOpenModules: _showModulePicker,
+                ),
+              ),
             ],
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAgentPanel(context),
-        tooltip: '$butlerName 管家',
-        backgroundColor: isZzz ? zzzAccent : theme.colorScheme.primary,
-        foregroundColor: isZzz ? zzzText : theme.colorScheme.onPrimary,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.mic),
-      ),
-      bottomNavigationBar: _buildNavBar(
-          isZzz, theme, zzzSignal, zzzMuted, zzzSurface, zzzAccent),
-    );
-  }
-
-  Widget _buildNavBar(
-    bool isZzz,
-    ThemeData theme,
-    Color zzzSignal,
-    Color zzzMuted,
-    Color zzzSurface,
-    Color zzzAccent,
-  ) {
-    final nav = NavigationBar(
-      selectedIndex: currentIndex,
-      onDestinationSelected: (value) {
-        setState(() => currentIndex = value);
-        // Refresh widget when navigating to dashboard (after potential changes)
-        if (value == 0) {
-          ref.read(widgetServiceProvider).refreshWidget();
-        }
-      },
-      backgroundColor: isZzz ? zzzSurface : null,
-      indicatorColor: isZzz ? zzzAccent.withValues(alpha: 0.24) : null,
-      surfaceTintColor: isZzz ? zzzSignal.withValues(alpha: 0.06) : null,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          label: '仪表盘',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.directions_subway_outlined),
-          label: '出行',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.restaurant_outlined),
-          label: '饮食',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.fitness_center_outlined),
-          label: '运动',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.sell_outlined),
-          label: '标签',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.person_outline),
-          label: '账号',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.settings_outlined),
-          label: '设置',
-        ),
-      ],
-    );
-
-    if (!isZzz) return nav;
-
-    return Theme(
-      data: theme.copyWith(
-        navigationBarTheme: NavigationBarThemeData(
-          iconTheme: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return IconThemeData(color: zzzSignal);
-            }
-            return IconThemeData(color: zzzMuted);
-          }),
-          labelTextStyle: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) {
-              return TextStyle(
-                  color: zzzSignal, fontSize: 12, fontWeight: FontWeight.w500);
-            }
-            return TextStyle(color: zzzMuted, fontSize: 12);
-          }),
-        ),
-      ),
-      child: nav,
     );
   }
 
@@ -389,12 +344,153 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
         );
   }
 
-  Future<void> _showAgentPanel(BuildContext context) async {
+  Future<void> _showModulePicker() async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const AgentDialogPanel(),
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '打开模块',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                GridView.count(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    for (final module in _modules)
+                      _ModuleTile(
+                        module: module,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          _showModule(module);
+                        },
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showModuleById(String id) async {
+    final module = _modules.firstWhere(
+      (module) =>
+          module.id == id || (id == 'habits' && module.id == 'dashboard'),
+      orElse: () => _modules.first,
+    );
+    await _showModule(module);
+  }
+
+  Future<void> _showModule(_HomeModule module) async {
+    if (module.id == 'dashboard') {
+      ref.read(widgetServiceProvider).refreshWidget();
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return FractionallySizedBox(
+          heightFactor: 0.92,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+                child: Row(
+                  children: [
+                    Icon(module.icon, color: theme.colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        module.label,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                      tooltip: '关闭',
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(child: module.builder()),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _HomeModule {
+  const _HomeModule({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.builder,
+  });
+
+  final String id;
+  final String label;
+  final IconData icon;
+  final Widget Function() builder;
+}
+
+class _ModuleTile extends StatelessWidget {
+  const _ModuleTile({
+    required this.module,
+    required this.onTap,
+  });
+
+  final _HomeModule module;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Material(
+      color: colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(module.icon, color: colorScheme.primary),
+            const SizedBox(height: 8),
+            Text(
+              module.label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

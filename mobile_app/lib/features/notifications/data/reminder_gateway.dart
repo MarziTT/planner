@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -13,7 +14,7 @@ import '../domain/notification_tap_event.dart';
 import '../domain/reminder_schedule.dart';
 import 'harmony_notification_service.dart';
 
-const bool _isOhos = bool.fromEnvironment('dart.library.ohos');
+bool get _isOhos => Platform.operatingSystem == 'ohos';
 
 abstract class ReminderGateway {
   Stream<NotificationTapEvent> get taps;

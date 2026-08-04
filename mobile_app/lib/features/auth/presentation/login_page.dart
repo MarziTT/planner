@@ -32,7 +32,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _loadSavedPhone() async {
     final storage = ref.read(tokenStorageProvider);
     final phone = await storage.getPhoneNumber();
-    if (phone != null && phone.isNotEmpty) {
+    if (_phoneController.text.isEmpty && phone != null && phone.isNotEmpty) {
       _phoneController.text = phone;
     }
   }

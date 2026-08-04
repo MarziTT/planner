@@ -3,10 +3,16 @@
 // 实现应在确认 SDK 版本后接入，避免把 Android API 误用到 ArkTS。
 import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
 import { GeneratedPluginRegistrant } from '../plugins/GeneratedPluginRegistrant';
+import HarmonyHealthPlugin from '../plugins/HarmonyHealthPlugin';
+import HarmonyNotificationPlugin from '../plugins/HarmonyNotificationPlugin';
+import HarmonySecureStoragePlugin from '../plugins/HarmonySecureStoragePlugin';
 
 export default class EntryAbility extends FlutterAbility {
   configureFlutterEngine(flutterEngine: FlutterEngine): void {
     super.configureFlutterEngine(flutterEngine);
     GeneratedPluginRegistrant.registerWith(flutterEngine);
+    flutterEngine.getPlugins()?.add(new HarmonySecureStoragePlugin());
+    flutterEngine.getPlugins()?.add(new HarmonyNotificationPlugin());
+    flutterEngine.getPlugins()?.add(new HarmonyHealthPlugin());
   }
 }

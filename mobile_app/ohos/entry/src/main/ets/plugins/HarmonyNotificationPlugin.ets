@@ -10,6 +10,7 @@ import notificationManager from '@ohos.notificationManager';
 
 export default class HarmonyNotificationPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
+  private readonly slotType = notificationManager.SlotType.SERVICE_INFORMATION;
 
   getUniqueClassName(): string {
     return 'HarmonyNotificationPlugin';
@@ -32,27 +33,39 @@ export default class HarmonyNotificationPlugin implements FlutterPlugin, MethodC
 
   async onMethodCall(call: MethodCall, result: MethodResult): Promise<void> {
     try {
-      const args = (call.arguments ?? {}) as Record<string, Object>;
       if (call.method === 'ensureChannel') {
-        await notificationManager.addSlot({
-          type: notificationManager.SlotType.SERVICE_INFORMATION,
-          name: String(args['name'] ?? 'PixelPlanner'),
-        });
+        await notificationManager.addSlot(this.slotType);
         result.success(null);
       } else if (call.method === 'show') {
-        const content = {
-          contentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
+        const title = (call.argument('title') as string) ?? 'PixelPlanner';
+        const body = (call.argument('body') as string) ?? '';
+        const category = (call.argument('category') as string) ?? 'schedule';
+        const notificationId = (call.argument('id') as number) ?? 0;
+        const scheduledAt = (call.argument('scheduledAt') as number) ?? 0;
+        const publishTime = scheduledAt > 0 ? scheduledAt : Date.now();
+        const content: notificationManager.NotificationContent = {
+          notificationContentType: notificationManager.ContentType.NOTIFICATION_CONTENT_BASIC_TEXT,
           normal: {
-            title: String(args['title'] ?? 'PixelPlanner'),
-            text: String(args['body'] ?? ''),
-            additionalText: String(args['category'] ?? 'schedule'),
+            title: title,
+            text: body,
+            additionalText: category,
           },
         };
-        await notificationManager.publish({
-          id: Number(args['id'] ?? 0),
-          slotType: notificationManager.SlotType.SERVICE_INFORMATION,
-          content,
-        });
+        const request: notificationManager.NotificationRequest = {
+          id: notificationId,
+          notificationSlotType: this.slotType,
+          content: content,
+          deliveryTime: publishTime,
+          showDeliveryTime: true,
+          tapDismissed: true,
+          extraInfo: {
+            payload: (call.argument('payload') as string) ?? '',
+            channelId: (call.argument('channelId') as string) ?? '',
+            priority: (call.argument('priority') as string) ?? '',
+            category: category,
+          },
+        };
+        await notificationManager.publish(request);
         result.success(null);
       } else if (call.method === 'cancelAll') {
         await notificationManager.cancelAll();

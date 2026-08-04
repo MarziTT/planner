@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/butler/butler_persona.dart';
@@ -10,7 +11,14 @@ import '../state/agent_notifier.dart';
 import 'chat_bubble.dart';
 
 class AgentDialogPanel extends ConsumerStatefulWidget {
-  const AgentDialogPanel({super.key});
+  const AgentDialogPanel({
+    super.key,
+    this.embedded = false,
+    this.onOpenModules,
+  });
+
+  final bool embedded;
+  final VoidCallback? onOpenModules;
 
   @override
   ConsumerState<AgentDialogPanel> createState() => _AgentDialogPanelState();
@@ -21,13 +29,48 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
   bool _confirming = false;
+  final List<_QuickCommand> _quickCommands = [
+    _QuickCommand(Icons.calendar_month_outlined, '明天有什么安排', '明天有什么安排'),
+    _QuickCommand(Icons.restaurant_outlined, '记录早餐', '记录早餐'),
+    _QuickCommand(Icons.fitness_center_outlined, '记一笔运动', '记一笔运动'),
+    _QuickCommand(Icons.bedtime_outlined, '记录昨晚作息', '记录昨晚作息'),
+    _QuickCommand(Icons.notifications_outlined, '提醒我喝水', '每小时提醒我喝水'),
+    _QuickCommand(Icons.add_task_outlined, '安排一个日程', '明天下午三点开会'),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _textController.addListener(_handleInputChanged);
+    _loadQuickCommands();
+  }
+
+  static const _quickCommandsKey = 'agent.quick_commands.v1';
+
+  Future<void> _loadQuickCommands() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_quickCommandsKey);
+    if (!mounted || raw == null) return;
+    final loaded = raw
+        .where((value) => value.trim().isNotEmpty)
+        .map((value) => _QuickCommand(Icons.bolt_outlined, value, value))
+        .toList();
+    if (loaded.isNotEmpty) setState(() { _quickCommands..clear()..addAll(loaded); });
+  }
 
   @override
   void dispose() {
+    _textController.removeListener(_handleInputChanged);
     _textController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleInputChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   bool _isLoadingStatus(AgentStatus status) {
@@ -161,16 +204,17 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     final colorScheme = theme.colorScheme;
 
     final screenHeight = MediaQuery.of(context).size.height;
+    final topRadius = widget.embedded ? Radius.zero : const Radius.circular(20);
 
     _scrollToBottom();
 
     return Container(
-      height: screenHeight * 0.6,
+      height: widget.embedded ? null : screenHeight * 0.6,
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+        borderRadius: BorderRadius.only(
+          topLeft: topRadius,
+          topRight: topRadius,
         ),
       ),
       child: Column(
@@ -227,20 +271,13 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
   }
 
   Widget _buildTopBar(bool isZzz, ColorScheme colorScheme, ThemeData theme) {
-    final persona = ButlerPersona.forTheme(
-      ref.watch(themeControllerProvider).preset,
-    );
-    final savedName = ref.watch(butlerNameProvider);
-    final displayName =
-        savedName == kDefaultButlerName ? persona.displayName : savedName;
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+        borderRadius: BorderRadius.only(
+          topLeft: widget.embedded ? Radius.zero : const Radius.circular(20),
+          topRight: widget.embedded ? Radius.zero : const Radius.circular(20),
         ),
       ),
       child: Row(
@@ -252,23 +289,24 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
           ),
           const SizedBox(width: 8),
           Text(
-            '$displayName 管家',
+            '对话',
             style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.onSurface,
             ),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: () {
-              ref.read(agentControllerProvider.notifier).reset();
-              Navigator.of(context).pop();
-            },
-            icon: Icon(Icons.keyboard_arrow_down,
-                color: colorScheme.onSurfaceVariant),
-            tooltip: '收起',
-            visualDensity: VisualDensity.compact,
-          ),
+          if (!widget.embedded)
+            IconButton(
+              onPressed: () {
+                ref.read(agentControllerProvider.notifier).reset();
+                Navigator.of(context).pop();
+              },
+              icon: Icon(Icons.keyboard_arrow_down,
+                  color: colorScheme.onSurfaceVariant),
+              tooltip: '收起',
+              visualDensity: VisualDensity.compact,
+            ),
         ],
       ),
     );
@@ -336,41 +374,34 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
           ),
         ),
         const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '快捷指令',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: '编辑快捷指令',
+              onPressed: _editQuickCommands,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+            ),
+          ],
+        ),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           alignment: WrapAlignment.center,
           children: [
-            _QuickCommandChip(
-              icon: Icons.calendar_month_outlined,
-              label: '明天有什么安排',
-              onTap: () => _handleQuickCommand('明天有什么安排'),
-            ),
-            _QuickCommandChip(
-              icon: Icons.restaurant_outlined,
-              label: '记录早餐',
-              onTap: () => _handleQuickCommand('记录早餐'),
-            ),
-            _QuickCommandChip(
-              icon: Icons.fitness_center_outlined,
-              label: '记一笔运动',
-              onTap: () => _handleQuickCommand('记一笔运动'),
-            ),
-            _QuickCommandChip(
-              icon: Icons.bedtime_outlined,
-              label: '昨晚睡了多久',
-              onTap: () => _handleQuickCommand('记录昨晚作息'),
-            ),
-            _QuickCommandChip(
-              icon: Icons.notifications_outlined,
-              label: '提醒我喝水',
-              onTap: () => _handleQuickCommand('每小时提醒我喝水'),
-            ),
-            _QuickCommandChip(
-              icon: Icons.add_task_outlined,
-              label: '安排个日程',
-              onTap: () => _handleQuickCommand('明天下午三点开会'),
-            ),
+            for (final command in _quickCommands)
+              _QuickCommandChip(
+                icon: command.icon,
+                label: command.label,
+                onTap: () => _handleQuickCommand(command.prompt),
+              ),
           ],
         ),
         const SizedBox(height: 16),
@@ -384,6 +415,21 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
         ),
       ],
     );
+  }
+
+  Future<void> _editQuickCommands() async {
+    final updated = await showDialog<List<_QuickCommand>>(
+      context: context,
+      builder: (context) => _QuickCommandEditor(commands: _quickCommands),
+    );
+    if (updated != null && mounted) {
+      setState(() { _quickCommands..clear()..addAll(updated); });
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _quickCommandsKey,
+        _quickCommands.map((command) => command.prompt).toList(),
+      );
+    }
   }
 
   Widget _buildInputArea(
@@ -575,6 +621,68 @@ class _QuickCommandChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _QuickCommand {
+  const _QuickCommand(this.icon, this.label, this.prompt);
+  final IconData icon;
+  final String label;
+  final String prompt;
+}
+
+class _QuickCommandEditor extends StatefulWidget {
+  const _QuickCommandEditor({required this.commands});
+  final List<_QuickCommand> commands;
+
+  @override
+  State<_QuickCommandEditor> createState() => _QuickCommandEditorState();
+}
+
+class _QuickCommandEditorState extends State<_QuickCommandEditor> {
+  late final List<_QuickCommand> _commands = [...widget.commands];
+
+  Future<void> _add() async {
+    final controller = TextEditingController();
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('新增快捷指令'),
+        content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: '输入要执行的指令')),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')), FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('添加'))],
+      ),
+    );
+    if (value != null && value.isNotEmpty) setState(() => _commands.add(_QuickCommand(Icons.bolt_outlined, value, value)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('编辑快捷指令'),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420, maxHeight: 360),
+        child: _commands.isEmpty
+            ? const Center(child: Text('还没有快捷指令'))
+            : ListView.builder(
+                shrinkWrap: true,
+                itemCount: _commands.length,
+                itemBuilder: (context, index) => ListTile(
+                  dense: true,
+                  leading: Icon(_commands[index].icon),
+                  title: Text(_commands[index].label),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () =>
+                        setState(() => _commands.removeAt(index)),
+                  ),
+                ),
+              ),
+      ),
+      actions: [
+        TextButton(onPressed: _add, child: const Text('新增')),
+        FilledButton(onPressed: () => Navigator.pop(context, _commands), child: const Text('完成')),
+      ],
     );
   }
 }
