@@ -439,6 +439,8 @@ def parse_schedule(text: str, config: dict | None = None) -> dict:
             "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         }
 
+    llm_warning = None
+
     # Try LLM first
     if resolve_targets(config):
         result = _call_openai(text, config)
@@ -450,11 +452,16 @@ def parse_schedule(text: str, config: dict | None = None) -> dict:
                     result[key] = None if key in ("person", "location", "datetime_range") else (
                         False if key == "is_fuzzy" else 0.0
                     )
+            result.setdefault("llm_warning", None)
             return result
+        llm_warning = "AI连接失败，已切换到离线识别"
 
     # Fallback to regex
     logger.info("Falling back to regex parser for: %s", text)
-    return _parse_with_regex(text)
+    result = _parse_with_regex(text)
+    if llm_warning:
+      result["llm_warning"] = llm_warning
+    return result
 
 
 # ============================================================================
@@ -895,6 +902,8 @@ def parse_text(text: str, config: dict | None = None) -> dict:
             "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         }
 
+    llm_warning = None
+
     # Prefer AI for natural-language intent recognition. Regex remains an
     # offline fallback when no model is configured or the model is unavailable.
     if resolve_targets(config):
@@ -904,9 +913,14 @@ def parse_text(text: str, config: dict | None = None) -> dict:
                 result["intent"] = "unknown"
             if "confidence" not in result:
                 result["confidence"] = 0.5
+            result.setdefault("llm_warning", None)
             return result
+        llm_warning = "AI连接失败，已切换到离线识别"
 
-    return _parse_multi_regex(text)
+    result = _parse_multi_regex(text)
+    if llm_warning:
+        result["llm_warning"] = llm_warning
+    return result
 
 
 # -- Public API: suggestion generation ----------------------------------------

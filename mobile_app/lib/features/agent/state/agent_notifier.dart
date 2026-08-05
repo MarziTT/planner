@@ -160,6 +160,18 @@ class AgentNotifier extends StateNotifier<AgentState> {
         personaPreset: _personaPreset,
       );
 
+      if (result.llmWarning != null && result.llmWarning!.isNotEmpty) {
+        final noticeMsg = ChatMessage(
+          id: _generateId(),
+          type: ChatMessageType.system,
+          text: result.llmWarning!,
+        );
+        state = state.copyWith(
+          messages: [...state.messages, noticeMsg],
+          errorMessage: null,
+        );
+      }
+
       // Query intent — auto-execute and show answer immediately
       if (result.intent == 'query') {
         await _handleQuery(result);

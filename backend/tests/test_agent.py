@@ -387,6 +387,13 @@ class TestParseTextPublic:
         assert result["event_name"] == "健身"
         assert result["datetime_range"] is not None
 
+    @patch("app.services.agent._call_openai_multi", return_value=None)
+    @patch("app.services.agent.resolve_targets", return_value=[object()])
+    def test_llm_failure_surfaces_offline_notice(self, mock_resolve_targets, mock_call_openai):
+        result = parse_text("七点健身", config={})
+        assert result["intent"] == "create_event"
+        assert result["llm_warning"] == "AI连接失败，已切换到离线识别"
+
 
 # ===========================================================================
 # _build_system_prompt

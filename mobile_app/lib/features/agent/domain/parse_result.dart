@@ -25,6 +25,8 @@ class ParseResult {
     this.answer,
     // --- create_reminder fields ---
     this.reminderText,
+    // --- backend notices ---
+    this.llmWarning,
     // --- common ---
     this.confidence = 0.0,
   });
@@ -48,6 +50,7 @@ class ParseResult {
   final String? queryText;
   final String? answer;
   final String? reminderText;
+  final String? llmWarning;
   final double confidence;
 
   ParseResult copyWith({
@@ -75,6 +78,7 @@ class ParseResult {
       queryText: queryText,
       answer: answer,
       reminderText: reminderText,
+      llmWarning: llmWarning,
       confidence: confidence,
     );
   }
@@ -109,6 +113,7 @@ class ParseResult {
       queryText: json['query_text'] as String?,
       answer: json['answer'] as String?,
       reminderText: json['reminder_text'] as String?,
+      llmWarning: json['llm_warning'] as String?,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
     );
   }
@@ -130,6 +135,7 @@ class ParseResult {
       'intensity': intensity,
       'routine_type': routineType,
       'routine_value': routineValue,
+      if (llmWarning != null) 'llm_warning': llmWarning,
       if (datetimeStart != null && datetimeEnd != null)
         'datetime_range': {
           'start': datetimeStart!.toIso8601String(),
