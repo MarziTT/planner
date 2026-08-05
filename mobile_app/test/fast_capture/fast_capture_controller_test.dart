@@ -11,6 +11,7 @@ class _FakePlannerRepository extends PlannerRepository {
 
   final bool shouldThrow;
   final List<PlannerEvent> createdEvents = [];
+  final List<List<int>?> createdTagIds = [];
 
   @override
   Future<PlannerEvent> createEvent({
@@ -32,6 +33,7 @@ class _FakePlannerRepository extends PlannerRepository {
       status: 'planned',
     );
     createdEvents.add(event);
+    createdTagIds.add(tagIds);
     return event;
   }
 
@@ -42,7 +44,8 @@ class _FakePlannerRepository extends PlannerRepository {
     required DateTime endsAt,
     int? tagId,
     List<int>? tagIds,
-  }) => createEvent(
+  }) =>
+      createEvent(
         title: title,
         startsAt: startsAt,
         endsAt: endsAt,
@@ -135,6 +138,22 @@ void main() {
     expect(controller.state.pendingDraft, isNull);
     expect(controller.state.errorMessage, isNull);
   });
+
+  test('explicit schedule wording is not tagged as workout event', () async {
+    final repository = _FakePlannerRepository();
+    final controller = buildController(repository);
+
+    await controller.submitText('今天下午七点记录日程健身');
+
+    expect(repository.createdEvents, hasLength(1));
+    expect(repository.createdEvents.single.title, '健身');
+    expect(repository.createdEvents.single.startsAt, DateTime(2026, 7, 9, 19));
+    expect(repository.createdEvents.single.endsAt, DateTime(2026, 7, 9, 20));
+    expect(repository.createdTagIds.single, isNull);
+    expect(controller.state.pendingDraft, isNull);
+    expect(controller.state.errorMessage, isNull);
+  });
+
   test('failed creation exposes small error string', () async {
     final repository = _FakePlannerRepository(shouldThrow: true);
     final controller = buildController(repository);

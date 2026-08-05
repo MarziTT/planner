@@ -14,6 +14,8 @@ class ConfirmCard extends StatelessWidget {
     super.key,
     required this.result,
     required this.onConfirm,
+    this.onCancel,
+    this.onEdit,
     this.isZzz = false,
     this.conflicts,
     this.suggestions,
@@ -22,6 +24,8 @@ class ConfirmCard extends StatelessWidget {
 
   final ParseResult result;
   final VoidCallback onConfirm;
+  final VoidCallback? onCancel;
+  final ValueChanged<ParseResult>? onEdit;
   final bool isZzz;
   final ConflictCheck? conflicts;
   final List<TimeSuggestion>? suggestions;
@@ -33,20 +37,20 @@ class ConfirmCard extends StatelessWidget {
       case 'create_event':
         return _buildEventCard(context);
       case 'log_meal':
-        return _buildSimpleCard(context, Icons.restaurant, '记录饮食',
-            _mealSummary());
+        return _buildSimpleCard(
+            context, Icons.restaurant, '记录饮食', _mealSummary());
       case 'log_exercise':
-        return _buildSimpleCard(context, Icons.fitness_center, '记录运动',
-            _exerciseSummary());
+        return _buildSimpleCard(
+            context, Icons.fitness_center, '记录运动', _exerciseSummary());
       case 'log_routine':
-        return _buildSimpleCard(context, Icons.bedtime, '记录作息',
-            _routineSummary());
+        return _buildSimpleCard(
+            context, Icons.bedtime, '记录作息', _routineSummary());
       case 'create_reminder':
-        return _buildSimpleCard(context, Icons.notifications, '创建提醒',
-            _reminderSummary());
+        return _buildSimpleCard(
+            context, Icons.notifications, '创建提醒', _reminderSummary());
       default:
-        return _buildSimpleCard(context, Icons.check, '确认',
-            result.eventName ?? '确认执行此操作？');
+        return _buildSimpleCard(
+            context, Icons.check, '确认', result.eventName ?? '确认执行此操作？');
     }
   }
 
@@ -103,7 +107,8 @@ class ConfirmCard extends StatelessWidget {
           ],
           if (start != null) ...[
             Row(children: [
-              Icon(Icons.access_time, size: 18, color: colorScheme.onSurfaceVariant),
+              Icon(Icons.access_time,
+                  size: 18, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 8),
               Text(
                 end != null
@@ -117,7 +122,8 @@ class ConfirmCard extends StatelessWidget {
           ],
           if (result.person != null) ...[
             Row(children: [
-              Icon(Icons.person_outline, size: 18, color: colorScheme.onSurfaceVariant),
+              Icon(Icons.person_outline,
+                  size: 18, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 8),
               Text(result.person!,
                   style: theme.textTheme.bodyMedium
@@ -127,8 +133,8 @@ class ConfirmCard extends StatelessWidget {
           ],
           if (result.location != null) ...[
             Row(children: [
-              Icon(Icons.location_on_outlined, size: 18,
-                  color: colorScheme.onSurfaceVariant),
+              Icon(Icons.location_on_outlined,
+                  size: 18, color: colorScheme.onSurfaceVariant),
               const SizedBox(width: 8),
               Text(result.location!,
                   style: theme.textTheme.bodyMedium
@@ -141,15 +147,17 @@ class ConfirmCard extends StatelessWidget {
               Icon(Icons.info_outline, size: 16, color: colorScheme.secondary),
               const SizedBox(width: 8),
               Text('时间已自动补全��可点击确认安排',
-                  style:
-                      theme.textTheme.bodySmall?.copyWith(color: colorScheme.secondary)),
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: colorScheme.secondary)),
             ]),
           ],
           if (isCheckingConflicts) ...[
             const SizedBox(height: 12),
             _buildCheckingRow(theme),
           ],
-          if (!isCheckingConflicts && conflicts != null && conflicts.hasConflicts) ...[
+          if (!isCheckingConflicts &&
+              conflicts != null &&
+              conflicts.hasConflicts) ...[
             const SizedBox(height: 12),
             _buildConflictSection(theme, colorScheme, conflicts),
           ],
@@ -162,28 +170,123 @@ class ConfirmCard extends StatelessWidget {
             _buildSuggestionsSection(theme, colorScheme, suggestions),
           ],
           const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onConfirm,
-              icon: Icon(
-                conflicts != null && conflicts.hasConflicts
-                    ? Icons.warning_amber_rounded
-                    : Icons.check_circle_outline,
-                size: 18,
+          Row(
+            children: [
+              IconButton(
+                tooltip: '修改日程',
+                onPressed: onEdit == null ? null : () => _editEvent(context),
+                icon: const Icon(Icons.edit_outlined),
               ),
-              label: Text(
-                conflicts != null && conflicts.hasConflicts ? '仍然安排' : '确认安排',
+              TextButton(
+                onPressed: onCancel,
+                child: const Text('取消'),
               ),
-              style: FilledButton.styleFrom(
-                backgroundColor: isZzz ? colorScheme.primary : null,
-                foregroundColor: isZzz ? colorScheme.onPrimary : null,
+              const SizedBox(width: 8),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onConfirm,
+                  icon: Icon(
+                    conflicts != null && conflicts.hasConflicts
+                        ? Icons.warning_amber_rounded
+                        : Icons.check_circle_outline,
+                    size: 18,
+                  ),
+                  label: Text(
+                    conflicts != null && conflicts.hasConflicts
+                        ? '仍然安排'
+                        : '确认安排',
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: isZzz ? colorScheme.primary : null,
+                    foregroundColor: isZzz ? colorScheme.onPrimary : null,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _editEvent(BuildContext context) async {
+    final start = result.datetimeStart;
+    if (start == null || onEdit == null) return;
+
+    final end = result.datetimeEnd ?? start.add(const Duration(hours: 1));
+    final titleController = TextEditingController(text: result.eventName ?? '');
+    final startController = TextEditingController(text: _dateTimeText(start));
+    final endController = TextEditingController(text: _dateTimeText(end));
+
+    try {
+      final updated = await showDialog<ParseResult>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('修改日程'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: '事项'),
+              ),
+              TextField(
+                controller: startController,
+                decoration: const InputDecoration(
+                  labelText: '开始时间',
+                  helperText: '格式：2026-08-05 19:00',
+                ),
+              ),
+              TextField(
+                controller: endController,
+                decoration: const InputDecoration(labelText: '结束时间'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final title = titleController.text.trim();
+                final editedStart = _parseDateTime(startController.text);
+                final editedEnd = _parseDateTime(endController.text);
+                if (title.isEmpty ||
+                    editedStart == null ||
+                    editedEnd == null ||
+                    !editedEnd.isAfter(editedStart)) {
+                  return;
+                }
+                Navigator.pop(
+                  context,
+                  result.copyWith(
+                    eventName: title,
+                    datetimeStart: editedStart,
+                    datetimeEnd: editedEnd,
+                  ),
+                );
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      );
+      if (updated != null) onEdit!(updated);
+    } finally {
+      titleController.dispose();
+      startController.dispose();
+      endController.dispose();
+    }
+  }
+
+  String _dateTimeText(DateTime value) {
+    return DateFormat('yyyy-MM-dd HH:mm').format(value);
+  }
+
+  DateTime? _parseDateTime(String value) {
+    return DateTime.tryParse(value.trim().replaceFirst(' ', 'T'));
   }
 
   // -----------------------------------------------------------------------
@@ -259,7 +362,7 @@ class ConfirmCard extends StatelessWidget {
     final mins = result.durationMinutes;
     final intensity = result.intensity ?? '中';
     final parts = <String>['类型: $type'];
-    if (mins != null) parts.add('时长: ${mins}分钟');
+    if (mins != null) parts.add('时长: $mins分钟');
     parts.add('强度: $intensity');
     return parts.join('\n');
   }
@@ -294,7 +397,10 @@ class ConfirmCard extends StatelessWidget {
 
   Widget _buildCheckingRow(ThemeData theme) {
     return Row(children: [
-      const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+      const SizedBox(
+          width: 14,
+          height: 14,
+          child: CircularProgressIndicator(strokeWidth: 2)),
       const SizedBox(width: 8),
       Text('正在检查日程冲突...',
           style: theme.textTheme.bodySmall
@@ -313,7 +419,8 @@ class ConfirmCard extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange.shade700),
+          Icon(Icons.warning_amber_rounded,
+              size: 16, color: Colors.orange.shade700),
           const SizedBox(width: 6),
           Text('检测到 ${conflicts.conflicts.length} 个时间冲突',
               style: theme.textTheme.bodySmall?.copyWith(
@@ -336,9 +443,11 @@ class ConfirmCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSuggestionsSection(
-      ThemeData theme, ColorScheme colorScheme, List<TimeSuggestion>? suggestions) {
-    if (suggestions == null || suggestions.isEmpty) return const SizedBox.shrink();
+  Widget _buildSuggestionsSection(ThemeData theme, ColorScheme colorScheme,
+      List<TimeSuggestion>? suggestions) {
+    if (suggestions == null || suggestions.isEmpty) {
+      return const SizedBox.shrink();
+    }
     final top = suggestions.take(2).toList();
     return Container(
       padding: const EdgeInsets.all(10),
@@ -361,7 +470,8 @@ class ConfirmCard extends StatelessWidget {
               child: Row(children: [
                 const SizedBox(width: 22),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.green.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(4),

@@ -476,6 +476,7 @@ Rules:
 1. Output ONLY the JSON object. No markdown fences, no explanation.
 2. timezone is UTC+8 (Asia/Shanghai). Today is {today}.
 3. For create_event: follow the same schema as before (event_name, person, location, datetime_range, is_fuzzy).
+3a. A concrete time or date/time phrase means create_event for an activity such as 健身、跑步、游泳 unless the user clearly says they already completed it, for example "我运动了30分钟" or "记录运动".
 4. For log_meal: extract meal_type (早餐/午餐/晚餐/加餐/零食), food_name (what they ate), estimated calories.
 5. For log_exercise: extract exercise_type (跑步/游泳/健身/骑行/散步 etc.), duration_minutes (integer), intensity (轻/中/高).
 6. For log_routine: extract routine_type (wake/sleep/standing), time_value (HH:MM format for wake/sleep, or just "done" for standing).
@@ -629,7 +630,26 @@ def _looks_like_schedule_command(text: str) -> bool:
     has_time = bool(_TIME_PATTERN.search(text)) or any(
         w in text for w in ["今天", "明天", "后天", "上午", "下午", "晚上", "周"]
     )
-    return has_schedule_marker and has_time
+    explicit_exercise_log = any(
+        marker in text
+        for marker in [
+            "运动了",
+            "练了",
+            "跑了",
+            "游了",
+            "散步了",
+            "我做了",
+            "记录运动",
+            "记一笔运动",
+        ]
+    )
+    has_scheduled_activity = any(
+        keyword in text
+        for keyword in ["健身", "训练", "跑步", "游泳", "锻炼", "瑜伽"]
+    )
+    return has_time and not explicit_exercise_log and (
+        has_schedule_marker or has_scheduled_activity
+    )
 
 
 def _detect_intent_regex(text: str) -> str:
@@ -875,12 +895,8 @@ def parse_text(text: str, config: dict | None = None) -> dict:
             "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         }
 
-    # Try regex first — fast, no API cost
-    regex_result = _parse_multi_regex(text)
-    if regex_result.get("intent") != "unknown":
-        return regex_result
-
-    # Regex couldn't determine intent, fall back to LLM
+    # Prefer AI for natural-language intent recognition. Regex remains an
+    # offline fallback when no model is configured or the model is unavailable.
     if resolve_targets(config):
         result = _call_openai_multi(text, config)
         if result is not None:
@@ -890,8 +906,7 @@ def parse_text(text: str, config: dict | None = None) -> dict:
                 result["confidence"] = 0.5
             return result
 
-    # Both failed — return regex unknown result
-    return regex_result
+    return _parse_multi_regex(text)
 
 
 # -- Public API: suggestion generation ----------------------------------------

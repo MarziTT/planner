@@ -54,3 +54,13 @@
 - Workout history uses `healthStore.readData` with an
   `ExerciseSequenceReadRequest` (`exerciseType: null` returns all available
   workout types); step totals are available in exercise sequence summaries.
+
+## 2026-08-05 agent confirmation follow-up
+
+- Chat text is classified by `backend/app/services/agent.py` before Flutter's
+  fast-capture parser runs. The backend now prefers the configured AI model and
+  retains regex only as a fallback.
+- The chat confirmation card currently exposes only confirmation; it needs
+  explicit cancel and edit actions before a schedule is created.
+- `origin` is configured as `https://github.com/MarziTT/planner.git`; pushing
+  the backend change is required to trigger the deployment pipeline.

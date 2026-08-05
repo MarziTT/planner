@@ -14,11 +14,9 @@ class AgentDialogPanel extends ConsumerStatefulWidget {
   const AgentDialogPanel({
     super.key,
     this.embedded = false,
-    this.onOpenModules,
   });
 
   final bool embedded;
-  final VoidCallback? onOpenModules;
 
   @override
   ConsumerState<AgentDialogPanel> createState() => _AgentDialogPanelState();
@@ -29,14 +27,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
   bool _confirming = false;
-  final List<_QuickCommand> _quickCommands = [
-    _QuickCommand(Icons.calendar_month_outlined, '明天有什么安排', '明天有什么安排'),
-    _QuickCommand(Icons.restaurant_outlined, '记录早餐', '记录早餐'),
-    _QuickCommand(Icons.fitness_center_outlined, '记一笔运动', '记一笔运动'),
-    _QuickCommand(Icons.bedtime_outlined, '记录昨晚作息', '记录昨晚作息'),
-    _QuickCommand(Icons.notifications_outlined, '提醒我喝水', '每小时提醒我喝水'),
-    _QuickCommand(Icons.add_task_outlined, '安排一个日程', '明天下午三点开会'),
-  ];
+  final List<_QuickCommand> _quickCommands = [];
 
   @override
   void initState() {
@@ -51,11 +42,26 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_quickCommandsKey);
     if (!mounted || raw == null) return;
+    const legacyPrompts = {
+      '明天有什么安排',
+      '记录早餐',
+      '记一笔运动',
+      '记录昨晚作息',
+      '提醒我喝水',
+      '安排一个日程',
+    };
     final loaded = raw
         .where((value) => value.trim().isNotEmpty)
+        .where((value) => !legacyPrompts.contains(value.trim()))
         .map((value) => _QuickCommand(Icons.bolt_outlined, value, value))
         .toList();
-    if (loaded.isNotEmpty) setState(() { _quickCommands..clear()..addAll(loaded); });
+    if (loaded.isNotEmpty) {
+      setState(() {
+        _quickCommands
+          ..clear()
+          ..addAll(loaded);
+      });
+    }
   }
 
   @override
@@ -219,7 +225,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
       ),
       child: Column(
         children: [
-          _buildTopBar(isZzz, colorScheme, theme),
+          if (!widget.embedded) _buildTopBar(colorScheme),
           Expanded(
             child: agentState.messages.isEmpty &&
                     !_isLoadingStatus(agentState.status)
@@ -254,6 +260,9 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
                         message: msg,
                         isZzz: isZzz,
                         onConfirm: isLastConfirm ? _handleConfirm : null,
+                        onCancel:
+                            isLastConfirm ? _handleCancelPendingAction : null,
+                        onEdit: isLastConfirm ? _handleEditPendingAction : null,
                         onConfirmResult: msg.parseResult,
                       );
                     },
@@ -270,7 +279,7 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
     );
   }
 
-  Widget _buildTopBar(bool isZzz, ColorScheme colorScheme, ThemeData theme) {
+  Widget _buildTopBar(ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -282,31 +291,17 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.psychology_outlined,
-            size: 20,
-            color: isZzz ? colorScheme.primary : colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '对话',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colorScheme.onSurface,
-            ),
-          ),
           const Spacer(),
-          if (!widget.embedded)
-            IconButton(
-              onPressed: () {
-                ref.read(agentControllerProvider.notifier).reset();
-                Navigator.of(context).pop();
-              },
-              icon: Icon(Icons.keyboard_arrow_down,
-                  color: colorScheme.onSurfaceVariant),
-              tooltip: '收起',
-              visualDensity: VisualDensity.compact,
-            ),
+          IconButton(
+            onPressed: () {
+              ref.read(agentControllerProvider.notifier).reset();
+              Navigator.of(context).pop();
+            },
+            icon: Icon(Icons.keyboard_arrow_down,
+                color: colorScheme.onSurfaceVariant),
+            tooltip: '收起',
+            visualDensity: VisualDensity.compact,
+          ),
         ],
       ),
     );
@@ -320,6 +315,16 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
       return;
     }
     await ref.read(agentControllerProvider.notifier).submitText(text);
+    _scrollToBottom();
+  }
+
+  void _handleCancelPendingAction() {
+    ref.read(agentControllerProvider.notifier).cancelPendingAction();
+    _scrollToBottom();
+  }
+
+  void _handleEditPendingAction(ParseResult result) {
+    ref.read(agentControllerProvider.notifier).updatePendingAction(result);
     _scrollToBottom();
   }
 
@@ -367,52 +372,74 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
         ),
         const SizedBox(height: 6),
         Text(
-          '日程、饮食、运动、作息、提醒，一句话交给我。',
+          '直接告诉我你要记录、查询或安排的事情。',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 20),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '快捷指令',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: '编辑快捷指令',
+        if (_quickCommands.isEmpty) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
               onPressed: _editQuickCommands,
               icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('自定义快捷指令'),
             ),
-          ],
-        ),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          alignment: WrapAlignment.center,
-          children: [
-            for (final command in _quickCommands)
-              _QuickCommandChip(
-                icon: command.icon,
-                label: command.label,
-                onTap: () => _handleQuickCommand(command.prompt),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          '点一下快捷指令，或直接用语音告诉我',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
-            fontSize: 11,
           ),
-        ),
+          const SizedBox(height: 12),
+          Text(
+            '这里不再预置固定入口，需要时自己添加。',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+        ],
+        if (_quickCommands.isNotEmpty) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '快捷指令',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: '编辑快捷指令',
+                onPressed: _editQuickCommands,
+                icon: const Icon(Icons.edit_outlined, size: 18),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final command in _quickCommands)
+                _QuickCommandChip(
+                  icon: command.icon,
+                  label: command.label,
+                  onTap: () => _handleQuickCommand(command.prompt),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '快捷指令现在可以自己添加、编辑和删除。',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              fontSize: 11,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -423,7 +450,11 @@ class _AgentDialogPanelState extends ConsumerState<AgentDialogPanel> {
       builder: (context) => _QuickCommandEditor(commands: _quickCommands),
     );
     if (updated != null && mounted) {
-      setState(() { _quickCommands..clear()..addAll(updated); });
+      setState(() {
+        _quickCommands
+          ..clear()
+          ..addAll(updated);
+      });
       final prefs = await SharedPreferences.getInstance();
       await prefs.setStringList(
         _quickCommandsKey,
@@ -643,17 +674,72 @@ class _QuickCommandEditor extends StatefulWidget {
 class _QuickCommandEditorState extends State<_QuickCommandEditor> {
   late final List<_QuickCommand> _commands = [...widget.commands];
 
+  Future<void> _promptEdit(int index) async {
+    final current = _commands[index];
+    final controller = TextEditingController(text: current.prompt);
+    try {
+      final value = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('编辑快捷指令'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '输入要执行的指令'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      );
+      if (value != null && value.isNotEmpty) {
+        setState(() {
+          _commands[index] = _QuickCommand(current.icon, value, value);
+        });
+      }
+    } finally {
+      controller.dispose();
+    }
+  }
+
   Future<void> _add() async {
     final controller = TextEditingController();
-    final value = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('新增快捷指令'),
-        content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: '输入要执行的指令')),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')), FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('添加'))],
-      ),
-    );
-    if (value != null && value.isNotEmpty) setState(() => _commands.add(_QuickCommand(Icons.bolt_outlined, value, value)));
+    try {
+      final value = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('新增快捷指令'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '输入要执行的指令'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: const Text('添加'),
+            ),
+          ],
+        ),
+      );
+      if (value != null && value.isNotEmpty) {
+        setState(() =>
+            _commands.add(_QuickCommand(Icons.bolt_outlined, value, value)));
+      }
+    } finally {
+      controller.dispose();
+    }
   }
 
   @override
@@ -671,17 +757,34 @@ class _QuickCommandEditorState extends State<_QuickCommandEditor> {
                   dense: true,
                   leading: Icon(_commands[index].icon),
                   title: Text(_commands[index].label),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () =>
-                        setState(() => _commands.removeAt(index)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        tooltip: '编辑',
+                        onPressed: () => _promptEdit(index),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline),
+                        tooltip: '删除',
+                        onPressed: () =>
+                            setState(() => _commands.removeAt(index)),
+                      ),
+                    ],
                   ),
                 ),
               ),
       ),
       actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('取消'),
+        ),
         TextButton(onPressed: _add, child: const Text('新增')),
-        FilledButton(onPressed: () => Navigator.pop(context, _commands), child: const Text('完成')),
+        FilledButton(
+            onPressed: () => Navigator.pop(context, _commands),
+            child: const Text('完成')),
       ],
     );
   }

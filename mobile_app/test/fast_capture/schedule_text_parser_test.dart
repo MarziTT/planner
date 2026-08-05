@@ -37,6 +37,17 @@ void main() {
     expect(draft.suggestedPeriod, TimePeriod.evening);
   });
 
+  test('explicit schedule wording keeps workout text as a generic event', () {
+    final draft = parser.parse('今天下午七点记录日程健身');
+
+    expect(draft.title, '健身');
+    expect(draft.eventType, CaptureEventType.generic);
+    expect(draft.startsAt, DateTime(2026, 7, 9, 19));
+    expect(draft.endsAt, DateTime(2026, 7, 9, 20));
+    expect(draft.ambiguityKind, TimeAmbiguityKind.none);
+    expect(draft.ambiguousHour, isNull);
+  });
+
   test(
       'period only capture asks for time confirmation instead of guessing hour',
       () {

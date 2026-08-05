@@ -50,6 +50,35 @@ class ParseResult {
   final String? reminderText;
   final double confidence;
 
+  ParseResult copyWith({
+    String? eventName,
+    DateTime? datetimeStart,
+    DateTime? datetimeEnd,
+  }) {
+    return ParseResult(
+      intent: intent,
+      eventName: eventName ?? this.eventName,
+      person: person,
+      location: location,
+      datetimeStart: datetimeStart ?? this.datetimeStart,
+      datetimeEnd: datetimeEnd ?? this.datetimeEnd,
+      isFuzzy: isFuzzy,
+      mealType: mealType,
+      foodName: foodName,
+      caloriesEstimate: caloriesEstimate,
+      exerciseType: exerciseType,
+      durationMinutes: durationMinutes,
+      intensity: intensity,
+      routineType: routineType,
+      routineValue: routineValue,
+      queryType: queryType,
+      queryText: queryText,
+      answer: answer,
+      reminderText: reminderText,
+      confidence: confidence,
+    );
+  }
+
   factory ParseResult.fromJson(Map<String, dynamic> json) {
     final range = json['datetime_range'] as Map<String, dynamic>?;
     DateTime? start;

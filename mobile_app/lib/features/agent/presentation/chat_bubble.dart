@@ -13,12 +13,16 @@ class ChatBubble extends StatelessWidget {
     required this.message,
     this.isZzz = false,
     this.onConfirm,
+    this.onCancel,
+    this.onEdit,
     this.onConfirmResult,
   });
 
   final ChatMessage message;
   final bool isZzz;
   final VoidCallback? onConfirm;
+  final VoidCallback? onCancel;
+  final ValueChanged<ParseResult>? onEdit;
   final ParseResult? onConfirmResult;
 
   @override
@@ -37,6 +41,8 @@ class ChatBubble extends StatelessWidget {
           result: onConfirmResult ?? message.parseResult,
           isZzz: isZzz,
           onConfirm: onConfirm,
+          onCancel: onCancel,
+          onEdit: onEdit,
         );
       case ChatMessageType.answerCard:
         return _AnswerCardBubble(
@@ -163,11 +169,15 @@ class _ConfirmCardBubble extends ConsumerStatefulWidget {
     required this.result,
     this.isZzz = false,
     this.onConfirm,
+    this.onCancel,
+    this.onEdit,
   });
 
   final ParseResult? result;
   final bool isZzz;
   final VoidCallback? onConfirm;
+  final VoidCallback? onCancel;
+  final ValueChanged<ParseResult>? onEdit;
 
   @override
   ConsumerState<_ConfirmCardBubble> createState() => _ConfirmCardBubbleState();
@@ -266,6 +276,8 @@ class _ConfirmCardBubbleState extends ConsumerState<_ConfirmCardBubble> {
             result: result,
             isZzz: widget.isZzz,
             onConfirm: widget.onConfirm ?? () {},
+            onCancel: widget.onCancel,
+            onEdit: widget.onEdit,
             conflicts: _conflicts,
             suggestions: _suggestions,
             isCheckingConflicts: _isChecking,

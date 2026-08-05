@@ -299,6 +299,42 @@ class AgentNotifier extends StateNotifier<AgentState> {
     }
   }
 
+  void updatePendingAction(ParseResult updated) {
+    final messages = [...state.messages];
+    final index = messages.lastIndexWhere(
+      (message) => message.type == ChatMessageType.confirmCard,
+    );
+    if (index < 0) return;
+
+    final current = messages[index];
+    messages[index] = ChatMessage(
+      id: current.id,
+      type: current.type,
+      text: _confirmCardLabel(updated),
+      parseResult: updated,
+    );
+    state = state.copyWith(
+      messages: messages,
+      status: AgentStatus.confirming,
+      errorMessage: null,
+    );
+  }
+
+  void cancelPendingAction() {
+    state = state.copyWith(
+      messages: [
+        ...state.messages,
+        ChatMessage(
+          id: _generateId(),
+          type: ChatMessageType.system,
+          text: '已取消本次操作',
+        ),
+      ],
+      status: AgentStatus.idle,
+      errorMessage: null,
+    );
+  }
+
   Future<bool> confirmSchedule(ParseResult result) async {
     if (result.datetimeStart == null || result.eventName == null) {
       return false;
@@ -388,8 +424,7 @@ final agentControllerProvider =
   final persona = ButlerPersona.forTheme(
     ref.watch(themeControllerProvider).preset,
   );
-  final personaPreset = persona.preset == ButlerPersonaPreset.zzzTheme
-      ? 'zzz_zero'
-      : 'default';
+  final personaPreset =
+      persona.preset == ButlerPersonaPreset.zzzTheme ? 'zzz_zero' : 'default';
   return AgentNotifier(repository, gateway, voiceOutput, personaPreset);
 });

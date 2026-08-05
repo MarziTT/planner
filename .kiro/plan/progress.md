@@ -35,3 +35,18 @@
 - Failed tests: `test_vision_capability_prefers_vision_models`, `test_auth_failure_skips_remaining_models_on_same_provider`.
 - Setup errors: two update-resource tests could not create the Windows pytest temp directory due to permission denial.
 - Backend warning: Flask-Limiter uses in-memory storage.
+
+## 2026-08-05 agent confirmation follow-up
+
+- Confirmed the D-drive app copy previously lagged behind G-drive source.
+- Switched backend multi-intent classification to prefer the configured AI
+  model, with regex fallback retained for outages and offline development.
+- Verified `backend/tests/test_agent.py`: 43 tests passed.
+- Next: add chat confirmation-card edit/cancel controls, validate, then commit
+  and push all current reviewed source changes to trigger backend deployment.
+- Added chat confirmation-card actions for pending schedules: edit title/start/
+  end time, then confirm; or cancel without creating an event.
+- Backend agent tests: 43 passed. Flutter fast-capture tests: 16 passed.
+- Targeted Flutter analysis could not complete because the USB-source checkout
+  has a locked `ios/Flutter/ephemeral/Packages/.packages` path; `dart format`
+  successfully parsed all changed chat files.

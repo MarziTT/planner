@@ -379,6 +379,14 @@ class TestParseTextPublic:
         result = parse_text("记录健身30分钟", config={})
         assert result["intent"] == "log_exercise"
 
+    @patch("app.services.agent.datetime")
+    def test_timed_exercise_defaults_to_schedule(self, mock_dt):
+        _configure_dt_mock(mock_dt)
+        result = parse_text("七点健身", config={})
+        assert result["intent"] == "create_event"
+        assert result["event_name"] == "健身"
+        assert result["datetime_range"] is not None
+
 
 # ===========================================================================
 # _build_system_prompt

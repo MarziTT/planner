@@ -22,7 +22,9 @@ class ScheduleTextParser {
 
   ParsedScheduleDraft parse(String input) {
     final normalized = _normalize(input);
-    final eventType = _eventType(normalized);
+    final eventType = _looksLikeScheduleCommand(normalized)
+        ? CaptureEventType.generic
+        : _eventType(normalized);
     final relative = _relativeTime(normalized);
     final period = _period(normalized);
     final clock = _clock(normalized);
@@ -340,6 +342,17 @@ class ScheduleTextParser {
     return DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
   }
 
+  bool _looksLikeScheduleCommand(String input) {
+    const markers = [
+      '日程',
+      '行程',
+      '安排',
+      '计划',
+      '预约',
+    ];
+    return markers.any(input.contains);
+  }
+
   CaptureEventType _eventType(String input) {
     if (input.contains('健身') ||
         input.contains('训练') ||
@@ -436,7 +449,8 @@ class ScheduleTextParser {
         RegExp(
             r'^(一会儿|待会儿|等会儿|半小时后|[0-9一二三四五六七八九十两]+分钟后|[0-9一二三四五六七八九十两]+小时后)'),
         '');
-    title = title.replaceFirst(RegExp(r'^(的|要|去|得|安排|记得|帮我|提醒我)'), '');
+    title = title.replaceFirst(
+        RegExp(r'^(的|要|去|得|安排|记得|帮我|提醒我|记录日程|记录行程|日程|行程|计划|预约)'), '');
     title = title.trim();
     return title.isEmpty ? input.trim() : title;
   }

@@ -14,6 +14,8 @@ import '../../fast_capture/presentation/quick_capture_bar.dart';
 import '../../notifications/data/reminder_gateway.dart';
 import '../../notifications/domain/notification_tap_event.dart';
 import '../../habits/views/habits_dashboard.dart';
+import '../../health/presentation/health_page.dart';
+import '../../planner/presentation/planner_dashboard.dart';
 import '../../planner/state/planner_controller.dart';
 import '../../profile/presentation/profile_page.dart';
 import '../../settings/domain/settings_model.dart';
@@ -28,7 +30,7 @@ import '../../../widgets/zzz_gif_decoration.dart';
 import '../../widgets/widget_service.dart';
 
 class HomeShellPage extends ConsumerStatefulWidget {
-  const HomeShellPage({super.key, this.initialTab = 'dashboard'});
+  const HomeShellPage({super.key, this.initialTab = 'planner'});
 
   final String initialTab;
 
@@ -43,6 +45,12 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
 
   static final List<_HomeModule> _modules = [
     _HomeModule(
+      id: 'planner',
+      label: '日程',
+      icon: Icons.calendar_month_outlined,
+      builder: () => const PlannerDashboard(),
+    ),
+    _HomeModule(
       id: 'dashboard',
       label: '今日总览',
       icon: Icons.dashboard_outlined,
@@ -53,6 +61,12 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
       label: '出行',
       icon: Icons.directions_subway_outlined,
       builder: () => const TransitPage(),
+    ),
+    _HomeModule(
+      id: 'health',
+      label: '健康',
+      icon: Icons.health_and_safety_outlined,
+      builder: () => const HealthPage(),
     ),
     _HomeModule(
       id: 'meals',
@@ -325,7 +339,6 @@ class _HomeShellPageState extends ConsumerState<HomeShellPage>
               Expanded(
                 child: AgentDialogPanel(
                   embedded: true,
-                  onOpenModules: _showModulePicker,
                 ),
               ),
             ],
