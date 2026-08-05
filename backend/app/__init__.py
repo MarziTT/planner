@@ -316,6 +316,24 @@ def _ensure_tables(app: Flask) -> None:
             db.session.rollback()
             app.logger.exception("Migration failed: users exercise_mode/trainer_end_date")
 
+        try:
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            if "user_patterns" in tables:
+                cols = {c["name"] for c in inspector.get_columns("user_patterns")}
+                if "wake_time" not in cols:
+                    db.session.execute(text(
+                        "ALTER TABLE user_patterns ADD COLUMN wake_time VARCHAR(5)"
+                    ))
+                    db.session.commit()
+                    app.logger.info(
+                        "Migration: added wake_time to user_patterns (dialect=%s)",
+                        db.engine.dialect.name,
+                    )
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Migration failed: user_patterns.wake_time")
+
         # Phase 2 — add calories/steps to exercise_records
         try:
             inspector = inspect(db.engine)
