@@ -1,4 +1,4 @@
-"""create settings table with weather_tone
+"""create settings table with butler_tone
 
 Revision ID: 7960ff215c9f
 Revises: a1b2c3d4e5f6
@@ -24,7 +24,7 @@ def upgrade():
         sa.Column('voice_enabled', sa.Boolean(), nullable=False, server_default=sa.text('1')),
         sa.Column('update_channel', sa.String(length=32), nullable=False, server_default=sa.text("'stable'")),
         sa.Column('zzz_enabled', sa.Boolean(), nullable=False, server_default=sa.text('0')),
-        sa.Column('weather_tone', sa.Text(), nullable=True),
+        sa.Column('butler_tone', sa.Text(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.func.now()),
     )

@@ -135,10 +135,10 @@ def smart_advisory():
         raw_events = _load_day_events(user.id, day_start)
         events_formatted = _normalize_events(raw_events)
 
-        # ---- 3. 读取用户天气管家语气设置 ----
+        # ---- 3. 读取用户管家语气设置 ----
         from ..models import AppSetting  # noqa: E402
         settings = db.session.get(AppSetting, user.id)
-        tone_prompt = settings.weather_tone if settings else None
+        tone_prompt = settings.butler_tone if settings else None
 
         # ---- 4. LLM 合成 ----
         config = _openai_config()

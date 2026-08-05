@@ -50,3 +50,20 @@
 - Targeted Flutter analysis could not complete because the USB-source checkout
   has a locked `ios/Flutter/ephemeral/Packages/.packages` path; `dart format`
   successfully parsed all changed chat files.
+- Added backend `llm_warning` propagation so AI connection failures surface as
+  chat notices instead of silently falling back.
+- Verified `backend/tests/test_agent.py` and Flutter static analysis for the
+  changed agent files; committed and pushed the fix to `main`.
+
+## 2026-08-05 butler tone and agent memory
+
+- Renamed the independent tone setting from weather-specific naming to
+  `butler_tone`; retained `/settings/weather-tone` as a compatibility alias.
+- Removed user-visible “天气管家” labels from the weather feature; weather is
+  now presented simply as weather.
+- Added AI persona instructions to the multi-intent prompt so the configured
+  butler identity/style is present when DeepSeek or another model is used.
+- Added `agent_experiences` to store per-user language examples and perform
+  offline similar-expression intent matching before calling the AI provider.
+- Verified backend persona/settings/agent tests: 55 passed. Verified Flutter
+  settings/weather static analysis: no issues.

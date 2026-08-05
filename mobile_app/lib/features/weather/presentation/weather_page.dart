@@ -28,11 +28,12 @@ class _WeatherPageState extends ConsumerState<WeatherPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('天气管家'),
+        title: const Text('天气'),
         centerTitle: true,
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(smartAdvisoryProvider.notifier).manualRefresh(),
+        onRefresh: () =>
+            ref.read(smartAdvisoryProvider.notifier).manualRefresh(),
         child: ListView(
           children: const [
             WeatherTimelineCard(),

@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import re
+from difflib import SequenceMatcher
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -26,6 +27,7 @@ except ImportError:
     _HAS_DATEUTIL = False
 
 logger = logging.getLogger(__name__)
+_EXPERIENCE_SIMILARITY_THRESHOLD = 0.78
 
 # -- JSON schema enforced in the LLM prompt -----------------------------------
 
@@ -469,6 +471,7 @@ def parse_schedule(text: str, config: dict | None = None) -> dict:
 # ============================================================================
 
 MULTI_INTENT_SYSTEM_PROMPT = """You are a butler assistant for a personal lifestyle app. Your job is to classify natural-language Chinese user requests into ONE of these intents and extract structured fields.
+{persona_instruction}
 
 Intents:
 - **create_event**: scheduling a meeting/appointment/task (existing)
@@ -575,19 +578,33 @@ Output: {{"intent":"unknown","confidence":0.0}}
 """
 
 
-def _build_multi_intent_prompt() -> str:
+def _persona_instruction(persona_preset: str | None = None) -> str:
+    try:
+        from .persona_service import resolve_persona
+
+        persona = resolve_persona(persona_preset)
+        return (
+            f"Persona: You are {persona['display_name']}, the user's private life butler. "
+            f"Style: {persona['style']} Keep classification accurate and do not over-talk."
+        )
+    except Exception:
+        return "Persona: You are the user's private life butler. Style: clear, reliable, concise."
+
+
+def _build_multi_intent_prompt(persona_preset: str | None = None) -> str:
     now = datetime.now(TZ)
     slots = dict(_TODAY_SLOTS)
     slots["current_time"] = f"{now.hour:02d}:{now.minute:02d}"
     slots["current_hour"] = now.hour
+    slots["persona_instruction"] = _persona_instruction(persona_preset)
     return MULTI_INTENT_SYSTEM_PROMPT.format(**slots)
 
 
-def _call_openai_multi(text: str, config: dict) -> dict | None:
+def _call_openai_multi(text: str, config: dict, persona_preset: str | None = None) -> dict | None:
     """Call LLM with multi-intent prompt; return parsed JSON or None."""
     raw = chat_completion(
         [
-            {"role": "system", "content": _build_multi_intent_prompt()},
+            {"role": "system", "content": _build_multi_intent_prompt(persona_preset)},
             {"role": "user", "content": text},
         ],
         config,
@@ -881,9 +898,139 @@ def _parse_multi_regex(text: str) -> dict:
     return {"intent": "unknown", "confidence": 0.0}
 
 
+def _normalize_experience_text(text: str) -> str:
+    value = text.strip().lower()
+    value = re.sub(r"\s+", "", value)
+    value = re.sub(rf"{_TIME_TOKEN}[点:：]\d{{0,2}}", "<time>", value)
+    value = re.sub(r"\d+", "<num>", value)
+    value = re.sub(r"(今天|明天|后天|大后天|上午|下午|晚上|今晚|早上|中午|周[一二三四五六日天])", "<date>", value)
+    value = re.sub(r"(帮我|请|麻烦|记录一下|记一下|记一笔)", "", value)
+    return value[:240]
+
+
+def _parse_with_experience_intent(text: str, intent: str, parsed: dict | None = None) -> dict:
+    if intent == "create_event":
+        result = _parse_with_regex(text)
+    elif intent == "log_meal":
+        result = _parse_meal_regex(text)
+    elif intent == "log_exercise":
+        result = _parse_exercise_regex(text)
+    elif intent == "log_routine":
+        result = _parse_routine_regex(text)
+    elif intent == "query":
+        result = _parse_query_regex(text)
+    elif intent == "create_reminder":
+        result = _parse_reminder_regex(text)
+    else:
+        result = dict(parsed or {"intent": intent or "unknown", "confidence": 0.0})
+
+    result["intent"] = intent or result.get("intent", "unknown")
+    result["confidence"] = max(float(result.get("confidence") or 0.0), 0.82)
+    result["offline_source"] = "experience"
+    return result
+
+
+def _lookup_agent_experience(user_id: int | None, text: str) -> dict | None:
+    if not user_id:
+        return None
+    try:
+        from ..extensions import db
+        from ..models_habits import AgentExperience
+
+        normalized = _normalize_experience_text(text)
+        if not normalized:
+            return None
+
+        rows = (
+            AgentExperience.query
+            .filter_by(user_id=user_id)
+            .order_by(AgentExperience.sample_count.desc(), AgentExperience.updated_at.desc())
+            .limit(80)
+            .all()
+        )
+        best_row = None
+        best_score = 0.0
+        for row in rows:
+            if row.normalized_text == normalized:
+                best_row = row
+                best_score = 1.0
+                break
+            score = SequenceMatcher(None, normalized, row.normalized_text or "").ratio()
+            if score > best_score:
+                best_row = row
+                best_score = score
+
+        if best_row is None or best_score < _EXPERIENCE_SIMILARITY_THRESHOLD:
+            return None
+
+        best_row.sample_count += 1
+        best_row.last_used_at = datetime.now(TZ)
+        db.session.commit()
+        result = _parse_with_experience_intent(text, best_row.intent, best_row.parsed)
+        result["experience_similarity"] = round(best_score, 3)
+        return result
+    except Exception:
+        try:
+            from ..extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.exception("Agent experience lookup failed")
+        return None
+
+
+def _remember_agent_experience(user_id: int | None, text: str, result: dict) -> None:
+    if not user_id:
+        return
+    intent = str(result.get("intent") or "")
+    if intent in {"", "unknown", "query"}:
+        return
+    try:
+        from ..extensions import db
+        from ..models_habits import AgentExperience
+
+        normalized = _normalize_experience_text(text)
+        if not normalized:
+            return
+        row = AgentExperience.query.filter_by(
+            user_id=user_id,
+            normalized_text=normalized,
+        ).first()
+        parsed = {k: v for k, v in result.items() if k not in {"llm_warning"}}
+        if row is None:
+            row = AgentExperience(
+                user_id=user_id,
+                source_text=text[:500],
+                normalized_text=normalized,
+                intent=intent,
+                parsed=parsed,
+            )
+            db.session.add(row)
+        else:
+            row.source_text = text[:500]
+            row.intent = intent
+            row.parsed = parsed
+            row.sample_count += 1
+            row.last_used_at = datetime.now(TZ)
+        db.session.commit()
+    except Exception:
+        try:
+            from ..extensions import db
+            db.session.rollback()
+        except Exception:
+            pass
+        logger.exception("Agent experience remember failed")
+
+
 # -- Public API: multi-intent ------------------------------------------------
 
-def parse_text(text: str, config: dict | None = None) -> dict:
+def parse_text(
+    text: str,
+    config: dict | None = None,
+    *,
+    user_id: int | None = None,
+    persona_preset: str | None = None,
+) -> dict:
     """Parse natural-language Chinese text with multi-intent NLU.
 
     Supports: create_event, log_meal, log_exercise, log_routine, query, create_reminder.
@@ -904,22 +1051,28 @@ def parse_text(text: str, config: dict | None = None) -> dict:
 
     llm_warning = None
 
+    experience_result = _lookup_agent_experience(user_id, text)
+    if experience_result is not None:
+        return experience_result
+
     # Prefer AI for natural-language intent recognition. Regex remains an
     # offline fallback when no model is configured or the model is unavailable.
     if resolve_targets(config):
-        result = _call_openai_multi(text, config)
+        result = _call_openai_multi(text, config, persona_preset)
         if result is not None:
             if "intent" not in result:
                 result["intent"] = "unknown"
             if "confidence" not in result:
                 result["confidence"] = 0.5
             result.setdefault("llm_warning", None)
+            _remember_agent_experience(user_id, text, result)
             return result
         llm_warning = "AI连接失败，已切换到离线识别"
 
     result = _parse_multi_regex(text)
     if llm_warning:
         result["llm_warning"] = llm_warning
+    _remember_agent_experience(user_id, text, result)
     return result
 
 

@@ -238,7 +238,7 @@ def generate_advisory(
     tone_prompt: str | None = None,
 ) -> dict:
     """
-    LLM 合成天气管家建议。
+    LLM 合成天气建议。
 
     Returns:
         {

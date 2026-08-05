@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/theme_controller.dart';
-import '../state/weather_tone_provider.dart';
+import '../state/butler_tone_provider.dart';
 
-class WeatherTonePage extends ConsumerStatefulWidget {
-  const WeatherTonePage({super.key});
+class ButlerTonePage extends ConsumerStatefulWidget {
+  const ButlerTonePage({super.key});
 
   @override
-  ConsumerState<WeatherTonePage> createState() => _WeatherTonePageState();
+  ConsumerState<ButlerTonePage> createState() => _ButlerTonePageState();
 }
 
-class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
+class _ButlerTonePageState extends ConsumerState<ButlerTonePage> {
   late final TextEditingController _textController;
   bool _loaded = false;
 
@@ -26,8 +26,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
     super.didChangeDependencies();
     if (!_loaded) {
       _loaded = true;
-      Future.microtask(
-          () => ref.read(weatherToneProvider.notifier).load());
+      Future.microtask(() => ref.read(butlerToneProvider.notifier).load());
     }
   }
 
@@ -39,8 +38,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
 
   Future<void> _save() async {
     final tone = _textController.text;
-    final success =
-        await ref.read(weatherToneProvider.notifier).save(tone);
+    final success = await ref.read(butlerToneProvider.notifier).save(tone);
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('已保存')),
@@ -50,7 +48,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
 
   Future<void> _resetDefault() async {
     final success =
-        await ref.read(weatherToneProvider.notifier).resetToDefault();
+        await ref.read(butlerToneProvider.notifier).resetToDefault();
     if (success && mounted) {
       _textController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,11 +59,10 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
 
   @override
   Widget build(BuildContext context) {
-    final toneState = ref.watch(weatherToneProvider);
+    final toneState = ref.watch(butlerToneProvider);
     final theme = Theme.of(context);
-    final isZzz =
-        ref.watch(themeControllerProvider).preset ==
-            PlannerThemePreset.kamenRiderZzz;
+    final isZzz = ref.watch(themeControllerProvider).preset ==
+        PlannerThemePreset.kamenRiderZzz;
 
     // 首次加载完成后同步到 TextController
     if (!toneState.loading && _textController.text != toneState.tone) {
@@ -78,7 +75,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('天气管家语气'),
+        title: const Text('管家语气'),
         actions: [
           TextButton(
             onPressed: toneState.saving ? null : _save,
@@ -105,8 +102,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
           // 错误提示
           if (toneState.error != null) ...[
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: theme.colorScheme.errorContainer,
                 borderRadius: BorderRadius.circular(12),
@@ -114,14 +110,12 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
               child: Row(
                 children: [
                   Icon(Icons.error_outline,
-                      size: 18,
-                      color: theme.colorScheme.onErrorContainer),
+                      size: 18, color: theme.colorScheme.onErrorContainer),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       toneState.error!,
-                      style: TextStyle(
-                          color: theme.colorScheme.error),
+                      style: TextStyle(color: theme.colorScheme.error),
                     ),
                   ),
                 ],
@@ -136,8 +130,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
             shape: isZzz
                 ? RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side:
-                        const BorderSide(color: Color(0xFF00FF41)),
+                    side: const BorderSide(color: Color(0xFF00FF41)),
                   )
                 : null,
             child: Padding(
@@ -154,17 +147,14 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
                               : theme.colorScheme.primary),
                       const SizedBox(width: 8),
                       Text('语气 Prompt',
-                          style:
-                              theme.textTheme.titleSmall?.copyWith(
-                            color: isZzz
-                                ? const Color(0xFFE0F0E0)
-                                : null,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: isZzz ? const Color(0xFFE0F0E0) : null,
                           )),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '自定义天气管家的说话风格。留空表示使用默认温暖管家语气。',
+                    '自定义管家的说话风格。留空表示使用默认温暖管家语气。',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: isZzz
                           ? const Color(0xFFC8C8D8)
@@ -185,17 +175,13 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
                     decoration: InputDecoration(
                       hintText: '输入语气描述，或从下方预设模板中选择…',
                       hintStyle: TextStyle(
-                        color: isZzz
-                            ? const Color(0xFF6A6A7A)
-                            : null,
+                        color: isZzz ? const Color(0xFF6A6A7A) : null,
                       ),
                       alignLabelWithHint: true,
                       border: const OutlineInputBorder(),
                       contentPadding: const EdgeInsets.all(14),
                       filled: isZzz,
-                      fillColor: isZzz
-                          ? const Color(0xFF14141A)
-                          : null,
+                      fillColor: isZzz ? const Color(0xFF14141A) : null,
                     ),
                   ),
                 ],
@@ -218,9 +204,8 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
               label: Text(
                 '恢复默认',
                 style: TextStyle(
-                  color: isZzz
-                      ? const Color(0xFF00FF41)
-                      : theme.colorScheme.error,
+                  color:
+                      isZzz ? const Color(0xFF00FF41) : theme.colorScheme.error,
                 ),
               ),
             ),
@@ -239,8 +224,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
               const SizedBox(width: 8),
               Text('预设模板',
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color:
-                        isZzz ? const Color(0xFFE0F0E0) : null,
+                    color: isZzz ? const Color(0xFFE0F0E0) : null,
                   )),
             ],
           ),
@@ -248,23 +232,21 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
 
           // 预设模板卡片
           // Zero 模板仅 ZZZ 主题可见
-          ...weatherTonePresets
-              .where((p) => isZzz || p.name == '温暖管家')
-              .map(
-            (preset) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _PresetCard(
-                preset: preset,
-                isZzz: isZzz,
-                onUse: () {
-                  _textController.text = preset.prompt;
-                  ref
-                      .read(weatherToneProvider.notifier)
-                      .updateLocal(preset.prompt);
-                },
+          ...butlerTonePresets.where((p) => isZzz || p.name == '温暖管家').map(
+                (preset) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _PresetCard(
+                    preset: preset,
+                    isZzz: isZzz,
+                    onUse: () {
+                      _textController.text = preset.prompt;
+                      ref
+                          .read(butlerToneProvider.notifier)
+                          .updateLocal(preset.prompt);
+                    },
+                  ),
+                ),
               ),
-            ),
-          ),
         ],
       ),
     );
@@ -272,7 +254,7 @@ class _WeatherTonePageState extends ConsumerState<WeatherTonePage> {
 }
 
 class _PresetCard extends StatelessWidget {
-  final WeatherTonePreset preset;
+  final ButlerTonePreset preset;
   final bool isZzz;
   final VoidCallback onUse;
 
@@ -306,13 +288,8 @@ class _PresetCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     preset.name,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleSmall
-                        ?.copyWith(
-                          color: isZzz
-                              ? const Color(0xFFE0F0E0)
-                              : null,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: isZzz ? const Color(0xFFE0F0E0) : null,
                           fontWeight: FontWeight.w600,
                         ),
                   ),
@@ -326,9 +303,7 @@ class _PresetCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: isZzz
                         ? const Color(0xFFC8C8D8)
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant,
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     height: 1.4,
                   ),
             ),

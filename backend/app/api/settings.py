@@ -97,20 +97,45 @@ def update_settings():
     return success({"item": _settings_to_dict(settings)})
 
 
+@settings_bp.get("/settings/butler-tone")
+@auth_required
+def get_butler_tone():
+    settings = _get_or_create_settings()
+    return success({"butler_tone": settings.butler_tone})
+
+
+@settings_bp.put("/settings/butler-tone")
+@auth_required
+def update_butler_tone():
+    settings = _get_or_create_settings()
+    payload = request.get_json(silent=True) or {}
+    tone = payload.get("butler_tone")
+    if tone is not None:
+        settings.butler_tone = tone if tone.strip() else None
+    db.session.commit()
+    return success({"butler_tone": settings.butler_tone})
+
+
 @settings_bp.get("/settings/weather-tone")
 @auth_required
-def get_weather_tone():
+def get_weather_tone_compat():
     settings = _get_or_create_settings()
-    return success({"weather_tone": settings.weather_tone})
+    return success({
+        "butler_tone": settings.butler_tone,
+        "weather_tone": settings.butler_tone,
+    })
 
 
 @settings_bp.put("/settings/weather-tone")
 @auth_required
-def update_weather_tone():
+def update_weather_tone_compat():
     settings = _get_or_create_settings()
     payload = request.get_json(silent=True) or {}
-    tone = payload.get("weather_tone")
+    tone = payload.get("butler_tone", payload.get("weather_tone"))
     if tone is not None:
-        settings.weather_tone = tone if tone.strip() else None
+        settings.butler_tone = tone if tone.strip() else None
     db.session.commit()
-    return success({"weather_tone": settings.weather_tone})
+    return success({
+        "butler_tone": settings.butler_tone,
+        "weather_tone": settings.butler_tone,
+    })

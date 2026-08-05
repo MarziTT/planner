@@ -7,10 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../habits/notify_manager.dart';
-import '../data/weather_repository.dart';
 import '../models/smart_advisory.dart';
 import '../models/timeline_item.dart';
-import '../weather_provider.dart';
 
 // ============================================================
 // WeatherNotificationService
@@ -116,8 +114,7 @@ class WeatherNotificationService {
         final curr = currentTimeline[i];
         final prev = lastTimeline[i];
 
-        final tempDiff =
-            (curr.weather.temp - prev.weather.temp).abs();
+        final tempDiff = (curr.weather.temp - prev.weather.temp).abs();
         if (tempDiff >= 8.0) {
           tempSpike = true;
         }
@@ -184,7 +181,7 @@ class WeatherNotificationService {
     // that launches the app to view full advisory.
     NotifyManager.show(
       channel: NotifyChannel.weather,
-      title: '今日天气管家',
+      title: '今日天气',
       body: '早上好！我已为你准备好今天的全天规划建议，点击查看。',
       priority: NotifyPriority.daily,
       payload: const NotifyPayload(eventType: 'weather_daily_summary'),
@@ -194,7 +191,7 @@ class WeatherNotificationService {
 
   void _fireEventNotification(TimelineItem item, int index) {
     final eventName = item.event ?? '日程';
-    final advice = item.advisory ?? '请查看天气管家了解详情';
+    final advice = item.advisory ?? '请查看天气了解详情';
     final temp = item.weather.temp.round();
     final condition = item.weather.condition;
 
@@ -202,9 +199,8 @@ class WeatherNotificationService {
       channel: NotifyChannel.weather,
       title: '「$eventName」即将开始',
       body: '$advice（当前$temp°C，$condition）',
-      priority: item.isHighPriority
-          ? NotifyPriority.important
-          : NotifyPriority.daily,
+      priority:
+          item.isHighPriority ? NotifyPriority.important : NotifyPriority.daily,
       payload: NotifyPayload(
         eventType: 'weather_event_reminder',
         eventId: _eventNotificationIdBase + index,

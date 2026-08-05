@@ -64,3 +64,17 @@
   explicit cancel and edit actions before a schedule is created.
 - `origin` is configured as `https://github.com/MarziTT/planner.git`; pushing
   the backend change is required to trigger the deployment pipeline.
+
+## 2026-08-05 AI persona and experience memory
+
+- Agent parsing is already centralized in `backend/app/services/agent.py`; its
+  multi-intent prompt accepts a persona preset request but does not yet use it.
+- The weather advisory prompt currently calls itself a weather-oriented
+  assistant. It should instead be a life-planning assistant that treats weather
+  as one input among schedule and health context.
+- Offline recognition should reuse confirmed user wording only to select an
+  intent. Current slots (time, activity, food) must still be extracted from the
+  new utterance so stale dates or values are never replayed.
+- The backend has Alembic migrations and automatic table creation at startup.
+  A dedicated per-user experience table is the safe durable store; `UserPattern`
+  is reserved for aggregate habit signals rather than raw language examples.

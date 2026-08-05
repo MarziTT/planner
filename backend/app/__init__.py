@@ -181,7 +181,7 @@ def _ensure_tables(app: Flask) -> None:
                             voice_enabled BOOLEAN NOT NULL DEFAULT true,
                             update_channel VARCHAR(32) NOT NULL DEFAULT 'stable',
                             zzz_enabled BOOLEAN NOT NULL DEFAULT false,
-                            weather_tone TEXT,
+                            butler_tone TEXT,
                             created_at TIMESTAMP NOT NULL DEFAULT NOW(),
                             updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                         )
@@ -196,7 +196,7 @@ def _ensure_tables(app: Flask) -> None:
                             voice_enabled BOOLEAN NOT NULL DEFAULT 1,
                             update_channel VARCHAR(32) NOT NULL DEFAULT 'stable',
                             zzz_enabled BOOLEAN NOT NULL DEFAULT 0,
-                            weather_tone TEXT,
+                            butler_tone TEXT,
                             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                         )
@@ -213,18 +213,26 @@ def _ensure_tables(app: Flask) -> None:
             tables = inspector.get_table_names()
             if "settings" in tables:
                 cols = {c["name"] for c in inspector.get_columns("settings")}
-                if "weather_tone" not in cols:
+                if "butler_tone" not in cols:
                     dialect = db.engine.dialect.name
                     if dialect == "postgresql":
                         db.session.execute(text(
-                            "ALTER TABLE settings ADD COLUMN weather_tone TEXT"
+                            "ALTER TABLE settings ADD COLUMN butler_tone TEXT"
                         ))
+                        if "weather_tone" in cols:
+                            db.session.execute(text(
+                                "UPDATE settings SET butler_tone = weather_tone WHERE butler_tone IS NULL"
+                            ))
                     elif dialect == "sqlite":
                         db.session.execute(text(
-                            "ALTER TABLE settings ADD COLUMN weather_tone TEXT"
+                            "ALTER TABLE settings ADD COLUMN butler_tone TEXT"
                         ))
+                        if "weather_tone" in cols:
+                            db.session.execute(text(
+                                "UPDATE settings SET butler_tone = weather_tone WHERE butler_tone IS NULL"
+                            ))
                     db.session.commit()
-                    app.logger.info("Migration: added weather_tone to settings (dialect=%s)", dialect)
+                    app.logger.info("Migration: added butler_tone to settings (dialect=%s)", dialect)
                 if "zzz_enabled" not in cols:
                     dialect = db.engine.dialect.name
                     if dialect == "postgresql":

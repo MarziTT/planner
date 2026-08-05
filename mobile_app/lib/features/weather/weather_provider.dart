@@ -99,7 +99,7 @@ class SmartAdvisoryController extends StateNotifier<SmartAdvisoryState> {
       if (finalPermission == LocationPermission.denied) {
         state = state.copyWith(
           loading: false,
-          error: '需要位置权限才能获取天气管家建议',
+          error: '需要位置权限才能获取天气建议',
         );
         return;
       }
@@ -140,7 +140,7 @@ String _formatAdvisoryError(Object e) {
     final statusCode = e.response?.statusCode;
     if (statusCode == 401) return '登录态失效，请重新登录';
     if (statusCode != null && statusCode >= 500) {
-      return '天气管家服务暂不可用 ($statusCode)';
+      return '天气服务暂不可用 ($statusCode)';
     }
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout ||
@@ -151,15 +151,15 @@ String _formatAdvisoryError(Object e) {
   }
   if (e is LocationServiceDisabledException) return '请开启手机定位服务';
   if (e.toString().contains('permission')) return '需要位置权限';
-  return '获取天气管家建议失败: ${e.toString().split('\n').first}';
+  return '获取天气建议失败: ${e.toString().split('\n').first}';
 }
 
 // ============================================================
 // Provider
 // ============================================================
 
-final smartAdvisoryProvider = StateNotifierProvider<SmartAdvisoryController,
-    SmartAdvisoryState>((ref) {
+final smartAdvisoryProvider =
+    StateNotifierProvider<SmartAdvisoryController, SmartAdvisoryState>((ref) {
   final repository = ref.watch(weatherRepositoryProvider);
   return SmartAdvisoryController(repository);
 });

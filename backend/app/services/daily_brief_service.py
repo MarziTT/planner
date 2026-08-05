@@ -144,7 +144,7 @@ def _load_persona(user_id: int, butler_name: str | None, preset_id: str | None =
         user = None
         setting = None
     persona = resolve_persona(preset_id, custom_name=butler_name,
-                              tone=setting.weather_tone if setting else None)
+                              tone=setting.butler_tone if setting else None)
     return {**persona, "butler_name": persona["display_name"],
             "user_name": (user.nickname if user else "").strip()}
 

@@ -55,6 +55,26 @@ class UserPattern(TimestampMixin, db.Model):
     wake_time = db.Column(db.String(5), nullable=True)
 
 
+class AgentExperience(TimestampMixin, db.Model):
+    """Confirmed or high-confidence language examples for offline agent parsing."""
+
+    __tablename__ = "agent_experiences"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "user_id", "normalized_text", name="uq_agent_experience_text"
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    source_text = db.Column(db.Text, default="", nullable=False)
+    normalized_text = db.Column(db.String(240), default="", nullable=False, index=True)
+    intent = db.Column(db.String(40), default="", nullable=False, index=True)
+    parsed = db.Column(JSONVariant)
+    sample_count = db.Column(db.Integer, default=1, nullable=False)
+    last_used_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+
 class NotifyPreference(TimestampMixin, db.Model):
     """Per-user notification preference; may be overridden by the habits engine."""
 

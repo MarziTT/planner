@@ -92,11 +92,17 @@ def parse_multi():
     """
     payload = request.get_json(silent=True) or {}
     text = (payload.get("text") or "").strip()
+    persona_preset = (payload.get("persona_preset") or "default").strip()
     if not text:
         return failure("validation_error", "text is required", status=422)
 
     config = _read_llm_config()
-    result = parse_text(text, config)
+    result = parse_text(
+        text,
+        config,
+        user_id=g.current_user.id,
+        persona_preset=persona_preset,
+    )
     return success(result)
 
 

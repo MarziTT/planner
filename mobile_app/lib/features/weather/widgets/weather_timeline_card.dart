@@ -99,7 +99,7 @@ class WeatherTimelineCard extends ConsumerWidget {
           Icon(Icons.wb_sunny_outlined, size: 20, color: accentColor),
           const SizedBox(width: 8),
           Text(
-            '天气管家',
+            '天气',
             style: TextStyle(
               color: textPrimary,
               fontSize: 16,

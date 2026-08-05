@@ -7,7 +7,7 @@ import '../../../core/theme/zzz_theme_extension.dart';
 import '../../updates/state/update_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/settings_controller.dart';
-import 'weather_tone_page.dart';
+import 'butler_tone_page.dart';
 
 const _zzzPreviewAssets = <String>[
   'assets/themes/zzz/shield.gif',
@@ -293,10 +293,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                     !(settings.notificationsEnabled)
                                 ? null
                                 : (value) async {
-                                    if (value == null) return;
-                                    if (value ==
-                                        settings.notificationsLeadMinutes)
+                                    if (value == null) {
                                       return;
+                                    }
+                                    if (value ==
+                                        settings.notificationsLeadMinutes) {
+                                      return;
+                                    }
                                     await ref
                                         .read(
                                             settingsControllerProvider.notifier)
@@ -328,7 +331,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _WeatherToneEntryCard(isZzz: isZzz),
+                  _ButlerToneEntryCard(isZzz: isZzz),
                   const SizedBox(height: 12),
                   Card(
                     color: isZzz ? zzz?.surface : null,
@@ -636,14 +639,14 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
                     controller: _controller,
                     maxLength: 12,
                     style: isZzz ? TextStyle(color: zzz?.textPrimary) : null,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: '管家名字',
                       hintText: '比如：贾维斯、阿福、小D',
                       counterText: '',
                       isDense: true,
-                      border: const OutlineInputBorder(),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                     onSubmitted: (_) => _save(),
                   ),
@@ -672,9 +675,9 @@ class _ButlerNameCardState extends ConsumerState<_ButlerNameCard> {
   }
 }
 
-/// 天气管家语气入口卡片
-class _WeatherToneEntryCard extends StatelessWidget {
-  const _WeatherToneEntryCard({required this.isZzz});
+/// 管家语气入口卡片
+class _ButlerToneEntryCard extends StatelessWidget {
+  const _ButlerToneEntryCard({required this.isZzz});
 
   final bool isZzz;
 
@@ -694,13 +697,13 @@ class _WeatherToneEntryCard extends StatelessWidget {
           : null,
       child: ListTile(
         title: Text(
-          '天气管家语气',
+          '管家语气',
           style: TextStyle(
             color: isZzz ? zzz?.textPrimary : null,
           ),
         ),
         subtitle: Text(
-          '自定义天气管家的说话风格',
+          '自定义管家的说话风格',
           style: TextStyle(
             color: isZzz ? zzz?.textSecondary : null,
           ),
@@ -712,7 +715,7 @@ class _WeatherToneEntryCard extends StatelessWidget {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => const WeatherTonePage(),
+              builder: (_) => const ButlerTonePage(),
             ),
           );
         },

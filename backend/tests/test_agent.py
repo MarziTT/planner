@@ -394,6 +394,32 @@ class TestParseTextPublic:
         assert result["intent"] == "create_event"
         assert result["llm_warning"] == "AI连接失败，已切换到离线识别"
 
+    @patch("app.services.agent.resolve_targets", return_value=[])
+    def test_agent_experience_reuses_similar_confirmed_expression(self, _mock_targets, app_client):
+        from app.extensions import db
+        from app.models import User
+        from app.models_habits import AgentExperience
+
+        app, _ = app_client
+        with app.app_context():
+            user = User(phone="18800000000", password_hash="x", nickname="tester")
+            db.session.add(user)
+            db.session.flush()
+            db.session.add(AgentExperience(
+                user_id=user.id,
+                source_text="七点健身",
+                normalized_text="<time>健身",
+                intent="create_event",
+                parsed={"intent": "create_event", "event_name": "健身"},
+            ))
+            db.session.commit()
+
+            result = parse_text("八点健身", config={}, user_id=user.id)
+
+        assert result["intent"] == "create_event"
+        assert result["event_name"] == "健身"
+        assert result["offline_source"] == "experience"
+
 
 # ===========================================================================
 # _build_system_prompt
