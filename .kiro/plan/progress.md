@@ -67,3 +67,17 @@
   offline similar-expression intent matching before calling the AI provider.
 - Verified backend persona/settings/agent tests: 55 passed. Verified Flutter
   settings/weather static analysis: no issues.
+
+## 2026-08-05 health center production repair
+
+- Captured the connected HarmonyOS device UI state and confirmed the health
+  center was displaying a Dio HTTP 500 response.
+- Queried Railway HTTP and application logs; the root cause was the production
+  `user_patterns` table missing the model's legacy `wake_time` column.
+- Added Alembic migration `d4e5f6a7b8c9` and startup schema repair in
+  `create_app(repair_tables=True)`, because the Railway Procfile runs
+  `ensure_tables.py` rather than Alembic upgrades.
+- Pushed `4ee1de0` and `9e6e0d6` to `main`; Railway deployment
+  `2ae3c171-0b04-42a2-85ef-6f8f8d2620ae` logged the column repair.
+- Triggered the phone's health-page retry and verified Railway returned
+  `GET /api/v1/dashboard/health` with HTTP 200.
