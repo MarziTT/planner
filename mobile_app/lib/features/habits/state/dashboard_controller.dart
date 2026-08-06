@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../../core/device/harmony_device_permissions.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/dashboard.dart';
 
@@ -39,21 +40,11 @@ class DashboardController extends StateNotifier<AsyncValue<DashboardData?>> {
     // 调用方未传坐标时，尝试获取本地位置
     if (resolvedLat == null || resolvedLon == null) {
       try {
-        final permission = await Geolocator.checkPermission();
-        LocationPermission finalPermission = permission;
-        if (permission == LocationPermission.denied) {
-          finalPermission = await Geolocator.requestPermission();
-        }
-        if (finalPermission == LocationPermission.denied ||
-            finalPermission == LocationPermission.deniedForever) {
-          // 权限未授予则不带坐标请求（天气返回 available: false）
-        } else {
-          final position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.low,
-          ).timeout(const Duration(seconds: 5));
-          resolvedLat = position.latitude;
-          resolvedLon = position.longitude;
-        }
+        final position = await const HarmonyDevicePermissions()
+            .getCurrentLocation()
+            .timeout(const Duration(seconds: 5));
+        resolvedLat = position.latitude;
+        resolvedLon = position.longitude;
       } on TimeoutException {
         // GPS 超时，不带坐标请求
       } catch (_) {

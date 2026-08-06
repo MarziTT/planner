@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
 import '../../../core/cache/local_cache_service.dart';
+import '../../../core/device/harmony_device_permissions.dart';
 import '../../../core/network/api_client.dart';
 import '../data/weather_repository.dart';
 import '../domain/weather_models.dart';
@@ -39,9 +40,8 @@ class WeatherState {
       data: clearData ? null : (data ?? this.data),
       loading: loading ?? this.loading,
       error: clearError ? null : (error ?? this.error),
-      lastFetchedAt: clearLastFetchedAt
-          ? null
-          : (lastFetchedAt ?? this.lastFetchedAt),
+      lastFetchedAt:
+          clearLastFetchedAt ? null : (lastFetchedAt ?? this.lastFetchedAt),
     );
   }
 
@@ -115,30 +115,8 @@ class WeatherController extends StateNotifier<WeatherState> {
 
     try {
       // 1. 获取位置权限
-      final permission = await Geolocator.checkPermission();
-      LocationPermission finalPermission = permission;
-      if (permission == LocationPermission.denied) {
-        finalPermission = await Geolocator.requestPermission();
-      }
-      if (finalPermission == LocationPermission.denied) {
-        state = state.copyWith(
-          loading: false,
-          error: '需要位置权限才能获取天气信息',
-        );
-        return;
-      }
-      if (finalPermission == LocationPermission.deniedForever) {
-        state = state.copyWith(
-          loading: false,
-          error: '位置权限已被禁止，请在系统设置中开启',
-        );
-        return;
-      }
-
-      // 2. 获取经纬度
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
+      final position =
+          await const HarmonyDevicePermissions().getCurrentLocation();
 
       // 3. 调用 repository
       final data = await _repository.fetchWeather(
@@ -162,7 +140,8 @@ String _formatError(Object e) {
   if (e is DioException) {
     final statusCode = e.response?.statusCode;
     if (statusCode == 401) return '登录态失效，请重新登录';
-    if (statusCode != null && statusCode >= 500) return '天气服务暂不可用 ($statusCode)';
+    if (statusCode != null && statusCode >= 500)
+      return '天气服务暂不可用 ($statusCode)';
     if (e.type == DioExceptionType.connectionError ||
         e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {

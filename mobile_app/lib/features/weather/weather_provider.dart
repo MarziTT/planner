@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../core/device/harmony_device_permissions.dart';
 import 'data/weather_repository.dart';
 import 'models/smart_advisory.dart';
 import 'state/weather_controller.dart';
@@ -91,29 +92,8 @@ class SmartAdvisoryController extends StateNotifier<SmartAdvisoryState> {
 
     try {
       // 1. 位置权限
-      final permission = await Geolocator.checkPermission();
-      LocationPermission finalPermission = permission;
-      if (permission == LocationPermission.denied) {
-        finalPermission = await Geolocator.requestPermission();
-      }
-      if (finalPermission == LocationPermission.denied) {
-        state = state.copyWith(
-          loading: false,
-          error: '需要位置权限才能获取天气建议',
-        );
-        return;
-      }
-      if (finalPermission == LocationPermission.deniedForever) {
-        state = state.copyWith(
-          loading: false,
-          error: '位置权限已被禁止，请在系统设置中开启',
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
+      final position =
+          await const HarmonyDevicePermissions().getCurrentLocation();
 
       final data = await _repository.fetchSmartAdvisory(
         lat: position.latitude,

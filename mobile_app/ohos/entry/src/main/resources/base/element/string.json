@@ -5,6 +5,7 @@
     {"name": "EntryAbility_desc", "value": "PixelPlanner main entry ability"},
     {"name": "EntryAbility_label", "value": "PixelPlanner"},
     {"name": "microphone_permission_reason", "value": "用于语音录制与语音转文字功能"},
+    {"name": "location_permission_reason", "value": "用于获取当前位置并提供本地天气信息"},
     {"name": "notification_permission_reason", "value": "用于任务提醒与日程通知"}
   ]
 }
