@@ -110,9 +110,10 @@ class HealthNotifier extends StateNotifier<HealthState> {
         state = state.copyWith(
           deviceHealthStatus: HealthAuthorizationStatus.denied,
           deviceHealthLoading: false,
-          deviceHealthError: authorization.granted
-              ? '已授权但暂时读不到运动健康数据。请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，确认 HUAWEI Health Kit / PixelPlanner 已开启后再同步。'
-              : '请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，开启 HUAWEI Health Kit / PixelPlanner 授权后，再回到这里同步。',
+          deviceHealthError: _formatDeviceHealthError(
+            authorizationGranted: authorization.granted,
+            readError: debug.debugMessage,
+          ),
           deviceHealthDebugInfo: debugInfo,
         );
         return;
@@ -130,6 +131,19 @@ class HealthNotifier extends StateNotifier<HealthState> {
         deviceHealthDebugInfo: 'unexpected=$error',
       );
     }
+  }
+
+  static String _formatDeviceHealthError({
+    required bool authorizationGranted,
+    required String? readError,
+  }) {
+    final errorText = readError ?? '';
+    if (errorText.contains('DAILY_ACTIVITIES read permission')) {
+      return 'PixelPlanner 缺少 DAILY_ACTIVITIES 读取权限。这不是手机授权问题，需要在华为开发者后台为 Health Service Kit 申请/启用“日常活动”读取 scope，生效后再同步。';
+    }
+    return authorizationGranted
+        ? '已授权但暂时读不到运动健康数据。请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，确认 HUAWEI Health Kit / PixelPlanner 已开启后再同步。'
+        : '请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，开启 HUAWEI Health Kit / PixelPlanner 授权后，再回到这里同步。';
   }
 }
 

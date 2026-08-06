@@ -117,3 +117,6 @@
   presence, and native read errors to the Flutter health card.
 - Expanded Health Kit diagnostics to include request authorization errors and
   serialize ArkTS error objects instead of showing `[object Object]`.
+- Health Kit debug output identified the real blocker:
+  `DAILY_ACTIVITIES` read permission is missing from the app's Health Service
+  Kit scope, so phone-side authorization alone cannot grant the data.
