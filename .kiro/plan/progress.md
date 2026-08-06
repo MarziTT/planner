@@ -81,3 +81,11 @@
   `2ae3c171-0b04-42a2-85ef-6f8f8d2620ae` logged the column repair.
 - Triggered the phone's health-page retry and verified Railway returned
   `GET /api/v1/dashboard/health` with HTTP 200.
+
+## 2026-08-06 Harmony health compile fix
+
+- Fixed `HarmonyHealthPlugin.ets` ArkTS strict-mode errors by replacing
+  untyped object maps and `Record<string, unknown>` payloads with explicit
+  interfaces and typed resolver logic.
+- Synced the fixed health plugin from `G:\PixelPlanner` to
+  `D:\PixelPlannerBuild\mobile_app` for the active DevEco build copy.

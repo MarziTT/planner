@@ -9,17 +9,29 @@ import {
 import type common from '@ohos.app.ability.common';
 import { healthService, healthStore } from '@kit.HealthServiceKit';
 
-const REQUESTABLE_DATA_TYPES: Record<string, healthStore.DataType> = {
-  weight: healthStore.healthDataTypes.WEIGHT,
-  bmi: healthStore.healthDataTypes.WEIGHT,
-  bodyFat: healthStore.healthDataTypes.WEIGHT,
-  muscleMass: healthStore.healthDataTypes.WEIGHT,
-  bodyWater: healthStore.healthDataTypes.WEIGHT,
-  basalMetabolicRate: healthStore.healthDataTypes.WEIGHT,
-  visceralFat: healthStore.healthDataTypes.WEIGHT,
-  dailyActivities: healthStore.healthDataTypes.DAILY_ACTIVITIES,
-  workout: healthStore.healthDataTypes.WORKOUT,
-};
+interface BodyMeasurementPayload {
+  measuredAt: string;
+  weightKg: number;
+  bmi: number | null;
+  bodyFatPercent: number | null;
+  muscleMassKg: number | null;
+  bodyWaterPercent: number | null;
+  basalMetabolicRate: number | null;
+  visceralFatLevel: number | null;
+  source: string;
+}
+
+interface ActivityReportPayload {
+  steps: number;
+  stepsGoal: number | null;
+  activeCalories: number;
+  activeCaloriesGoal: number | null;
+  exerciseMinutes: number;
+  exerciseGoalMinutes: number | null;
+  activeHours: number;
+  activeHoursGoal: number | null;
+  source: string;
+}
 
 export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
@@ -148,7 +160,7 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
   ): healthStore.AuthorizationRequest {
     const readDataTypes: Array<healthStore.DataType> = [];
     for (const requestedType of requestedTypes) {
-      const dataType = REQUESTABLE_DATA_TYPES[requestedType];
+      const dataType = this.resolveRequestableDataType(requestedType);
       if (dataType != null && !readDataTypes.includes(dataType)) {
         readDataTypes.push(dataType);
       }
@@ -160,7 +172,28 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
     };
   }
 
-  private async readBodyMeasurements(call: MethodCall): Promise<Array<Record<string, unknown>>> {
+  private resolveRequestableDataType(requestedType: string): healthStore.DataType | null {
+    if (
+      requestedType === 'weight' ||
+      requestedType === 'bmi' ||
+      requestedType === 'bodyFat' ||
+      requestedType === 'muscleMass' ||
+      requestedType === 'bodyWater' ||
+      requestedType === 'basalMetabolicRate' ||
+      requestedType === 'visceralFat'
+    ) {
+      return healthStore.healthDataTypes.WEIGHT;
+    }
+    if (requestedType === 'dailyActivities') {
+      return healthStore.healthDataTypes.DAILY_ACTIVITIES;
+    }
+    if (requestedType === 'workout') {
+      return healthStore.healthDataTypes.WORKOUT;
+    }
+    return null;
+  }
+
+  private async readBodyMeasurements(call: MethodCall): Promise<Array<BodyMeasurementPayload>> {
     const startTime = Date.parse(call.argument('startTime') as string);
     const endTime = Date.parse(call.argument('endTime') as string);
     const request: healthStore.SamplePointReadRequest<healthStore.healthFields.Weight> = {
@@ -169,7 +202,7 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
       endTime,
     };
     const records = await healthStore.readData<healthStore.healthModels.Weight>(request);
-    const deduplicated = new Map<string, Record<string, unknown>>();
+    const deduplicated = new Map<string, BodyMeasurementPayload>();
     for (const record of records) {
       const measuredAt = this.formatMeasuredAt(record.startTime, record.timeZone);
       const payload = this.mapWeightRecord(record, measuredAt);
@@ -183,7 +216,7 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
     });
   }
 
-  private async readTodayActivityReport(): Promise<Record<string, unknown> | null> {
+  private async readTodayActivityReport(): Promise<ActivityReportPayload | null> {
     const report = await healthService.workout.readActivityReport();
     return {
       steps: report.steps,
@@ -201,7 +234,7 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
   private mapWeightRecord(
     record: healthStore.healthModels.Weight,
     measuredAt: string,
-  ): Record<string, unknown> {
+  ): BodyMeasurementPayload {
     return {
       measuredAt,
       weightKg: record.fields.bodyWeight,
