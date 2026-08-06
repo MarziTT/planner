@@ -33,8 +33,11 @@ void main() {
       calls.add(call.method);
       return switch (call.method) {
         'isAvailable' => true,
-        'requestActivityAuthorization' => false,
-        'activityAuthorizationStatus' => 'authorized',
+        'requestActivityAuthorizationDebug' => <String, Object?>{
+            'granted': false,
+            'authorizationStatus': 'authorized',
+            'debugMessage': null,
+          },
         _ => null,
       };
     });
@@ -44,9 +47,7 @@ void main() {
         calls,
         containsAllInOrder([
           'isAvailable',
-          'requestActivityAuthorization',
-          'isAvailable',
-          'activityAuthorizationStatus',
+          'requestActivityAuthorizationDebug',
         ]));
   });
 

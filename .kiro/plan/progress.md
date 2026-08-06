@@ -115,3 +115,5 @@
   Huawei Health navigation path for enabling Health Kit / PixelPlanner access.
 - Added a Health Kit debug path that returns authorization status, read-result
   presence, and native read errors to the Flutter health card.
+- Expanded Health Kit diagnostics to include request authorization errors and
+  serialize ArkTS error objects instead of showing `[object Object]`.

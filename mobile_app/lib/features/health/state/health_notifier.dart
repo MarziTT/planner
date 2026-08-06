@@ -100,16 +100,17 @@ class HealthNotifier extends StateNotifier<HealthState> {
         );
         return;
       }
-      final granted = await _harmonyHealth.requestActivityAuthorization();
+      final authorization =
+          await _harmonyHealth.requestActivityAuthorizationDebug();
       final debug = await _harmonyHealth.readTodayActivityReportDebug();
       final report = debug.report;
       final debugInfo =
-          'requestGranted=$granted; activityStatus=${debug.authorizationStatus.name}; readError=${debug.debugMessage ?? 'none'}';
+          'requestGranted=${authorization.granted}; requestStatus=${authorization.authorizationStatus.name}; requestError=${authorization.debugMessage ?? 'none'}; activityStatus=${debug.authorizationStatus.name}; readError=${debug.debugMessage ?? 'none'}';
       if (report == null) {
         state = state.copyWith(
           deviceHealthStatus: HealthAuthorizationStatus.denied,
           deviceHealthLoading: false,
-          deviceHealthError: granted
+          deviceHealthError: authorization.granted
               ? '已授权但暂时读不到运动健康数据。请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，确认 HUAWEI Health Kit / PixelPlanner 已开启后再同步。'
               : '请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，开启 HUAWEI Health Kit / PixelPlanner 授权后，再回到这里同步。',
           deviceHealthDebugInfo: debugInfo,

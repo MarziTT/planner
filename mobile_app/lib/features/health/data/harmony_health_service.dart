@@ -71,24 +71,49 @@ class HarmonyHealthService {
   }
 
   Future<bool> requestActivityAuthorization() async {
-    if (!await isAvailable()) return false;
+    final debug = await requestActivityAuthorizationDebug();
+    return debug.granted ||
+        debug.authorizationStatus == HealthAuthorizationStatus.authorized;
+  }
+
+  Future<HealthAuthorizationAttempt> requestActivityAuthorizationDebug() async {
+    if (!await isAvailable()) {
+      return const HealthAuthorizationAttempt(
+        granted: false,
+        authorizationStatus: HealthAuthorizationStatus.unavailable,
+      );
+    }
     try {
-      final granted = await _channel.invokeMethod<bool>(
-            'requestActivityAuthorization',
-            const <String, Object>{
-              'dataTypes': <String>[
-                'dailyActivities',
-                'workout',
-              ],
-            },
-          ) ??
-          false;
-      if (granted) return true;
+      final value = await _channel.invokeMapMethod<Object?, Object?>(
+        'requestActivityAuthorizationDebug',
+        const <String, Object>{
+          'dataTypes': <String>[
+            'dailyActivities',
+            'workout',
+          ],
+        },
+      );
+      if (value == null) {
+        return const HealthAuthorizationAttempt(
+          granted: false,
+          authorizationStatus: HealthAuthorizationStatus.notDetermined,
+        );
+      }
+      final json = value.map((key, value) => MapEntry(key.toString(), value));
+      return HealthAuthorizationAttempt(
+        granted: json['granted'] == true,
+        authorizationStatus: _parseAuthorizationStatus(
+          json['authorizationStatus'] as String?,
+        ),
+        debugMessage: json['debugMessage'] as String?,
+      );
+    } on PlatformException catch (error) {
       final status = await activityAuthorizationStatus();
-      return status == HealthAuthorizationStatus.authorized;
-    } on PlatformException {
-      final status = await activityAuthorizationStatus();
-      return status == HealthAuthorizationStatus.authorized;
+      return HealthAuthorizationAttempt(
+        granted: false,
+        authorizationStatus: status,
+        debugMessage: error.message ?? error.toString(),
+      );
     }
   }
 
@@ -206,6 +231,18 @@ class HealthActivityReportDebug {
 
   const HealthActivityReportDebug({
     required this.report,
+    required this.authorizationStatus,
+    this.debugMessage,
+  });
+}
+
+class HealthAuthorizationAttempt {
+  final bool granted;
+  final HealthAuthorizationStatus authorizationStatus;
+  final String? debugMessage;
+
+  const HealthAuthorizationAttempt({
+    required this.granted,
     required this.authorizationStatus,
     this.debugMessage,
   });

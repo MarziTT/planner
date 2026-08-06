@@ -39,6 +39,12 @@ interface ActivityReportDebugPayload {
   debugMessage: string | null;
 }
 
+interface ActivityAuthorizationDebugPayload {
+  granted: boolean;
+  authorizationStatus: string;
+  debugMessage: string | null;
+}
+
 export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
   private context: common.UIAbilityContext | null = null;
@@ -105,6 +111,11 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
         return;
       }
 
+      if (call.method === 'requestActivityAuthorizationDebug') {
+        result.success(await this.requestActivityAuthorizationDebug(call));
+        return;
+      }
+
       if (call.method === 'readBodyMeasurements') {
         result.success(await this.readBodyMeasurements(call));
         return;
@@ -122,7 +133,11 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
 
       result.notImplemented();
     } catch (error) {
-      result.error('health_error', 'Health operation failed', String(error));
+      result.error(
+        'health_error',
+        'Health operation failed',
+        this.formatError(error as Object),
+      );
     }
   }
 
@@ -175,6 +190,25 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
     const request = this.buildAuthorizationRequest(types);
     const response = await this.requestAuthorizations(request);
     return this.hasAnyGrantedType(response.readDataTypes, request.readDataTypes);
+  }
+
+  private async requestActivityAuthorizationDebug(
+    call: MethodCall,
+  ): Promise<ActivityAuthorizationDebugPayload> {
+    try {
+      const granted = await this.requestActivityAuthorization(call);
+      return {
+        granted,
+        authorizationStatus: await this.activityAuthorizationStatus(),
+        debugMessage: null,
+      };
+    } catch (error) {
+      return {
+        granted: false,
+        authorizationStatus: await this.activityAuthorizationStatus(),
+        debugMessage: this.formatError(error as Object),
+      };
+    }
   }
 
   private async requestAuthorizations(
@@ -295,9 +329,24 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
       return {
         report: null,
         authorizationStatus: await this.activityAuthorizationStatus(),
-        debugMessage: String(error),
+        debugMessage: this.formatError(error as Object),
       };
     }
+  }
+
+  private formatError(error: Object): string {
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized.length > 0 && serialized !== '{}' && serialized !== 'null') {
+        return serialized;
+      }
+    } catch (_) {}
+
+    const runtimeError = error as Error;
+    if (runtimeError.message.length > 0) {
+      return runtimeError.message;
+    }
+    return String(error);
   }
 
   private mapWeightRecord(
