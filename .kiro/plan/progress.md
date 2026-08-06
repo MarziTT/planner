@@ -111,3 +111,5 @@
 - Changed the health-center connection flow to trust actual health data reads
   instead of a single authorization boolean, and added a regression test for
   delayed activity authorization.
+- Clarified the health-center authorization guidance with the expected
+  Huawei Health navigation path for enabling Health Kit / PixelPlanner access.

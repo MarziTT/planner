@@ -98,8 +98,8 @@ class HealthNotifier extends StateNotifier<HealthState> {
           deviceHealthStatus: HealthAuthorizationStatus.denied,
           deviceHealthLoading: false,
           deviceHealthError: granted
-              ? '已授权但暂时读不到华为运动健康数据，请到 HUAWEI Health 中确认 HUAWEI Health Kit 开关已开启，必要时稍后再试'
-              : '健康数据权限未授予，请在 HUAWEI Health 中开启 HUAWEI Health Kit 并重新授权',
+              ? '已授权但暂时读不到运动健康数据。请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，确认 HUAWEI Health Kit / PixelPlanner 已开启后再同步。'
+              : '请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，开启 HUAWEI Health Kit / PixelPlanner 授权后，再回到这里同步。',
         );
         return;
       }
