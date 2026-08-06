@@ -15,6 +15,7 @@ class HealthState {
   final HealthAuthorizationStatus deviceHealthStatus;
   final bool deviceHealthLoading;
   final String? deviceHealthError;
+  final String? deviceHealthDebugInfo;
 
   const HealthState({
     this.loadState = HealthLoadState.initial,
@@ -24,6 +25,7 @@ class HealthState {
     this.deviceHealthStatus = HealthAuthorizationStatus.notDetermined,
     this.deviceHealthLoading = false,
     this.deviceHealthError,
+    this.deviceHealthDebugInfo,
   });
 
   HealthState copyWith({
@@ -34,7 +36,9 @@ class HealthState {
     HealthAuthorizationStatus? deviceHealthStatus,
     bool? deviceHealthLoading,
     String? deviceHealthError,
+    String? deviceHealthDebugInfo,
     bool clearDeviceHealthError = false,
+    bool clearDeviceHealthDebugInfo = false,
   }) {
     return HealthState(
       loadState: loadState ?? this.loadState,
@@ -46,6 +50,9 @@ class HealthState {
       deviceHealthError: clearDeviceHealthError
           ? null
           : (deviceHealthError ?? this.deviceHealthError),
+      deviceHealthDebugInfo: clearDeviceHealthDebugInfo
+          ? null
+          : (deviceHealthDebugInfo ?? this.deviceHealthDebugInfo),
     );
   }
 }
@@ -80,6 +87,7 @@ class HealthNotifier extends StateNotifier<HealthState> {
     state = state.copyWith(
       deviceHealthLoading: true,
       clearDeviceHealthError: true,
+      clearDeviceHealthDebugInfo: true,
     );
     try {
       final available = await _harmonyHealth.isAvailable();
@@ -88,11 +96,15 @@ class HealthNotifier extends StateNotifier<HealthState> {
           deviceHealthStatus: HealthAuthorizationStatus.unavailable,
           deviceHealthLoading: false,
           deviceHealthError: '当前设备未提供鸿蒙健康服务',
+          deviceHealthDebugInfo: 'isAvailable=false',
         );
         return;
       }
       final granted = await _harmonyHealth.requestActivityAuthorization();
-      final report = await _harmonyHealth.readTodayActivityReport();
+      final debug = await _harmonyHealth.readTodayActivityReportDebug();
+      final report = debug.report;
+      final debugInfo =
+          'requestGranted=$granted; activityStatus=${debug.authorizationStatus.name}; readError=${debug.debugMessage ?? 'none'}';
       if (report == null) {
         state = state.copyWith(
           deviceHealthStatus: HealthAuthorizationStatus.denied,
@@ -100,18 +112,21 @@ class HealthNotifier extends StateNotifier<HealthState> {
           deviceHealthError: granted
               ? '已授权但暂时读不到运动健康数据。请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，确认 HUAWEI Health Kit / PixelPlanner 已开启后再同步。'
               : '请打开华为运动健康 > 我的 > 隐私管理 > 数据分享与授权，开启 HUAWEI Health Kit / PixelPlanner 授权后，再回到这里同步。',
+          deviceHealthDebugInfo: debugInfo,
         );
         return;
       }
       state = state.copyWith(
         activityReport: report,
-        deviceHealthStatus: HealthAuthorizationStatus.authorized,
+        deviceHealthStatus: debug.authorizationStatus,
         deviceHealthLoading: false,
+        deviceHealthDebugInfo: debugInfo,
       );
     } catch (error) {
       state = state.copyWith(
         deviceHealthLoading: false,
         deviceHealthError: '读取鸿蒙健康数据失败：$error',
+        deviceHealthDebugInfo: 'unexpected=$error',
       );
     }
   }

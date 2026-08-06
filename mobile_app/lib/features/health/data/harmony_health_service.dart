@@ -143,6 +143,72 @@ class HarmonyHealthService {
       return null;
     }
   }
+
+  Future<HealthActivityReportDebug> readTodayActivityReportDebug() async {
+    if (!await isAvailable()) {
+      return const HealthActivityReportDebug(
+        report: null,
+        authorizationStatus: HealthAuthorizationStatus.unavailable,
+      );
+    }
+    try {
+      final value = await _channel.invokeMapMethod<Object?, Object?>(
+        'readTodayActivityReportDebug',
+      );
+      if (value == null) {
+        return const HealthActivityReportDebug(
+          report: null,
+          authorizationStatus: HealthAuthorizationStatus.notDetermined,
+        );
+      }
+      final json = value.map((key, value) => MapEntry(key.toString(), value));
+      final reportValue = json['report'];
+      final report = reportValue is Map
+          ? HealthActivityReport.fromJson(
+              reportValue.map((key, value) => MapEntry(key.toString(), value)),
+            )
+          : null;
+      return HealthActivityReportDebug(
+        report: report,
+        authorizationStatus: _parseAuthorizationStatus(
+          json['authorizationStatus'] as String?,
+        ),
+        debugMessage: json['debugMessage'] as String?,
+      );
+    } on MissingPluginException {
+      return const HealthActivityReportDebug(
+        report: null,
+        authorizationStatus: HealthAuthorizationStatus.unavailable,
+      );
+    } on PlatformException catch (error) {
+      return HealthActivityReportDebug(
+        report: null,
+        authorizationStatus: HealthAuthorizationStatus.notDetermined,
+        debugMessage: error.message ?? error.toString(),
+      );
+    }
+  }
+
+  static HealthAuthorizationStatus _parseAuthorizationStatus(String? value) {
+    return switch (value) {
+      'authorized' => HealthAuthorizationStatus.authorized,
+      'denied' => HealthAuthorizationStatus.denied,
+      'unavailable' => HealthAuthorizationStatus.unavailable,
+      _ => HealthAuthorizationStatus.notDetermined,
+    };
+  }
+}
+
+class HealthActivityReportDebug {
+  final HealthActivityReport? report;
+  final HealthAuthorizationStatus authorizationStatus;
+  final String? debugMessage;
+
+  const HealthActivityReportDebug({
+    required this.report,
+    required this.authorizationStatus,
+    this.debugMessage,
+  });
 }
 
 class HealthActivityReport {

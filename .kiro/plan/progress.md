@@ -113,3 +113,5 @@
   delayed activity authorization.
 - Clarified the health-center authorization guidance with the expected
   Huawei Health navigation path for enabling Health Kit / PixelPlanner access.
+- Added a Health Kit debug path that returns authorization status, read-result
+  presence, and native read errors to the Flutter health card.

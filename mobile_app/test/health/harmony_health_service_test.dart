@@ -50,6 +50,34 @@ void main() {
         ]));
   });
 
+  test('reads activity report debug payload', () async {
+    messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel,
+        (call) async {
+      if (call.method == 'isAvailable') return true;
+      if (call.method == 'readTodayActivityReportDebug') {
+        return <String, Object?>{
+          'authorizationStatus': 'authorized',
+          'debugMessage': null,
+          'report': <String, Object>{
+            'steps': 1234,
+            'activeCalories': 88,
+            'exerciseMinutes': 12,
+            'activeHours': 3,
+            'source': 'huawei_health',
+          },
+        };
+      }
+      return null;
+    });
+
+    final debug = await service.readTodayActivityReportDebug();
+
+    expect(debug.authorizationStatus, HealthAuthorizationStatus.authorized);
+    expect(debug.debugMessage, isNull);
+    expect(debug.report?.steps, 1234);
+    expect(debug.report?.exerciseMinutes, 12);
+  });
+
   test('parses and sorts body measurements newest first', () async {
     messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel,
         (call) async {

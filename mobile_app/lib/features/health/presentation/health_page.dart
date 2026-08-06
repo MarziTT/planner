@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/zzz_theme_extension.dart';
+import '../data/harmony_health_service.dart';
 import '../domain/health_models.dart';
 import '../state/health_notifier.dart';
 
@@ -21,7 +22,9 @@ class _HealthPageState extends ConsumerState<HealthPage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(healthNotifierProvider.notifier).load());
+    Future.microtask(() {
+      ref.read(healthNotifierProvider.notifier).load();
+    });
   }
 
   @override
@@ -81,6 +84,8 @@ class _HealthPageState extends ConsumerState<HealthPage> {
         children: [
           _buildPeriodHeader(trends.period, theme),
           const SizedBox(height: 20),
+          _buildDeviceHealthCard(state, theme),
+          const SizedBox(height: 20),
           _buildSummaryCards(trends, theme),
           const SizedBox(height: 24),
           _buildSectionTitle('运动趋势', Icons.directions_run, theme),
@@ -100,6 +105,76 @@ class _HealthPageState extends ConsumerState<HealthPage> {
           _buildSleepCard(trends.routine, theme),
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDeviceHealthCard(HealthState state, ThemeData theme) {
+    final report = state.activityReport;
+    final connected =
+        state.deviceHealthStatus == HealthAuthorizationStatus.authorized;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.monitor_heart,
+                    color:
+                        connected ? Colors.green : theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    connected ? '鸿蒙运动健康已连接' : '连接鸿蒙运动健康',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                if (state.deviceHealthLoading)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else if (!connected)
+                  TextButton(
+                    onPressed: () => ref
+                        .read(healthNotifierProvider.notifier)
+                        .connectDeviceHealth(),
+                    child: const Text('连接并同步'),
+                  ),
+              ],
+            ),
+            if (report != null) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _DeviceHealthStat('步数', '${report.steps}'),
+                  _DeviceHealthStat('活动热量', '${report.activeCalories} kcal'),
+                  _DeviceHealthStat('运动', '${report.exerciseMinutes} 分钟'),
+                ],
+              ),
+            ],
+            if (state.deviceHealthError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                state.deviceHealthError!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+            if (state.deviceHealthDebugInfo != null) ...[
+              const SizedBox(height: 8),
+              SelectableText(
+                '调试信息：${state.deviceHealthDebugInfo}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withAlpha(140),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -706,6 +781,26 @@ class _MiniStat extends StatelessWidget {
             color: theme.colorScheme.onSurface.withAlpha(150),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class _DeviceHealthStat extends StatelessWidget {
+  const _DeviceHealthStat(this.label, this.value);
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(value, style: theme.textTheme.titleSmall),
+        const SizedBox(height: 2),
+        Text(label, style: theme.textTheme.labelSmall),
       ],
     );
   }

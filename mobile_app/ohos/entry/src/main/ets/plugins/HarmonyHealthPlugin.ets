@@ -33,6 +33,12 @@ interface ActivityReportPayload {
   source: string;
 }
 
+interface ActivityReportDebugPayload {
+  report: ActivityReportPayload | null;
+  authorizationStatus: string;
+  debugMessage: string | null;
+}
+
 export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
   private context: common.UIAbilityContext | null = null;
@@ -106,6 +112,11 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
 
       if (call.method === 'readTodayActivityReport') {
         result.success(await this.readTodayActivityReport());
+        return;
+      }
+
+      if (call.method === 'readTodayActivityReportDebug') {
+        result.success(await this.readTodayActivityReportDebug());
         return;
       }
 
@@ -257,18 +268,36 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
   }
 
   private async readTodayActivityReport(): Promise<ActivityReportPayload | null> {
-    const report = await healthService.workout.readActivityReport();
-    return {
-      steps: report.steps,
-      stepsGoal: report.stepsGoal ?? null,
-      activeCalories: report.activeCalories,
-      activeCaloriesGoal: report.activeCaloriesGoal ?? null,
-      exerciseMinutes: report.exercise,
-      exerciseGoalMinutes: report.exerciseGoal ?? null,
-      activeHours: report.activeHours,
-      activeHoursGoal: report.activeHoursGoal ?? null,
-      source: 'huawei_health',
-    };
+    const result = await this.readTodayActivityReportDebug();
+    return result.report;
+  }
+
+  private async readTodayActivityReportDebug(): Promise<ActivityReportDebugPayload> {
+    try {
+      const authorizationStatus = await this.activityAuthorizationStatus();
+      const report = await healthService.workout.readActivityReport();
+      return {
+        report: {
+          steps: report.steps,
+          stepsGoal: report.stepsGoal ?? null,
+          activeCalories: report.activeCalories,
+          activeCaloriesGoal: report.activeCaloriesGoal ?? null,
+          exerciseMinutes: report.exercise,
+          exerciseGoalMinutes: report.exerciseGoal ?? null,
+          activeHours: report.activeHours,
+          activeHoursGoal: report.activeHoursGoal ?? null,
+          source: 'huawei_health',
+        },
+        authorizationStatus,
+        debugMessage: null,
+      };
+    } catch (error) {
+      return {
+        report: null,
+        authorizationStatus: await this.activityAuthorizationStatus(),
+        debugMessage: String(error),
+      };
+    }
   }
 
   private mapWeightRecord(
