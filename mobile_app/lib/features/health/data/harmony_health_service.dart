@@ -36,6 +36,17 @@ class HarmonyHealthService {
     };
   }
 
+  Future<HealthAuthorizationStatus> activityAuthorizationStatus() async {
+    if (!await isAvailable()) return HealthAuthorizationStatus.unavailable;
+    final value =
+        await _channel.invokeMethod<String>('activityAuthorizationStatus');
+    return switch (value) {
+      'authorized' => HealthAuthorizationStatus.authorized,
+      'denied' => HealthAuthorizationStatus.denied,
+      _ => HealthAuthorizationStatus.notDetermined,
+    };
+  }
+
   Future<bool> requestAuthorization() async {
     if (!await isAvailable()) return false;
     try {
@@ -62,7 +73,7 @@ class HarmonyHealthService {
   Future<bool> requestActivityAuthorization() async {
     if (!await isAvailable()) return false;
     try {
-      return await _channel.invokeMethod<bool>(
+      final granted = await _channel.invokeMethod<bool>(
             'requestActivityAuthorization',
             const <String, Object>{
               'dataTypes': <String>[
@@ -72,8 +83,12 @@ class HarmonyHealthService {
             },
           ) ??
           false;
+      if (granted) return true;
+      final status = await activityAuthorizationStatus();
+      return status == HealthAuthorizationStatus.authorized;
     } on PlatformException {
-      return false;
+      final status = await activityAuthorizationStatus();
+      return status == HealthAuthorizationStatus.authorized;
     }
   }
 

@@ -15,7 +15,8 @@ void main() {
 
   test('requests body composition permissions', () async {
     MethodCall? captured;
-    messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+    messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel,
+        (call) async {
       captured = call;
       return call.method == 'isAvailable' ? true : true;
     });
@@ -25,8 +26,33 @@ void main() {
     expect((captured?.arguments as Map)['dataTypes'], contains('weight'));
   });
 
+  test('accepts delayed activity permission after status recheck', () async {
+    final calls = <String>[];
+    messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel,
+        (call) async {
+      calls.add(call.method);
+      return switch (call.method) {
+        'isAvailable' => true,
+        'requestActivityAuthorization' => false,
+        'activityAuthorizationStatus' => 'authorized',
+        _ => null,
+      };
+    });
+
+    expect(await service.requestActivityAuthorization(), isTrue);
+    expect(
+        calls,
+        containsAllInOrder([
+          'isAvailable',
+          'requestActivityAuthorization',
+          'isAvailable',
+          'activityAuthorizationStatus',
+        ]));
+  });
+
   test('parses and sorts body measurements newest first', () async {
-    messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel, (call) async {
+    messenger.defaultBinaryMessenger.setMockMethodCallHandler(channel,
+        (call) async {
       if (call.method == 'isAvailable') return true;
       return <Map<String, Object>>[
         {'measuredAt': '2026-07-01T08:00:00+08:00', 'weightKg': 72},

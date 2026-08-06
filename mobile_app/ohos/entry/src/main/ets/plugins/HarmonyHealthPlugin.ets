@@ -84,6 +84,11 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
         return;
       }
 
+      if (call.method === 'activityAuthorizationStatus') {
+        result.success(await this.activityAuthorizationStatus());
+        return;
+      }
+
       if (call.method === 'requestAuthorization') {
         result.success(await this.requestAuthorization(call));
         return;
@@ -130,18 +135,35 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
     }
   }
 
+  private async activityAuthorizationStatus(): Promise<string> {
+    const request = this.buildAuthorizationRequest([
+      'dailyActivities',
+      'workout',
+    ]);
+    try {
+      const response = await healthStore.getAuthorizations(request);
+      return this.hasAnyGrantedType(response.readDataTypes, request.readDataTypes)
+        ? 'authorized'
+        : response.readDataTypes.length > 0
+          ? 'denied'
+          : 'notDetermined';
+    } catch (error) {
+      return 'notDetermined';
+    }
+  }
+
   private async requestAuthorization(call: MethodCall): Promise<boolean> {
     const types = this.extractTypes(call);
     const request = this.buildAuthorizationRequest(types);
     const response = await this.requestAuthorizations(request);
-    return response.readDataTypes.includes(healthStore.healthDataTypes.WEIGHT);
+    return this.hasAnyGrantedType(response.readDataTypes, request.readDataTypes);
   }
 
   private async requestActivityAuthorization(call: MethodCall): Promise<boolean> {
     const types = this.extractTypes(call);
     const request = this.buildAuthorizationRequest(types);
     const response = await this.requestAuthorizations(request);
-    return response.readDataTypes.includes(healthStore.healthDataTypes.DAILY_ACTIVITIES);
+    return this.hasAnyGrantedType(response.readDataTypes, request.readDataTypes);
   }
 
   private async requestAuthorizations(
@@ -197,6 +219,18 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
       return healthStore.healthDataTypes.WORKOUT;
     }
     return null;
+  }
+
+  private hasAnyGrantedType(
+    grantedTypes: Array<healthStore.DataType>,
+    requestedTypes: Array<healthStore.DataType>,
+  ): boolean {
+    for (const requestedType of requestedTypes) {
+      if (grantedTypes.includes(requestedType)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async readBodyMeasurements(call: MethodCall): Promise<Array<BodyMeasurementPayload>> {

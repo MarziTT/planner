@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../data/harmony_health_service.dart';
 import '../data/health_repository.dart';
 import '../domain/health_models.dart';
 
@@ -10,30 +11,51 @@ class HealthState {
   final HealthLoadState loadState;
   final HealthTrends? trends;
   final String? errorMessage;
+  final HealthActivityReport? activityReport;
+  final HealthAuthorizationStatus deviceHealthStatus;
+  final bool deviceHealthLoading;
+  final String? deviceHealthError;
 
   const HealthState({
     this.loadState = HealthLoadState.initial,
     this.trends,
     this.errorMessage,
+    this.activityReport,
+    this.deviceHealthStatus = HealthAuthorizationStatus.notDetermined,
+    this.deviceHealthLoading = false,
+    this.deviceHealthError,
   });
 
   HealthState copyWith({
     HealthLoadState? loadState,
     HealthTrends? trends,
     String? errorMessage,
+    HealthActivityReport? activityReport,
+    HealthAuthorizationStatus? deviceHealthStatus,
+    bool? deviceHealthLoading,
+    String? deviceHealthError,
+    bool clearDeviceHealthError = false,
   }) {
     return HealthState(
       loadState: loadState ?? this.loadState,
       trends: trends ?? this.trends,
       errorMessage: errorMessage ?? this.errorMessage,
+      activityReport: activityReport ?? this.activityReport,
+      deviceHealthStatus: deviceHealthStatus ?? this.deviceHealthStatus,
+      deviceHealthLoading: deviceHealthLoading ?? this.deviceHealthLoading,
+      deviceHealthError: clearDeviceHealthError
+          ? null
+          : (deviceHealthError ?? this.deviceHealthError),
     );
   }
 }
 
 class HealthNotifier extends StateNotifier<HealthState> {
   final HealthRepository _repository;
+  final HarmonyHealthService _harmonyHealth;
 
-  HealthNotifier(this._repository) : super(const HealthState());
+  HealthNotifier(this._repository, this._harmonyHealth)
+      : super(const HealthState());
 
   Future<void> load({int days = 7}) async {
     state = state.copyWith(loadState: HealthLoadState.loading);
@@ -53,9 +75,52 @@ class HealthNotifier extends StateNotifier<HealthState> {
   }
 
   Future<void> refresh() => load();
+
+  Future<void> connectDeviceHealth() async {
+    state = state.copyWith(
+      deviceHealthLoading: true,
+      clearDeviceHealthError: true,
+    );
+    try {
+      final available = await _harmonyHealth.isAvailable();
+      if (!available) {
+        state = state.copyWith(
+          deviceHealthStatus: HealthAuthorizationStatus.unavailable,
+          deviceHealthLoading: false,
+          deviceHealthError: '当前设备未提供鸿蒙健康服务',
+        );
+        return;
+      }
+      final granted = await _harmonyHealth.requestActivityAuthorization();
+      final report = await _harmonyHealth.readTodayActivityReport();
+      if (report == null) {
+        state = state.copyWith(
+          deviceHealthStatus: HealthAuthorizationStatus.denied,
+          deviceHealthLoading: false,
+          deviceHealthError: granted
+              ? '已授权但暂时读不到华为运动健康数据，请到 HUAWEI Health 中确认 HUAWEI Health Kit 开关已开启，必要时稍后再试'
+              : '健康数据权限未授予，请在 HUAWEI Health 中开启 HUAWEI Health Kit 并重新授权',
+        );
+        return;
+      }
+      state = state.copyWith(
+        activityReport: report,
+        deviceHealthStatus: HealthAuthorizationStatus.authorized,
+        deviceHealthLoading: false,
+      );
+    } catch (error) {
+      state = state.copyWith(
+        deviceHealthLoading: false,
+        deviceHealthError: '读取鸿蒙健康数据失败：$error',
+      );
+    }
+  }
 }
 
 final healthNotifierProvider =
     StateNotifierProvider<HealthNotifier, HealthState>((ref) {
-  return HealthNotifier(ref.read(healthRepositoryProvider));
+  return HealthNotifier(
+    ref.read(healthRepositoryProvider),
+    const HarmonyHealthService(),
+  );
 });

@@ -106,3 +106,8 @@
   does not surface as an unhandled `PlatformException`.
 - Synced all changed health/permission files to
   `D:\PixelPlannerBuild\mobile_app`.
+- Added a post-request health authorization status check so the app can
+  recognize delayed or cached grants instead of treating them as denial.
+- Changed the health-center connection flow to trust actual health data reads
+  instead of a single authorization boolean, and added a regression test for
+  delayed activity authorization.
