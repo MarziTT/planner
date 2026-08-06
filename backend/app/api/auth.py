@@ -82,15 +82,26 @@ def phone_login():
 
     backdoor_phone = current_app.config.get("BACKDOOR_PHONE", "")
     backdoor_code = current_app.config.get("BACKDOOR_CODE", "")
+    demo_phone = current_app.config.get("DEMO_LOGIN_PHONE", "")
+    demo_code = current_app.config.get("DEMO_LOGIN_CODE", "")
 
     if (
-        current_app.config.get("ENABLE_BACKDOOR", False)
-        and backdoor_phone
-        and backdoor_code
-        and compare_digest(phone, backdoor_phone)
-        and compare_digest(code, backdoor_code)
+        (
+            current_app.config.get("ENABLE_BACKDOOR", False)
+            and backdoor_phone
+            and backdoor_code
+            and compare_digest(phone, backdoor_phone)
+            and compare_digest(code, backdoor_code)
+        )
+        or (
+            current_app.config.get("ENABLE_DEMO_LOGIN", False)
+            and demo_phone
+            and demo_code
+            and compare_digest(phone, demo_phone)
+            and compare_digest(code, demo_code)
+        )
     ):
-        sms_code = None  # backdoor bypasses SmsCode
+        sms_code = None  # configured shortcut bypasses SmsCode
     else:
         now = datetime.now(timezone.utc)
         sms_code = (

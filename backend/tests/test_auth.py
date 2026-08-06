@@ -47,6 +47,54 @@ def test_phone_login_existing_user(app_client):
             db.drop_all()
 
 
+def test_phone_login_configured_demo_user(app_client):
+    """Configured demo credentials can bypass SMS without enabling test backdoor."""
+    app, client = app_client
+    app.config.update(
+        ENABLE_BACKDOOR=False,
+        ENABLE_DEMO_LOGIN=True,
+        DEMO_LOGIN_PHONE="13800000001",
+        DEMO_LOGIN_CODE="888888",
+    )
+    try:
+        response = client.post(
+            "/api/v1/auth/phone-login",
+            json={"phone": "13800000001", "code": "888888"},
+        )
+
+        assert response.status_code == 201
+        payload = response.get_json()
+        assert payload["ok"] is True
+        assert payload["data"]["tokens"]["accessToken"]
+    finally:
+        with app.app_context():
+            db.drop_all()
+
+
+def test_phone_login_demo_user_disabled_by_default(app_client):
+    """Demo credentials are rejected unless the demo switch is enabled."""
+    app, client = app_client
+    app.config.update(
+        ENABLE_BACKDOOR=False,
+        ENABLE_DEMO_LOGIN=False,
+        DEMO_LOGIN_PHONE="13800000001",
+        DEMO_LOGIN_CODE="888888",
+    )
+    try:
+        response = client.post(
+            "/api/v1/auth/phone-login",
+            json={"phone": "13800000001", "code": "888888"},
+        )
+
+        assert response.status_code == 401
+        payload = response.get_json()
+        assert payload["ok"] is False
+        assert payload["error"]["code"] == "invalid_code"
+    finally:
+        with app.app_context():
+            db.drop_all()
+
+
 def test_profile_update_marks_onboarding_complete(app_client):
     """Updating profile sets onboardingDone = True."""
     app, client = app_client

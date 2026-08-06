@@ -7,6 +7,10 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 
+def _env_flag(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _normalize_database_url(raw_url: str | None) -> str:
     if not raw_url:
         db_path = BASE_DIR / "data" / "pixel_planner.db"
@@ -53,6 +57,9 @@ class BaseConfig:
     ENABLE_BACKDOOR = False
     BACKDOOR_PHONE = os.getenv("BACKDOOR_PHONE", "")
     BACKDOOR_CODE = os.getenv("BACKDOOR_CODE", "")
+    ENABLE_DEMO_LOGIN = _env_flag("ENABLE_DEMO_LOGIN")
+    DEMO_LOGIN_PHONE = os.getenv("DEMO_LOGIN_PHONE", "")
+    DEMO_LOGIN_CODE = os.getenv("DEMO_LOGIN_CODE", "")
 
     TENCENT_SECRET_ID = os.getenv("TENCENT_SECRET_ID") or os.getenv("TENCENTCLOUD_SECRET_ID", "")
     TENCENT_SECRET_KEY = os.getenv("TENCENT_SECRET_KEY") or os.getenv("TENCENTCLOUD_SECRET_KEY", "")

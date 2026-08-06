@@ -89,3 +89,7 @@
   interfaces and typed resolver logic.
 - Synced the fixed health plugin from `G:\PixelPlanner` to
   `D:\PixelPlannerBuild\mobile_app` for the active DevEco build copy.
+- Diagnosed phone login failure for `13800000001` / `888888`: production
+  config intentionally disabled the test-only backdoor credentials.
+- Added an explicit `ENABLE_DEMO_LOGIN` / `DEMO_LOGIN_PHONE` /
+  `DEMO_LOGIN_CODE` path for production demo login, defaulting off.
