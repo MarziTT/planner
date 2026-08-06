@@ -35,8 +35,12 @@ interface ActivityReportPayload {
 
 export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
-  private context: common.Context | null = null;
+  private context: common.UIAbilityContext | null = null;
   private initialized = false;
+
+  constructor(context?: common.UIAbilityContext) {
+    this.context = context ?? null;
+  }
 
   getUniqueClassName(): string {
     return 'HarmonyHealthPlugin';
@@ -48,7 +52,9 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
       'pixelplanner/harmony_health',
     );
     this.channel.setMethodCallHandler(this);
-    this.context = binding.getApplicationContext();
+    if (this.context == null) {
+      this.context = binding.getApplicationContext() as common.UIAbilityContext;
+    }
     try {
       await healthStore.init(this.context);
       this.initialized = true;
@@ -145,7 +151,7 @@ export default class HarmonyHealthPlugin implements FlutterPlugin, MethodCallHan
       throw new Error('Health context is unavailable');
     }
     return healthStore.requestAuthorizations(
-      this.context as common.UIAbilityContext,
+      this.context,
       request,
     );
   }

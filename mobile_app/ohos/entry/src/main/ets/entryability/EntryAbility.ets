@@ -14,7 +14,7 @@ export default class EntryAbility extends FlutterAbility {
     GeneratedPluginRegistrant.registerWith(flutterEngine);
     flutterEngine.getPlugins()?.add(new HarmonySecureStoragePlugin());
     flutterEngine.getPlugins()?.add(new HarmonyNotificationPlugin());
-    flutterEngine.getPlugins()?.add(new HarmonyHealthPlugin());
-    flutterEngine.getPlugins()?.add(new HarmonyDevicePermissionPlugin());
+    flutterEngine.getPlugins()?.add(new HarmonyHealthPlugin(this.context));
+    flutterEngine.getPlugins()?.add(new HarmonyDevicePermissionPlugin(this.context));
   }
 }

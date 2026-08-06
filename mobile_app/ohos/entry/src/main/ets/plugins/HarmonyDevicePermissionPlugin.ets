@@ -19,8 +19,12 @@ const LOCATION_PERMISSIONS: Permissions[] = [
 export default class HarmonyDevicePermissionPlugin
   implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
-  private context: common.Context | null = null;
+  private context: common.UIAbilityContext | null = null;
   private readonly accessManager = abilityAccessCtrl.createAtManager();
+
+  constructor(context?: common.UIAbilityContext) {
+    this.context = context ?? null;
+  }
 
   getUniqueClassName(): string {
     return 'HarmonyDevicePermissionPlugin';
@@ -32,7 +36,9 @@ export default class HarmonyDevicePermissionPlugin
       'pixelplanner/harmony_device_permissions',
     );
     this.channel.setMethodCallHandler(this);
-    this.context = binding.getApplicationContext();
+    if (this.context == null) {
+      this.context = binding.getApplicationContext() as common.UIAbilityContext;
+    }
   }
 
   onDetachedFromEngine(binding: FlutterPluginBinding): void {

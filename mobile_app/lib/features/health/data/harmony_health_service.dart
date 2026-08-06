@@ -2,7 +2,12 @@ import 'package:flutter/services.dart';
 
 import '../domain/body_measurement.dart';
 
-enum HealthAuthorizationStatus { unavailable, notDetermined, denied, authorized }
+enum HealthAuthorizationStatus {
+  unavailable,
+  notDetermined,
+  denied,
+  authorized
+}
 
 class HarmonyHealthService {
   static const MethodChannel _defaultChannel =
@@ -33,35 +38,43 @@ class HarmonyHealthService {
 
   Future<bool> requestAuthorization() async {
     if (!await isAvailable()) return false;
-    return await _channel.invokeMethod<bool>(
-          'requestAuthorization',
-          const <String, Object>{
-            'dataTypes': <String>[
-              'weight',
-              'bmi',
-              'bodyFat',
-              'muscleMass',
-              'bodyWater',
-              'basalMetabolicRate',
-              'visceralFat',
-            ],
-          },
-        ) ??
-        false;
+    try {
+      return await _channel.invokeMethod<bool>(
+            'requestAuthorization',
+            const <String, Object>{
+              'dataTypes': <String>[
+                'weight',
+                'bmi',
+                'bodyFat',
+                'muscleMass',
+                'bodyWater',
+                'basalMetabolicRate',
+                'visceralFat',
+              ],
+            },
+          ) ??
+          false;
+    } on PlatformException {
+      return false;
+    }
   }
 
   Future<bool> requestActivityAuthorization() async {
     if (!await isAvailable()) return false;
-    return await _channel.invokeMethod<bool>(
-          'requestActivityAuthorization',
-          const <String, Object>{
-            'dataTypes': <String>[
-              'dailyActivities',
-              'workout',
-            ],
-          },
-        ) ??
-        false;
+    try {
+      return await _channel.invokeMethod<bool>(
+            'requestActivityAuthorization',
+            const <String, Object>{
+              'dataTypes': <String>[
+                'dailyActivities',
+                'workout',
+              ],
+            },
+          ) ??
+          false;
+    } on PlatformException {
+      return false;
+    }
   }
 
   Future<List<BodyMeasurement>> readBodyMeasurements({
@@ -110,6 +123,8 @@ class HarmonyHealthService {
       final json = value.map((key, value) => MapEntry(key.toString(), value));
       return HealthActivityReport.fromJson(json);
     } on MissingPluginException {
+      return null;
+    } on PlatformException {
       return null;
     }
   }

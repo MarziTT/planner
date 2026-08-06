@@ -93,3 +93,16 @@
   config intentionally disabled the test-only backdoor credentials.
 - Added an explicit `ENABLE_DEMO_LOGIN` / `DEMO_LOGIN_PHONE` /
   `DEMO_LOGIN_CODE` path for production demo login, defaulting off.
+
+## 2026-08-06 Harmony permission context fix
+
+- Fixed Harmony microphone/location/health plugins to receive the real
+  `UIAbilityContext` from `EntryAbility` instead of relying on the application
+  context cast.
+- Kept runtime permission requests attached to actual feature use: recording
+  requests microphone permission, weather requests location permission, and
+  health center requests Health Kit authorization.
+- Added Dart-side health error fallback so denied/unavailable Health Kit data
+  does not surface as an unhandled `PlatformException`.
+- Synced all changed health/permission files to
+  `D:\PixelPlannerBuild\mobile_app`.
