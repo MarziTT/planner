@@ -28,6 +28,7 @@ class LlmTarget:
     vision_models: tuple[str, ...] = ()
     timeout: float | None = None
     text_only: bool = False
+    host_header: str = ""
 
 
 def _split_models(value: Any, default: str = "gpt-4o-mini") -> tuple[str, ...]:
@@ -62,6 +63,7 @@ def resolve_targets(config: dict[str, Any]) -> list[LlmTarget]:
             models=_split_models(config.get("DEEPSEEK_MODEL"), default="deepseek-r1:7b"),
             timeout=max(1.0, deepseek_timeout),
             text_only=True,
+            host_header=str(config.get("DEEPSEEK_HOST_HEADER") or "").strip(),
         ))
 
     if isinstance(raw_providers, list):
@@ -119,6 +121,8 @@ def chat_completion(
         headers = {"Content-Type": "application/json"}
         if target.api_key:
             headers["Authorization"] = f"Bearer {target.api_key}"
+        if target.host_header:
+            headers["Host"] = target.host_header
         models = target.vision_models or target.models if capability == "vision" else target.models
         for model in models:
             payload = {

@@ -54,6 +54,23 @@ def test_keyless_deepseek_uses_custom_timeout_and_reasoning_fallback(mock_post):
 
 
 @patch("app.services.llm_gateway.requests.post")
+def test_deepseek_can_override_host_header_for_tailscale_funnel(mock_post):
+    response = Mock(status_code=200)
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"choices": [{"message": {"content": "ok"}}]}
+    mock_post.return_value = response
+
+    result = chat_completion([{"role": "user", "content": "hello"}], {
+        "DEEPSEEK_API_BASE_URL": "https://desktop.example.ts.net/v1",
+        "DEEPSEEK_MODEL": "deepseek-r1:7b",
+        "DEEPSEEK_HOST_HEADER": "127.0.0.1:11434",
+    })
+
+    assert result == "ok"
+    assert mock_post.call_args.kwargs["headers"]["Host"] == "127.0.0.1:11434"
+
+
+@patch("app.services.llm_gateway.requests.post")
 def test_vision_requests_skip_text_only_deepseek(mock_post):
     response = Mock(status_code=200)
     response.raise_for_status.return_value = None

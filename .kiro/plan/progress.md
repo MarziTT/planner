@@ -153,3 +153,9 @@
 - Verified targeted backend tests:
   `python -m pytest backend\tests\test_agent.py backend\tests\test_agent_persona.py backend\tests\test_agent_multi.py`
   and `python -m pytest backend\tests\test_settings_api.py`.
+- Verified Tailscale Funnel reaches Ollama at
+  `https://desktop-pea6sa6.tailf598b7.ts.net/v1/models` only when the upstream
+  Host header is rewritten to `127.0.0.1:11434`; plain requests return 403.
+- Added `DEEPSEEK_HOST_HEADER` support to the LLM gateway and confirmed the
+  project `chat_completion` client can receive a response from `deepseek-r1:7b`
+  through the Funnel.

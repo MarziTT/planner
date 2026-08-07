@@ -46,6 +46,7 @@ def _read_llm_config() -> dict:
         "DEEPSEEK_API_BASE_URL": current_app.config.get("DEEPSEEK_API_BASE_URL", ""),
         "DEEPSEEK_MODEL": current_app.config.get("DEEPSEEK_MODEL", "deepseek-r1:7b"),
         "DEEPSEEK_API_KEY": current_app.config.get("DEEPSEEK_API_KEY", ""),
+        "DEEPSEEK_HOST_HEADER": current_app.config.get("DEEPSEEK_HOST_HEADER", ""),
         "DEEPSEEK_TIMEOUT_SECONDS": current_app.config.get("DEEPSEEK_TIMEOUT_SECONDS", 120),
     }
 
@@ -67,6 +68,7 @@ def _read_llm_config() -> dict:
         "DEEPSEEK_API_BASE_URL": fallback["DEEPSEEK_API_BASE_URL"],
         "DEEPSEEK_MODEL": fallback["DEEPSEEK_MODEL"],
         "DEEPSEEK_API_KEY": fallback["DEEPSEEK_API_KEY"],
+        "DEEPSEEK_HOST_HEADER": fallback["DEEPSEEK_HOST_HEADER"],
         "DEEPSEEK_TIMEOUT_SECONDS": fallback["DEEPSEEK_TIMEOUT_SECONDS"],
     }
 

@@ -76,6 +76,7 @@ class BaseConfig:
     DEEPSEEK_API_BASE_URL = os.getenv("DEEPSEEK_API_BASE_URL", "")
     DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-r1:7b")
     DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_HOST_HEADER = os.getenv("DEEPSEEK_HOST_HEADER", "")
     DEEPSEEK_TIMEOUT_SECONDS = float(os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "120"))
 
     # Phase 2 — habits engine
