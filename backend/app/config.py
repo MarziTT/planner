@@ -73,6 +73,10 @@ class BaseConfig:
     OPENAI_MODELS = os.getenv("OPENAI_MODELS", "")
     OPENAI_VISION_MODELS = os.getenv("OPENAI_VISION_MODELS", "")
     LLM_PROVIDERS = os.getenv("LLM_PROVIDERS", "")
+    DEEPSEEK_API_BASE_URL = os.getenv("DEEPSEEK_API_BASE_URL", "")
+    DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-r1:7b")
+    DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+    DEEPSEEK_TIMEOUT_SECONDS = float(os.getenv("DEEPSEEK_TIMEOUT_SECONDS", "120"))
 
     # Phase 2 — habits engine
     HABITS_WINDOW_DAYS = int(os.getenv("HABITS_WINDOW_DAYS", "30"))

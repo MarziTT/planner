@@ -42,6 +42,10 @@ def _read_llm_config() -> dict:
         "OPENAI_MODELS": current_app.config.get("OPENAI_MODELS", ""),
         "OPENAI_VISION_MODELS": current_app.config.get("OPENAI_VISION_MODELS", ""),
         "LLM_PROVIDERS": current_app.config.get("LLM_PROVIDERS", ""),
+        "DEEPSEEK_API_BASE_URL": current_app.config.get("DEEPSEEK_API_BASE_URL", ""),
+        "DEEPSEEK_MODEL": current_app.config.get("DEEPSEEK_MODEL", "deepseek-r1:7b"),
+        "DEEPSEEK_API_KEY": current_app.config.get("DEEPSEEK_API_KEY", ""),
+        "DEEPSEEK_TIMEOUT_SECONDS": current_app.config.get("DEEPSEEK_TIMEOUT_SECONDS", 120),
     }
 
     try:
@@ -59,6 +63,10 @@ def _read_llm_config() -> dict:
         "OPENAI_MODELS": fallback["OPENAI_MODELS"],
         "OPENAI_VISION_MODELS": fallback["OPENAI_VISION_MODELS"],
         "LLM_PROVIDERS": fallback["LLM_PROVIDERS"],
+        "DEEPSEEK_API_BASE_URL": fallback["DEEPSEEK_API_BASE_URL"],
+        "DEEPSEEK_MODEL": fallback["DEEPSEEK_MODEL"],
+        "DEEPSEEK_API_KEY": fallback["DEEPSEEK_API_KEY"],
+        "DEEPSEEK_TIMEOUT_SECONDS": fallback["DEEPSEEK_TIMEOUT_SECONDS"],
     }
 
 

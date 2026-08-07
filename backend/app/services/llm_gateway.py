@@ -26,6 +26,8 @@ class LlmTarget:
     base_url: str
     models: tuple[str, ...]
     vision_models: tuple[str, ...] = ()
+    timeout: float | None = None
+    text_only: bool = False
 
 
 def _split_models(value: Any, default: str = "gpt-4o-mini") -> tuple[str, ...]:
@@ -47,21 +49,38 @@ def resolve_targets(config: dict[str, Any]) -> list[LlmTarget]:
             raw_providers = None
 
     targets: list[LlmTarget] = []
+    deepseek_base_url = str(config.get("DEEPSEEK_API_BASE_URL") or "").strip()
+    if deepseek_base_url:
+        try:
+            deepseek_timeout = float(config.get("DEEPSEEK_TIMEOUT_SECONDS") or 120)
+        except (TypeError, ValueError):
+            deepseek_timeout = 120.0
+        targets.append(LlmTarget(
+            name="deepseek",
+            api_key=str(config.get("DEEPSEEK_API_KEY") or ""),
+            base_url=deepseek_base_url.rstrip("/"),
+            models=_split_models(config.get("DEEPSEEK_MODEL"), default="deepseek-r1:7b"),
+            timeout=max(1.0, deepseek_timeout),
+            text_only=True,
+        ))
+
     if isinstance(raw_providers, list):
         for index, provider in enumerate(raw_providers):
-            if not isinstance(provider, dict) or not provider.get("api_key"):
+            if not isinstance(provider, dict) or not provider.get("base_url"):
                 continue
             targets.append(LlmTarget(
                 name=str(provider.get("name") or f"relay-{index + 1}"),
-                api_key=str(provider["api_key"]),
+                api_key=str(provider.get("api_key") or ""),
                 base_url=str(provider.get("base_url") or "https://api.openai.com/v1").rstrip("/"),
                 models=_split_models(provider.get("models") or provider.get("model")),
                 vision_models=_split_models(provider.get("vision_models"), default="") if provider.get("vision_models") else (),
+                timeout=float(provider["timeout"]) if provider.get("timeout") else None,
             ))
 
     legacy_key = str(config.get("OPENAI_API_KEY") or "")
     if legacy_key:
-        targets.insert(0, LlmTarget(
+        legacy_index = 1 if targets and targets[0].name == "deepseek" else 0
+        targets.insert(legacy_index, LlmTarget(
             name="primary",
             api_key=legacy_key,
             base_url=str(config.get("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/"),
@@ -91,11 +110,15 @@ def chat_completion(
 ) -> str | None:
     """Try providers and models in order, returning the first valid response."""
     for target in resolve_targets(config):
+        if capability == "vision" and target.text_only:
+            continue
         if _is_cooling_down(target):
             logger.info("Skipping cooled-down LLM provider %s", target.name)
             continue
         url = f"{target.base_url}/chat/completions"
-        headers = {"Authorization": f"Bearer {target.api_key}", "Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json"}
+        if target.api_key:
+            headers["Authorization"] = f"Bearer {target.api_key}"
         models = target.vision_models or target.models if capability == "vision" else target.models
         for model in models:
             payload = {
@@ -106,7 +129,8 @@ def chat_completion(
                 **(extra_payload or {}),
             }
             try:
-                response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+                request_timeout = target.timeout if target.timeout is not None else timeout
+                response = requests.post(url, headers=headers, json=payload, timeout=request_timeout)
                 if response.status_code in (401, 403):
                     logger.warning("LLM provider %s rejected credentials", target.name)
                     break
@@ -123,7 +147,12 @@ def chat_completion(
                     logger.warning("LLM provider %s returned %s; cooling down", target.name, response.status_code)
                     break
                 response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"]
+                message = response.json()["choices"][0]["message"]
+                content = (
+                    message.get("content")
+                    or message.get("reasoning_content")
+                    or message.get("reasoning")
+                )
                 if isinstance(content, str) and content.strip():
                     return content.strip()
                 logger.warning("LLM provider %s returned empty content", target.name)

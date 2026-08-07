@@ -19,6 +19,59 @@ def test_resolve_targets_supports_legacy_and_multiple_relays():
     assert targets[0].models == ("best-model", "fallback-model")
 
 
+def test_resolve_targets_adds_keyless_deepseek_first():
+    targets = resolve_targets({
+        "DEEPSEEK_API_BASE_URL": "https://deepseek.example/v1/",
+        "DEEPSEEK_MODEL": "deepseek-r1:7b",
+        "DEEPSEEK_TIMEOUT_SECONDS": "120",
+        "OPENAI_API_KEY": "fallback-key",
+    })
+
+    assert [target.name for target in targets] == ["deepseek", "primary"]
+    assert targets[0].api_key == ""
+    assert targets[0].base_url == "https://deepseek.example/v1"
+    assert targets[0].timeout == 120
+
+
+@patch("app.services.llm_gateway.requests.post")
+def test_keyless_deepseek_uses_custom_timeout_and_reasoning_fallback(mock_post):
+    response = Mock(status_code=200)
+    response.raise_for_status.return_value = None
+    response.json.return_value = {
+        "choices": [{"message": {"content": "", "reasoning": "连接成功"}}],
+    }
+    mock_post.return_value = response
+
+    result = chat_completion([{"role": "user", "content": "hello"}], {
+        "DEEPSEEK_API_BASE_URL": "https://deepseek.example/v1",
+        "DEEPSEEK_MODEL": "deepseek-r1:7b",
+        "DEEPSEEK_TIMEOUT_SECONDS": 120,
+    })
+
+    assert result == "连接成功"
+    assert "Authorization" not in mock_post.call_args.kwargs["headers"]
+    assert mock_post.call_args.kwargs["timeout"] == 120
+
+
+@patch("app.services.llm_gateway.requests.post")
+def test_vision_requests_skip_text_only_deepseek(mock_post):
+    response = Mock(status_code=200)
+    response.raise_for_status.return_value = None
+    response.json.return_value = {"choices": [{"message": {"content": "vision"}}]}
+    mock_post.return_value = response
+
+    result = chat_completion([], {
+        "DEEPSEEK_API_BASE_URL": "https://deepseek.example/v1",
+        "DEEPSEEK_MODEL": "deepseek-r1:7b",
+        "OPENAI_API_KEY": "vision-key",
+        "OPENAI_MODEL": "text-model",
+        "OPENAI_VISION_MODELS": "vision-model",
+    }, capability="vision")
+
+    assert result == "vision"
+    assert mock_post.call_args.kwargs["json"]["model"] == "vision-model"
+
+
 @patch("app.services.llm_gateway.requests.post")
 def test_vision_capability_prefers_vision_models(mock_post):
     response = Mock(status_code=200)
