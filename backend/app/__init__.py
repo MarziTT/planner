@@ -7,6 +7,7 @@ from .api.dashboard import dashboard_bp
 from .api.exercise import exercise_bp
 from .api.habits import habits_bp
 from .api.meals import meals_bp
+from .api.memory import memory_bp
 from .api.notifications import notify_bp
 from .api.planner import planner_bp
 from .api.profile import profile_bp
@@ -53,6 +54,7 @@ def create_app(config_name: str | None = None, repair_tables: bool = False) -> F
     app.register_blueprint(habits_bp, url_prefix="/api/v1")
     app.register_blueprint(routine_bp, url_prefix="/api/v1")
     app.register_blueprint(meals_bp, url_prefix="/api/v1")
+    app.register_blueprint(memory_bp, url_prefix="/api/v1")
     app.register_blueprint(exercise_bp, url_prefix="/api/v1")
     app.register_blueprint(transit_bp, url_prefix="/api/v1")
     app.register_blueprint(dashboard_bp, url_prefix="/api/v1")

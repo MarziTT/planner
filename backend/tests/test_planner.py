@@ -1,6 +1,7 @@
 """Test planner endpoints for create, update, list, export and tag-import."""
 
 from app.extensions import db
+from app.models_habits import MemoryFeedback, UserMemory
 
 
 def _register_and_login(client):
@@ -114,6 +115,50 @@ def test_tags_export_and_import_snapshot(app_client):
         assert len(payload["events"]) == 1
         assert len(payload["todos"]) == 1
         assert len(payload["tags"]) == 2
+    finally:
+        with app.app_context():
+            db.drop_all()
+
+
+def test_event_actions_feed_controlled_personal_memory(app_client):
+    app, client = app_client
+    try:
+        headers = _register_and_login(client)
+        created = client.post(
+            "/api/v1/events",
+            headers=headers,
+            json={
+                "title": "晚间健身",
+                "startsAt": "2026-08-07T19:00:00",
+                "endsAt": "2026-08-07T20:00:00",
+            },
+        )
+        event_id = created.get_json()["data"]["item"]["id"]
+
+        modified = client.put(
+            f"/api/v1/events/{event_id}",
+            headers=headers,
+            json={
+                "startsAt": "2026-08-07T20:00:00",
+                "endsAt": "2026-08-07T21:30:00",
+            },
+        )
+        assert modified.status_code == 200
+
+        with app.app_context():
+            memory = UserMemory.query.filter_by(category="schedule").one()
+            assert memory.value["hour"] == 20
+            assert memory.value["duration_minutes"] == 90
+            assert memory.evidence_count == 2
+            assert [row.action for row in MemoryFeedback.query.order_by(MemoryFeedback.id).all()] == [
+                "confirmed", "modified",
+            ]
+
+        deleted = client.delete(f"/api/v1/events/{event_id}", headers=headers)
+        assert deleted.status_code == 200
+        with app.app_context():
+            assert MemoryFeedback.query.order_by(MemoryFeedback.id.desc()).first().action == "cancelled"
+            assert UserMemory.query.filter_by(category="schedule").one().evidence_count == 2
     finally:
         with app.app_context():
             db.drop_all()

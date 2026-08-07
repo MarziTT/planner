@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/butler/butler_name_provider.dart';
 import '../../../core/theme/theme_controller.dart';
 import '../../../core/theme/zzz_theme_extension.dart';
+import '../../memory/presentation/memory_page.dart';
 import '../../updates/state/update_controller.dart';
 import '../../../widgets/zzz_gif_decoration.dart';
 import '../state/settings_controller.dart';
@@ -332,6 +333,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 12),
                   _ButlerToneEntryCard(isZzz: isZzz),
+                  const SizedBox(height: 12),
+                  _MemoryEntryCard(isZzz: isZzz),
                   const SizedBox(height: 12),
                   Card(
                     color: isZzz ? zzz?.surface : null,
@@ -719,6 +722,47 @@ class _ButlerToneEntryCard extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _MemoryEntryCard extends StatelessWidget {
+  const _MemoryEntryCard({required this.isZzz});
+
+  final bool isZzz;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final zzz = context.zzz;
+    return Card(
+      color: isZzz ? zzz?.surface : null,
+      shape: isZzz
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: zzz?.borderStrong ?? theme.colorScheme.primary,
+              ),
+            )
+          : null,
+      child: ListTile(
+        leading: const Icon(Icons.psychology_alt_outlined),
+        title: Text(
+          '个人记忆',
+          style: TextStyle(color: isZzz ? zzz?.textPrimary : null),
+        ),
+        subtitle: Text(
+          '查看和控制管家从已确认行为中学到的习惯',
+          style: TextStyle(color: isZzz ? zzz?.textSecondary : null),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: isZzz ? zzz?.textTertiary : null,
+        ),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MemoryPage()),
+        ),
       ),
     );
   }

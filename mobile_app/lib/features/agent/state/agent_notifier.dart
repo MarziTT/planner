@@ -361,6 +361,7 @@ class AgentNotifier extends StateNotifier<AgentState> {
         start: result.datetimeStart!,
         end: end,
         reminderMinutes: 30,
+        sourceText: result.sourceText,
       ));
 
       final systemMsg = ChatMessage(

@@ -75,6 +75,50 @@ class AgentExperience(TimestampMixin, db.Model):
     last_used_at = db.Column(db.DateTime, default=utc_now, nullable=False)
 
 
+class MemorySetting(TimestampMixin, db.Model):
+    """User-controlled switch for personalized learning."""
+
+    __tablename__ = "memory_settings"
+
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    learning_enabled = db.Column(db.Boolean, default=True, nullable=False)
+
+
+class UserMemory(TimestampMixin, db.Model):
+    """An inspectable, editable fact learned from confirmed user behavior."""
+
+    __tablename__ = "user_memories"
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "category", "memory_key", name="uq_user_memory_key"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    category = db.Column(db.String(40), nullable=False, index=True)
+    memory_key = db.Column(db.String(160), nullable=False)
+    summary = db.Column(db.String(500), nullable=False)
+    value = db.Column(JSONVariant)
+    confidence = db.Column(db.Float, default=0.6, nullable=False)
+    evidence_count = db.Column(db.Integer, default=1, nullable=False)
+    source = db.Column(db.String(32), default="confirmed_action", nullable=False)
+    active = db.Column(db.Boolean, default=True, nullable=False, index=True)
+    last_confirmed_at = db.Column(db.DateTime, default=utc_now, nullable=False)
+
+
+class MemoryFeedback(TimestampMixin, db.Model):
+    """Audit trail of explicit behavior signals used for learning."""
+
+    __tablename__ = "memory_feedback"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    action = db.Column(db.String(32), nullable=False, index=True)
+    entity_type = db.Column(db.String(32), default="agent_action", nullable=False)
+    entity_id = db.Column(db.String(64))
+    source_text = db.Column(db.String(500), default="", nullable=False)
+    details = db.Column(JSONVariant)
+
+
 class NotifyPreference(TimestampMixin, db.Model):
     """Per-user notification preference; may be overridden by the habits engine."""
 

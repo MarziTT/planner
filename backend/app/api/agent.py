@@ -21,6 +21,7 @@ from ..services.agent import parse_schedule, parse_text, suggest_commands
 from ..services.meal_service import create_meal_record
 from ..services import exercise_service
 from ..services.routine_service import record_wake
+from ..services.memory_service import record_feedback
 
 from .common import auth_required, failure, success
 
@@ -85,6 +86,7 @@ def parse():
 
     config = _read_llm_config()
     result = parse_schedule(text, config)
+    result["source_text"] = text
     return success(result)
 
 
@@ -111,6 +113,7 @@ def parse_multi():
         user_id=g.current_user.id,
         persona_preset=persona_preset,
     )
+    result["source_text"] = text
     return success(result)
 
 
@@ -143,15 +146,15 @@ def execute():
 
     try:
         if intent == "log_meal":
-            return _execute_log_meal(user_id, payload)
+            response = _execute_log_meal(user_id, payload)
         elif intent == "log_exercise":
-            return _execute_log_exercise(user_id, payload)
+            response = _execute_log_exercise(user_id, payload)
         elif intent == "log_routine":
-            return _execute_log_routine(user_id, payload)
+            response = _execute_log_routine(user_id, payload)
         elif intent == "create_event":
-            return _execute_create_event(user_id, payload)
+            response = _execute_create_event(user_id, payload)
         elif intent == "create_reminder":
-            return _execute_create_reminder(user_id, payload)
+            response = _execute_create_reminder(user_id, payload)
         elif intent == "query":
             return _execute_query(user_id, payload)
         else:
@@ -160,6 +163,18 @@ def execute():
                 f"Intent '{intent}' is not executable; try re-phrasing",
                 status=422,
             )
+        if response[1] < 300:
+            data = response[0].get("data") or {}
+            entity_id = data.get("event_id") or data.get("todo_id") or data.get("record_id")
+            record_feedback(
+                user_id,
+                "confirmed",
+                entity_type=intent,
+                entity_id=entity_id,
+                source_text=str(payload.get("source_text") or ""),
+                details=payload,
+            )
+        return response
     except Exception:
         logger.exception("Execute intent '%s' failed", intent)
         return failure("execute_failed", "Failed to execute action", status=500)
@@ -408,6 +423,21 @@ def schedule():
     )
     db.session.add(event)
     db.session.commit()
+
+    record_feedback(
+        g.current_user.id,
+        "confirmed",
+        entity_type="create_event",
+        entity_id=event.id,
+        source_text=str(payload.get("source_text") or ""),
+        details={
+            **payload,
+            "intent": "create_event",
+            "event_name": title,
+            "start": start_raw,
+            "end": end_raw,
+        },
+    )
 
     # reminder_minutes is accepted but not persisted (Event model has no reminder field yet).
     _ = reminder_minutes

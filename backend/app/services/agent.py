@@ -600,11 +600,22 @@ def _build_multi_intent_prompt(persona_preset: str | None = None) -> str:
     return MULTI_INTENT_SYSTEM_PROMPT.format(**slots)
 
 
-def _call_openai_multi(text: str, config: dict, persona_preset: str | None = None) -> dict | None:
+def _call_openai_multi(
+    text: str,
+    config: dict,
+    persona_preset: str | None = None,
+    memory_context: str = "",
+) -> dict | None:
     """Call LLM with multi-intent prompt; return parsed JSON or None."""
+    system_prompt = _build_multi_intent_prompt(persona_preset)
+    if memory_context:
+        system_prompt += (
+            "\n\nConfirmed user memory (context only; never invent facts from it):\n"
+            f"{memory_context}\nUse it only when relevant to resolve preferences or ambiguity."
+        )
     raw = chat_completion(
         [
-            {"role": "system", "content": _build_multi_intent_prompt(persona_preset)},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": text},
         ],
         config,
@@ -1058,21 +1069,26 @@ def parse_text(
     # Prefer AI for natural-language intent recognition. Regex remains an
     # offline fallback when no model is configured or the model is unavailable.
     if resolve_targets(config):
-        result = _call_openai_multi(text, config, persona_preset)
+        memory_context = ""
+        if user_id:
+            try:
+                from .memory_service import relevant_memory_context
+                memory_context = relevant_memory_context(user_id, text)
+            except Exception:
+                logger.exception("Personal memory lookup failed")
+        result = _call_openai_multi(text, config, persona_preset, memory_context)
         if result is not None:
             if "intent" not in result:
                 result["intent"] = "unknown"
             if "confidence" not in result:
                 result["confidence"] = 0.5
             result.setdefault("llm_warning", None)
-            _remember_agent_experience(user_id, text, result)
             return result
         llm_warning = "AI连接失败，已切换到离线识别"
 
     result = _parse_multi_regex(text)
     if llm_warning:
         result["llm_warning"] = llm_warning
-    _remember_agent_experience(user_id, text, result)
     return result
 
 

@@ -7,6 +7,7 @@ from flask import Blueprint, current_app, g, request
 
 from ..extensions import db
 from ..models import Event, Profile, Tag, Todo
+from ..services.memory_service import record_feedback
 from .common import auth_required, failure, success
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,17 @@ def _event_to_dict(event: Event):
         "status": event.status,
         "tagId": event.tag_id,
         "tagIds": [event.tag_id] if event.tag_id is not None else [],
+    }
+
+
+def _event_memory_details(event: Event) -> dict:
+    return {
+        "intent": "create_event",
+        "event_name": event.title,
+        "title": event.title,
+        "start": event.starts_at.isoformat(),
+        "end": event.ends_at.isoformat(),
+        "status": event.status,
     }
 
 
@@ -136,7 +148,15 @@ def create_event():
         tag_id=payload.get("tagId"),
     )
     db.session.add(event)
-    db.session.commit()
+    db.session.flush()
+    record_feedback(
+        g.current_user.id,
+        "confirmed",
+        entity_type="event",
+        entity_id=event.id,
+        source_text=str(payload.get("sourceText") or ""),
+        details=_event_memory_details(event),
+    )
     return success({"item": _event_to_dict(event)}, status=201)
 
 
@@ -176,7 +196,22 @@ def update_event(event_id: int):
         except (ValueError, TypeError):
             return failure("validation_error", "tagIds must be a list of integers", status=422)
         event.tag_id = ids[0] if ids else None
-    db.session.commit()
+    action = "modified"
+    learn = True
+    if "status" in payload and event.status == "cancelled":
+        action = "cancelled"
+        learn = False
+    elif "status" in payload and event.status == "completed":
+        action = "completed"
+    record_feedback(
+        g.current_user.id,
+        action,
+        entity_type="event",
+        entity_id=event.id,
+        source_text=str(payload.get("sourceText") or ""),
+        details=_event_memory_details(event),
+        learn=learn,
+    )
     return success({"item": _event_to_dict(event)})
 
 
@@ -186,8 +221,16 @@ def delete_event(event_id: int):
     event = Event.query.filter_by(id=event_id, user_id=g.current_user.id).first()
     if not event:
         return failure("not_found", "Event not found", status=404)
+    details = _event_memory_details(event)
     db.session.delete(event)
-    db.session.commit()
+    record_feedback(
+        g.current_user.id,
+        "cancelled",
+        entity_type="event",
+        entity_id=event.id,
+        details=details,
+        learn=False,
+    )
     return success({"deleted": True})
 
 
@@ -233,7 +276,16 @@ def create_todo():
         completed=bool(payload.get("completed", False)),
     )
     db.session.add(todo)
-    db.session.commit()
+    db.session.flush()
+    record_feedback(
+        g.current_user.id,
+        "confirmed",
+        entity_type="todo",
+        entity_id=todo.id,
+        source_text=str(payload.get("sourceText") or ""),
+        details={"intent": "create_reminder", "title": todo.title},
+        learn=False,
+    )
     return success({"item": _todo_to_dict(todo)}, status=201)
 
 
@@ -255,7 +307,15 @@ def update_todo(todo_id: int):
         todo.due_date = _parse_iso_date(payload["dueDate"]) if payload["dueDate"] else None
     if "completed" in payload:
         todo.completed = bool(payload["completed"])
-    db.session.commit()
+    action = "completed" if payload.get("completed") is True else "modified"
+    record_feedback(
+        g.current_user.id,
+        action,
+        entity_type="todo",
+        entity_id=todo.id,
+        details={"intent": "create_reminder", "title": todo.title},
+        learn=False,
+    )
     return success({"item": _todo_to_dict(todo)})
 
 
@@ -265,8 +325,16 @@ def delete_todo(todo_id: int):
     todo = Todo.query.filter_by(id=todo_id, user_id=g.current_user.id).first()
     if not todo:
         return failure("not_found", "Todo not found", status=404)
+    title = todo.title
     db.session.delete(todo)
-    db.session.commit()
+    record_feedback(
+        g.current_user.id,
+        "cancelled",
+        entity_type="todo",
+        entity_id=todo.id,
+        details={"intent": "create_reminder", "title": title},
+        learn=False,
+    )
     return success({"deleted": True})
 
 
