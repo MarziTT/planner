@@ -209,14 +209,14 @@ def _ensure_tables(app: Flask) -> None:
             db.session.rollback()
             app.logger.exception("Failed to create settings table")
 
-        # Add zzz_enabled column if settings table exists without it
+        # Add missing settings columns if older deployments created a partial table
         try:
             inspector = inspect(db.engine)
             tables = inspector.get_table_names()
             if "settings" in tables:
                 cols = {c["name"] for c in inspector.get_columns("settings")}
+                dialect = db.engine.dialect.name
                 if "butler_tone" not in cols:
-                    dialect = db.engine.dialect.name
                     if dialect == "postgresql":
                         db.session.execute(text(
                             "ALTER TABLE settings ADD COLUMN butler_tone TEXT"
@@ -236,7 +236,6 @@ def _ensure_tables(app: Flask) -> None:
                     db.session.commit()
                     app.logger.info("Migration: added butler_tone to settings (dialect=%s)", dialect)
                 if "zzz_enabled" not in cols:
-                    dialect = db.engine.dialect.name
                     if dialect == "postgresql":
                         db.session.execute(text(
                             "ALTER TABLE settings ADD COLUMN zzz_enabled BOOLEAN NOT NULL DEFAULT false"
@@ -247,9 +246,25 @@ def _ensure_tables(app: Flask) -> None:
                         ))
                     db.session.commit()
                     app.logger.info("Migration: added zzz_enabled to settings (dialect=%s)", dialect)
+                settings_missing = {
+                    "llm_api_key": "TEXT",
+                    "llm_base_url": "TEXT",
+                    "llm_model": "VARCHAR(64)",
+                }
+                for col_name, col_def in settings_missing.items():
+                    if col_name not in cols:
+                        db.session.execute(text(
+                            f"ALTER TABLE settings ADD COLUMN {col_name} {col_def}"
+                        ))
+                        db.session.commit()
+                        app.logger.info(
+                            "Migration: added %s to settings (dialect=%s)",
+                            col_name,
+                            dialect,
+                        )
         except Exception:
             db.session.rollback()
-            app.logger.exception("Migration failed: settings.zzz_enabled")
+            app.logger.exception("Migration failed: settings columns")
 
         # Add missing profile columns
         try:

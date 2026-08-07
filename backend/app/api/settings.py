@@ -37,27 +37,54 @@ def _get_or_create_settings() -> AppSetting:
 
 
 def _ensure_settings_butler_tone_column() -> None:
-    """Lazy-repair older settings tables that still miss butler_tone."""
+    """Lazy-repair older settings tables before ORM selects all model columns."""
     try:
         inspector = inspect(db.engine)
         if "settings" not in inspector.get_table_names():
             return
         columns = {column["name"] for column in inspector.get_columns("settings")}
-        if "butler_tone" in columns:
-            return
         dialect = db.engine.dialect.name
         if dialect not in {"postgresql", "sqlite"}:
             return
-        db.session.execute(text("ALTER TABLE settings ADD COLUMN butler_tone TEXT"))
-        if "weather_tone" in columns:
+
+        repaired: list[str] = []
+        column_defs = {
+            "butler_tone": "TEXT",
+            "llm_api_key": "TEXT",
+            "llm_base_url": "TEXT",
+            "llm_model": "VARCHAR(64)",
+        }
+        if "zzz_enabled" not in columns:
+            zzz_def = (
+                "BOOLEAN NOT NULL DEFAULT false"
+                if dialect == "postgresql"
+                else "BOOLEAN DEFAULT false"
+            )
+            db.session.execute(text(f"ALTER TABLE settings ADD COLUMN zzz_enabled {zzz_def}"))
+            repaired.append("zzz_enabled")
+
+        for column_name, column_def in column_defs.items():
+            if column_name not in columns:
+                db.session.execute(text(
+                    f"ALTER TABLE settings ADD COLUMN {column_name} {column_def}"
+                ))
+                repaired.append(column_name)
+
+        if "butler_tone" not in columns and "weather_tone" in columns:
             db.session.execute(text(
                 "UPDATE settings SET butler_tone = weather_tone WHERE butler_tone IS NULL"
             ))
-        db.session.commit()
-        logger.info("Lazy migration: added butler_tone to settings (dialect=%s)", dialect)
+
+        if repaired:
+            db.session.commit()
+            logger.info(
+                "Lazy migration: repaired settings columns %s (dialect=%s)",
+                ",".join(repaired),
+                dialect,
+            )
     except Exception:
         db.session.rollback()
-        logger.exception("Lazy migration failed: settings.butler_tone")
+        logger.exception("Lazy migration failed: settings columns")
 
 
 def _settings_to_dict(settings: AppSetting):

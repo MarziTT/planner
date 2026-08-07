@@ -1,3 +1,5 @@
+from sqlalchemy import text
+
 from app.extensions import db
 from app.models import AppSetting
 
@@ -63,3 +65,48 @@ def test_butler_tone_round_trip_and_compatibility(app_client):
     finally:
         with app.app_context():
             db.drop_all()
+
+
+def test_settings_endpoint_repairs_partial_legacy_table(app_client):
+    app, client = app_client
+    headers = _login(client)
+    try:
+        with app.app_context():
+            db.session.execute(text("DROP TABLE settings"))
+            db.session.execute(text("""
+                CREATE TABLE settings (
+                    user_id INTEGER PRIMARY KEY,
+                    theme VARCHAR(32) NOT NULL DEFAULT 'forest',
+                    theme_mode VARCHAR(16) NOT NULL DEFAULT 'dark',
+                    notifications_enabled BOOLEAN NOT NULL DEFAULT 1,
+                    voice_enabled BOOLEAN NOT NULL DEFAULT 1,
+                    update_channel VARCHAR(32) NOT NULL DEFAULT 'stable',
+                    weather_tone TEXT,
+                    created_at DATETIME,
+                    updated_at DATETIME
+                )
+            """))
+            db.session.execute(text("""
+                INSERT INTO settings (
+                    user_id, theme, theme_mode, notifications_enabled,
+                    voice_enabled, update_channel, weather_tone
+                ) VALUES (1, 'forest', 'dark', 1, 1, 'stable', '温和旧语气')
+            """))
+            db.session.commit()
+
+        response = client.get("/api/v1/settings", headers=headers)
+
+        assert response.status_code == 200
+        item = response.get_json()["data"]["item"]
+        assert item["llmApiKey"] == ""
+        assert item["llmBaseUrl"] == ""
+        assert item["llmModel"] == ""
+
+        tone_response = client.get("/api/v1/settings/butler-tone", headers=headers)
+        assert tone_response.status_code == 200
+        assert tone_response.get_json()["data"]["butler_tone"] == "温和旧语气"
+    finally:
+        with app.app_context():
+            db.drop_all()
+
+
