@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 from flask import Blueprint, current_app, g, request
 
 from ..extensions import db
-from ..models import Event, Todo
+from ..models import AppSetting, Event, Todo
 from ..models_habits import ExerciseRecord, MealRecord
 from ..services.agent import parse_schedule, parse_text, suggest_commands
 from ..services.meal_service import create_meal_record
@@ -71,6 +71,20 @@ def _read_llm_config() -> dict:
     }
 
 
+def _read_butler_tone() -> str | None:
+    try:
+        from .settings import _ensure_settings_butler_tone_column
+
+        _ensure_settings_butler_tone_column()
+        settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
+    except Exception:
+        return None
+    if settings is None:
+        return None
+    tone = (settings.butler_tone or "").strip()
+    return tone or None
+
+
 @agent_bp.post("/parse")
 @auth_required
 def parse():
@@ -107,11 +121,13 @@ def parse_multi():
         return failure("validation_error", "text is required", status=422)
 
     config = _read_llm_config()
+    butler_tone = _read_butler_tone()
     result = parse_text(
         text,
         config,
         user_id=g.current_user.id,
         persona_preset=persona_preset,
+        butler_tone=butler_tone,
     )
     result["source_text"] = text
     return success(result)
@@ -462,5 +478,10 @@ def suggest():
     persona_preset = (payload.get("persona_preset") or "default").strip()
 
     config = _read_llm_config()
-    suggestions = suggest_commands(butler_name=butler_name, config=config, persona_preset=persona_preset)
+    suggestions = suggest_commands(
+        butler_name=butler_name,
+        config=config,
+        persona_preset=persona_preset,
+        butler_tone=_read_butler_tone(),
+    )
     return success({"suggestions": suggestions})

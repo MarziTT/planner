@@ -133,3 +133,14 @@
   a second non-fatal analysis attempt timed out on the G-drive checkout.
 - Synced the source removal to `D:\PixelPlannerBuild\mobile_app` without
   touching signing material or build outputs.
+
+## 2026-08-07 butler tone and DeepSeek core
+
+- Diagnosed the butler tone page 500 as a backend settings compatibility
+  risk when older databases miss the renamed `butler_tone` column.
+- Added lazy settings-table repair before loading or creating settings, so
+  `/settings` and `/settings/butler-tone` can self-heal the missing column.
+- Wired saved `butler_tone` into the agent parse and quick-suggestion prompts,
+  so the configured DeepSeek/OpenAI-compatible model receives the user's tone.
+- Verified targeted backend tests:
+  `python -m pytest backend\tests\test_settings_api.py backend\tests\test_agent_persona.py`.

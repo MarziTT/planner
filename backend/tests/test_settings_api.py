@@ -38,3 +38,28 @@ def test_settings_masks_llm_key_and_preserves_masked_round_trip(app_client):
     finally:
         with app.app_context():
             db.drop_all()
+
+
+def test_butler_tone_round_trip_and_compatibility(app_client):
+    app, client = app_client
+    headers = _login(client)
+    try:
+        get_response = client.get("/api/v1/settings/butler-tone", headers=headers)
+        assert get_response.status_code == 200
+        assert get_response.get_json()["data"]["butler_tone"] in (None, "")
+
+        save_response = client.put(
+            "/api/v1/settings/butler-tone",
+            json={"butler_tone": "温和、简洁、先结论后建议"},
+            headers=headers,
+        )
+        assert save_response.status_code == 200
+        assert save_response.get_json()["data"]["butler_tone"] == "温和、简洁、先结论后建议"
+
+        compat_response = client.get("/api/v1/settings/weather-tone", headers=headers)
+        compat_data = compat_response.get_json()["data"]
+        assert compat_data["butler_tone"] == "温和、简洁、先结论后建议"
+        assert compat_data["weather_tone"] == "温和、简洁、先结论后建议"
+    finally:
+        with app.app_context():
+            db.drop_all()

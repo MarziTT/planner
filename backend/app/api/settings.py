@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from flask import Blueprint, g, request
+from sqlalchemy import inspect, text
 
 from ..extensions import db
 from ..models import AppSetting
@@ -26,12 +27,37 @@ def _mask_secret(value: str | None) -> str:
 
 def _get_or_create_settings() -> AppSetting:
     """获取当前用户的设置记录，不存在时自动创建默认记录。"""
+    _ensure_settings_butler_tone_column()
     settings = AppSetting.query.filter_by(user_id=g.current_user.id).first()
     if settings is None:
         settings = AppSetting(user_id=g.current_user.id)
         db.session.add(settings)
         db.session.flush()
     return settings
+
+
+def _ensure_settings_butler_tone_column() -> None:
+    """Lazy-repair older settings tables that still miss butler_tone."""
+    try:
+        inspector = inspect(db.engine)
+        if "settings" not in inspector.get_table_names():
+            return
+        columns = {column["name"] for column in inspector.get_columns("settings")}
+        if "butler_tone" in columns:
+            return
+        dialect = db.engine.dialect.name
+        if dialect not in {"postgresql", "sqlite"}:
+            return
+        db.session.execute(text("ALTER TABLE settings ADD COLUMN butler_tone TEXT"))
+        if "weather_tone" in columns:
+            db.session.execute(text(
+                "UPDATE settings SET butler_tone = weather_tone WHERE butler_tone IS NULL"
+            ))
+        db.session.commit()
+        logger.info("Lazy migration: added butler_tone to settings (dialect=%s)", dialect)
+    except Exception:
+        db.session.rollback()
+        logger.exception("Lazy migration failed: settings.butler_tone")
 
 
 def _settings_to_dict(settings: AppSetting):

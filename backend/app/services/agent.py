@@ -581,25 +581,30 @@ Output: {{"intent":"chat","answer":"你好，我在。今天想让我帮你安�
 """
 
 
-def _persona_instruction(persona_preset: str | None = None) -> str:
+def _persona_instruction(persona_preset: str | None = None, butler_tone: str | None = None) -> str:
     try:
         from .persona_service import resolve_persona
 
-        persona = resolve_persona(persona_preset)
+        persona = resolve_persona(persona_preset, tone=butler_tone)
+        tone_text = (butler_tone or "").strip()
+        if tone_text:
+            tone_clause = f" Tone: {tone_text}."
+        else:
+            tone_clause = ""
         return (
             f"Persona: You are {persona['display_name']}, the user's private life butler. "
-            f"Style: {persona['style']} Keep classification accurate and do not over-talk."
+            f"Style: {persona['style']}{tone_clause} Keep classification accurate and do not over-talk."
         )
     except Exception:
         return "Persona: You are the user's private life butler. Style: clear, reliable, concise."
 
 
-def _build_multi_intent_prompt(persona_preset: str | None = None) -> str:
+def _build_multi_intent_prompt(persona_preset: str | None = None, butler_tone: str | None = None) -> str:
     now = datetime.now(TZ)
     slots = dict(_TODAY_SLOTS)
     slots["current_time"] = f"{now.hour:02d}:{now.minute:02d}"
     slots["current_hour"] = now.hour
-    slots["persona_instruction"] = _persona_instruction(persona_preset)
+    slots["persona_instruction"] = _persona_instruction(persona_preset, butler_tone)
     return MULTI_INTENT_SYSTEM_PROMPT.format(**slots)
 
 
@@ -607,10 +612,11 @@ def _call_openai_multi(
     text: str,
     config: dict,
     persona_preset: str | None = None,
+    butler_tone: str | None = None,
     memory_context: str = "",
 ) -> dict | None:
     """Call LLM with multi-intent prompt; return parsed JSON or None."""
-    system_prompt = _build_multi_intent_prompt(persona_preset)
+    system_prompt = _build_multi_intent_prompt(persona_preset, butler_tone)
     if memory_context:
         system_prompt += (
             "\n\nConfirmed user memory (context only; never invent facts from it):\n"
@@ -1065,6 +1071,7 @@ def parse_text(
     *,
     user_id: int | None = None,
     persona_preset: str | None = None,
+    butler_tone: str | None = None,
 ) -> dict:
     """Parse natural-language Chinese text with multi-intent NLU.
 
@@ -1104,7 +1111,7 @@ def parse_text(
                 memory_context = relevant_memory_context(user_id, text)
             except Exception:
                 logger.exception("Personal memory lookup failed")
-        result = _call_openai_multi(text, config, persona_preset, memory_context)
+        result = _call_openai_multi(text, config, persona_preset, butler_tone, memory_context)
         if result is not None:
             if "intent" not in result:
                 result["intent"] = "unknown"
@@ -1149,7 +1156,11 @@ Night (10pm-7am): ["帮我记录今天的睡眠", "明天几点起床好", "安�
 IMPORTANT: VARY the suggestions — use different wording, different topics, different angles. Don't pick the same suggestions from the examples above. Be creative within the user's context."""
 
 
-def _build_suggest_prompt(butler_name: str = "贾维斯", persona_preset: str | None = None) -> str:
+def _build_suggest_prompt(
+    butler_name: str = "贾维斯",
+    persona_preset: str | None = None,
+    butler_tone: str | None = None,
+) -> str:
     now = datetime.now(TZ)
     hour = now.hour
 
@@ -1174,13 +1185,17 @@ def _build_suggest_prompt(butler_name: str = "贾维斯", persona_preset: str | 
         time_of_day=time_of_day,
         weekday=weekday,
     )
+    tone_text = (butler_tone or "").strip()
+    if tone_text:
+        prompt += f"\nTone: {tone_text}"
     if persona_preset in {"zzz", "zzzTheme", "zzz_zero", "zero"}:
         prompt += "\nPersona: 零号。使用冷静、克制、短句、任务导向的表达；不要使用热情寒暄、emoji或泛泛的鼓励。"
     return prompt
 
 
 def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None,
-                     persona_preset: str | None = None) -> list[str]:
+                     persona_preset: str | None = None,
+                     butler_tone: str | None = None) -> list[str]:
     """Generate 5-6 contextual quick-command suggestions.
 
     Primary: call OpenAI-compatible LLM with suggest prompt.
@@ -1195,7 +1210,7 @@ def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None,
 
     # Try LLM
     if resolve_targets(config):
-        result = _call_openai_suggest(butler_name, config, persona_preset)
+        result = _call_openai_suggest(butler_name, config, persona_preset, butler_tone)
         if result is not None and isinstance(result, list) and len(result) > 0:
             return [s for s in result if isinstance(s, str) and s.strip()][:6]
 
@@ -1204,10 +1219,15 @@ def suggest_commands(butler_name: str = "贾维斯", config: dict | None = None,
     return _fallback_suggest()
 
 
-def _call_openai_suggest(butler_name: str, config: dict, persona_preset: str | None = None) -> list[str] | None:
+def _call_openai_suggest(
+    butler_name: str,
+    config: dict,
+    persona_preset: str | None = None,
+    butler_tone: str | None = None,
+) -> list[str] | None:
     raw = chat_completion(
         [
-            {"role": "system", "content": _build_suggest_prompt(butler_name, persona_preset)},
+            {"role": "system", "content": _build_suggest_prompt(butler_name, persona_preset, butler_tone)},
             {"role": "user", "content": "生成一组建议"},
         ],
         config,
