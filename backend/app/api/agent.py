@@ -17,7 +17,7 @@ from flask import Blueprint, current_app, g, request
 from ..extensions import db
 from ..models import AppSetting, Event, Todo
 from ..models_habits import ExerciseRecord, MealRecord
-from ..services.agent import parse_schedule, parse_text, suggest_commands
+from ..services.agent import answer_query_with_ai, parse_schedule, parse_text, suggest_commands
 from ..services.meal_service import create_meal_record
 from ..services import exercise_service
 from ..services.routine_service import record_wake
@@ -340,7 +340,14 @@ def _execute_query(user_id: int, payload: dict) -> tuple:
     query_type = (payload.get("query_type") or "general")
     query_text = (payload.get("query_text") or "")
 
-    answer = _build_query_answer(user_id, query_type, query_text)
+    factual_context = _build_query_answer(user_id, query_type, query_text)
+    answer = answer_query_with_ai(
+        query_text=query_text or query_type,
+        factual_context=factual_context,
+        config=_read_llm_config(),
+        persona_preset=(payload.get("persona_preset") or "default").strip(),
+        butler_tone=_read_butler_tone(),
+    ) or factual_context
     return success({"action": "query_answered", "query_type": query_type, "answer": answer})
 
 

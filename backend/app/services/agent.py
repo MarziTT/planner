@@ -1020,6 +1020,39 @@ def _lookup_agent_experience(user_id: int | None, text: str) -> dict | None:
         return None
 
 
+def _agent_experience_context(user_id: int | None, text: str, limit: int = 5) -> str:
+    if not user_id:
+        return ""
+    try:
+        from ..models_habits import AgentExperience
+
+        normalized = _normalize_experience_text(text)
+        if not normalized:
+            return ""
+        rows = (
+            AgentExperience.query
+            .filter_by(user_id=user_id)
+            .order_by(AgentExperience.sample_count.desc(), AgentExperience.updated_at.desc())
+            .limit(60)
+            .all()
+        )
+        scored: list[tuple[float, AgentExperience]] = []
+        for row in rows:
+            score = SequenceMatcher(None, normalized, row.normalized_text or "").ratio()
+            if score >= 0.45:
+                scored.append((score, row))
+        scored.sort(key=lambda item: (item[0], item[1].sample_count), reverse=True)
+        examples: list[str] = []
+        for score, row in scored[:max(1, min(limit, 8))]:
+            examples.append(
+                f"- 用户曾确认“{row.source_text}” => intent={row.intent}, similarity={score:.2f}"
+            )
+        return "\n".join(examples)
+    except Exception:
+        logger.exception("Agent experience context lookup failed")
+        return ""
+
+
 def _remember_agent_experience(user_id: int | None, text: str, result: dict) -> None:
     if not user_id:
         return
@@ -1077,8 +1110,8 @@ def parse_text(
 
     Supports: create_event, log_meal, log_exercise, log_routine, query, create_reminder.
 
-    Primary: keyword-based regex intent detection + entity extraction (fast, free).
-    Fallback: call OpenAI-compatible LLM when regex can't determine intent.
+    Primary: OpenAI-compatible LLM such as DeepSeek, enriched with confirmed
+    user memories and expression examples. Offline recognizers are fallback only.
 
     Returns a dict with at minimum:
         {"intent": "...", "confidence": 0.0-1.0}
@@ -1093,24 +1126,25 @@ def parse_text(
 
     llm_warning = None
 
-    local_chat = _local_chat_reply(text)
-    if local_chat is not None:
-        return local_chat
-
-    experience_result = _lookup_agent_experience(user_id, text)
-    if experience_result is not None:
-        return experience_result
-
-    # Prefer AI for natural-language intent recognition. Regex remains an
-    # offline fallback when no model is configured or the model is unavailable.
-    if resolve_targets(config):
+    targets = resolve_targets(config)
+    if targets:
         memory_context = ""
         if user_id:
+            memory_parts = []
             try:
                 from .memory_service import relevant_memory_context
-                memory_context = relevant_memory_context(user_id, text)
+                personal_memory = relevant_memory_context(user_id, text)
+                if personal_memory:
+                    memory_parts.append(personal_memory)
             except Exception:
                 logger.exception("Personal memory lookup failed")
+            experience_context = _agent_experience_context(user_id, text)
+            if experience_context:
+                memory_parts.append(
+                    "Confirmed user expression examples:\n"
+                    f"{experience_context}\nUse these examples as learning signals; still parse the current text freshly."
+                )
+            memory_context = "\n\n".join(memory_parts)
         result = _call_openai_multi(text, config, persona_preset, butler_tone, memory_context)
         if result is not None:
             if "intent" not in result:
@@ -1121,10 +1155,68 @@ def parse_text(
             return result
         llm_warning = "AI连接失败，已切换到离线识别"
 
+    experience_result = _lookup_agent_experience(user_id, text)
+    if experience_result is not None:
+        if llm_warning:
+            experience_result["llm_warning"] = llm_warning
+        return experience_result
+
+    local_chat = _local_chat_reply(text)
+    if local_chat is not None:
+        if llm_warning:
+            local_chat["llm_warning"] = llm_warning
+        return local_chat
+
     result = _parse_multi_regex(text)
     if llm_warning:
         result["llm_warning"] = llm_warning
     return result
+
+
+def answer_query_with_ai(
+    query_text: str,
+    factual_context: str,
+    config: dict | None = None,
+    *,
+    persona_preset: str | None = None,
+    butler_tone: str | None = None,
+    butler_name: str = "贾维斯",
+) -> str | None:
+    """Ask the configured model to answer from backend facts in butler style."""
+    if config is None:
+        config = {
+            "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY", ""),
+            "OPENAI_BASE_URL": os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+            "OPENAI_MODEL": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        }
+    if not resolve_targets(config):
+        return None
+    system_prompt = (
+        f"{_persona_instruction(persona_preset, butler_tone)} "
+        f"You are {butler_name}, the user's senior private butler. "
+        "Answer in natural Chinese. Use only the factual context below; do not invent records. "
+        "If context says there is no data, say so calmly and suggest one useful next action."
+    )
+    raw = chat_completion(
+        [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": (
+                    f"User question: {query_text}\n"
+                    f"Factual context from PixelPlanner:\n{factual_context}"
+                ),
+            },
+        ],
+        config,
+        temperature=0.3,
+        max_tokens=500,
+        timeout=20,
+    )
+    if raw is None:
+        return None
+    answer = raw.strip()
+    return answer or None
 
 
 # -- Public API: suggestion generation ----------------------------------------

@@ -311,6 +311,20 @@ class TestParseWithRegex:
         assert result["intent"] == "chat"
         assert "我在" in result["answer"]
 
+    @patch("app.services.agent._call_openai_multi")
+    @patch("app.services.agent.resolve_targets", return_value=[object()])
+    def test_configured_ai_handles_greeting_before_local_chat(self, _mock_targets, mock_call_openai):
+        mock_call_openai.return_value = {
+            "intent": "chat",
+            "answer": "DeepSeek 在，我会按你的语气来。",
+            "confidence": 0.99,
+        }
+
+        result = parse_text("你好", config={"DEEPSEEK_API_BASE_URL": "http://localhost:11434/v1"})
+
+        assert result["answer"] == "DeepSeek 在，我会按你的语气来。"
+        mock_call_openai.assert_called_once()
+
     @patch("app.services.agent.datetime")
     def test_event_with_location(self, mock_dt):
         _configure_dt_mock(mock_dt)
@@ -424,6 +438,31 @@ class TestParseTextPublic:
         assert result["intent"] == "create_event"
         assert result["event_name"] == "健身"
         assert result["offline_source"] == "experience"
+
+    @patch("app.services.agent._agent_experience_context", return_value='- 用户曾确认“七点健身” => intent=create_event')
+    @patch("app.services.agent._call_openai_multi")
+    @patch("app.services.agent.resolve_targets", return_value=[object()])
+    def test_configured_ai_receives_experience_context(
+        self,
+        _mock_targets,
+        mock_call_openai,
+        _mock_experience_context,
+    ):
+        mock_call_openai.return_value = {
+            "intent": "create_event",
+            "event_name": "健身",
+            "confidence": 0.95,
+        }
+
+        result = parse_text(
+            "八点健身",
+            config={"DEEPSEEK_API_BASE_URL": "http://localhost:11434/v1"},
+            user_id=1,
+        )
+
+        assert result["intent"] == "create_event"
+        memory_context = mock_call_openai.call_args.args[4]
+        assert "七点健身" in memory_context
 
 
 # ===========================================================================

@@ -144,3 +144,12 @@
   so the configured DeepSeek/OpenAI-compatible model receives the user's tone.
 - Verified targeted backend tests:
   `python -m pytest backend\tests\test_settings_api.py backend\tests\test_agent_persona.py`.
+- Changed agent parsing so configured DeepSeek/OpenAI-compatible targets run
+  before local chat shortcuts or offline expression matching.
+- Kept confirmed memories and similar-expression history as model context, so
+  the butler learns from confirmations without bypassing DeepSeek.
+- Routed query answers through the configured model using backend facts as
+  grounding; deterministic backend answers remain the fallback if AI is down.
+- Verified targeted backend tests:
+  `python -m pytest backend\tests\test_agent.py backend\tests\test_agent_persona.py backend\tests\test_agent_multi.py`
+  and `python -m pytest backend\tests\test_settings_api.py`.
