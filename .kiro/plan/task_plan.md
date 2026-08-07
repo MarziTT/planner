@@ -24,13 +24,14 @@ Deliver a stable PixelPlanner project with complete HarmonyOS support, verified 
 - Notifications and notification permissions
 - Voice output, speech input, and recording
 - File paths, import/export, sharing, URL launching, image selection
-- Weather, health, network, updates, and agent workflows
+- Weather, network, updates, and agent workflows
 
 ## Product Direction
 
 - The mobile app's primary internal experience is a chat-first command center.
 - Existing dashboard, transit, meals, exercise, tags, profile, and settings remain available as on-demand modules.
 - Keep backend APIs, packaging, signing, and native integration boundaries unchanged while evolving the UI.
+- Remove the mobile health center and Huawei Health Kit integration. Do not add features that require Huawei developer-console scope approval.
 
 ## Rules
 

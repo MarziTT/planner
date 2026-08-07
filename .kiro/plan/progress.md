@@ -120,3 +120,16 @@
 - Health Kit debug output identified the real blocker:
   `DAILY_ACTIVITIES` read permission is missing from the app's Health Service
   Kit scope, so phone-side authorization alone cannot grant the data.
+
+## 2026-08-07 health feature removal
+
+- User chose to remove the health center and all features that require Huawei
+  developer-console scope approval.
+- Removed the home module entry, native Health Kit registration/plugin,
+  Flutter health feature, and Health Kit tests.
+- Kept unrelated microphone/location runtime permissions and backend records.
+- Confirmed no Health Kit references remain in mobile source. Targeted Flutter
+  analysis reported no compile errors and four pre-existing `const` lint infos;
+  a second non-fatal analysis attempt timed out on the G-drive checkout.
+- Synced the source removal to `D:\PixelPlannerBuild\mobile_app` without
+  touching signing material or build outputs.

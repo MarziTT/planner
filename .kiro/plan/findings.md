@@ -78,3 +78,13 @@
 - The backend has Alembic migrations and automatic table creation at startup.
   A dedicated per-user experience table is the safe durable store; `UserPattern`
   is reserved for aggregate habit signals rather than raw language examples.
+
+## 2026-08-07 health feature removal
+
+- Health Kit reads fail with code 201 because Huawei has not approved the
+  `DAILY_ACTIVITIES` read scope for this app.
+- Product decision: remove the mobile health center and all Huawei Health Kit
+  code instead of applying for official Huawei scopes.
+- The mobile health feature is isolated to one home module, one ArkTS plugin,
+  its Flutter feature directory, and one dedicated test.
+- Backend exercise, meals, routines, and other user-record APIs remain intact.
