@@ -24,11 +24,15 @@ class AgentApiClient {
 
   /// Phase 4: multi-intent NLU — classifies ANY natural-language request.
   Future<ParseResult> parseMulti(String text, {String? personaPreset}) async {
-    final response = await _dio.post('/agent/parse-multi', data: {
-      'text': text,
-      if (personaPreset != null && personaPreset.trim().isNotEmpty)
-        'persona_preset': personaPreset.trim(),
-    });
+    final response = await _dio.post(
+      '/agent/parse-multi',
+      data: {
+        'text': text,
+        if (personaPreset != null && personaPreset.trim().isNotEmpty)
+          'persona_preset': personaPreset.trim(),
+      },
+      options: Options(receiveTimeout: const Duration(seconds: 130)),
+    );
     final data = response.data;
     if (data is! Map || data['data'] is! Map) {
       throw DioException(

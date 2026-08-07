@@ -479,6 +479,7 @@ Intents:
 - **log_exercise**: user exercised/did sports, wants to log exercise
 - **log_routine**: user reports wake time, sleep time, or standing
 - **query**: user asks about their own data (calories, exercise, schedule, health)
+- **chat**: greetings, general questions, advice, explanations, or normal conversation that does not modify app data
 - **create_reminder**: user wants a reminder/todo for something non-scheduled
 - **unknown**: none of the above
 
@@ -490,13 +491,14 @@ Rules:
 4. For log_meal: extract meal_type (早餐/午餐/晚餐/加餐/零食), food_name (what they ate), estimated calories.
 5. For log_exercise: extract exercise_type (跑步/游泳/健身/骑行/散步 etc.), duration_minutes (integer), intensity (轻/中/高).
 6. For log_routine: extract routine_type (wake/sleep/standing), time_value (HH:MM format for wake/sleep, or just "done" for standing).
-7. For query: extract query_type (calories_today/exercise_today/schedule_today/health_summary/general), query_text (the verbatim question).
+7. For query: use only for questions about data already stored in this app; extract query_type and query_text.
+7a. For chat: answer naturally as the user's private butler and include the answer field. Do not claim an action was completed.
 8. For create_reminder: extract reminder_text (what to remind about), and optionally datetime_range for when.
 9. confidence: 1.0 for clear requests, lower for ambiguous ones.
 
 Output schema (pick the intent that matches, include only relevant fields):
 {{
-  "intent": "create_event | log_meal | log_exercise | log_routine | query | create_reminder | unknown",
+  "intent": "create_event | log_meal | log_exercise | log_routine | query | chat | create_reminder | unknown",
 
   "event_name": "str or null",
   "person": "str or null",
@@ -517,6 +519,7 @@ Output schema (pick the intent that matches, include only relevant fields):
 
   "query_type": "str or null",
   "query_text": "str or null",
+  "answer": "str or null",
 
   "reminder_text": "str or null",
 
@@ -574,7 +577,7 @@ User: 明天下午3点跟老张开项目会
 Output: {{"intent":"create_event","event_name":"开项目会","person":"老张","location":null,"datetime_range":{{"start":"{tomorrow}T15:00:00","end":"{tomorrow}T16:00:00"}},"is_fuzzy":false,"confidence":0.95}}
 
 User: 你好
-Output: {{"intent":"unknown","confidence":0.0}}
+Output: {{"intent":"chat","answer":"你好，我在。今天想让我帮你安排日程，还是聊点别的？","confidence":1.0}}
 """
 
 
@@ -633,7 +636,28 @@ def _call_openai_multi(
         return json.loads(raw)
     except Exception as exc:
         logger.warning("Multi-intent LLM call failed: %s", exc)
+        fallback = _parse_multi_regex(text)
+        if fallback.get("intent") == "unknown" and raw.strip():
+            return {"intent": "chat", "answer": raw.strip(), "confidence": 0.7}
         return None
+
+
+def _local_chat_reply(text: str) -> dict | None:
+    normalized = re.sub(r"[\s，。！？!?、]+", "", text.strip().lower())
+    greetings = {"你好", "您好", "嗨", "hello", "hi", "早上好", "中午好", "下午好", "晚上好"}
+    if normalized in greetings:
+        return {
+            "intent": "chat",
+            "answer": "你好，我在。你可以直接和我聊天，也可以让我安排日程、设置提醒或记录生活。",
+            "confidence": 1.0,
+        }
+    if normalized in {"你是谁", "你叫什么", "你能做什么", "怎么用"}:
+        return {
+            "intent": "chat",
+            "answer": "我是你的私人生活管家。我可以回答问题，也会判断你的话是否需要转成日程、提醒、饮食或运动记录；涉及写入数据时会先让你确认。",
+            "confidence": 1.0,
+        }
+    return None
 
 
 # -- Multi-intent regex fallback ------------------------------------------------
@@ -1061,6 +1085,10 @@ def parse_text(
         }
 
     llm_warning = None
+
+    local_chat = _local_chat_reply(text)
+    if local_chat is not None:
+        return local_chat
 
     experience_result = _lookup_agent_experience(user_id, text)
     if experience_result is not None:

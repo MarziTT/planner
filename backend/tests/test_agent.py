@@ -306,6 +306,11 @@ class TestParseWithRegex:
         assert result["datetime_range"] is None
         assert result["intent"] == "unknown"
 
+    def test_greeting_returns_local_butler_chat(self):
+        result = parse_text("你好", config={})
+        assert result["intent"] == "chat"
+        assert "我在" in result["answer"]
+
     @patch("app.services.agent.datetime")
     def test_event_with_location(self, mock_dt):
         _configure_dt_mock(mock_dt)

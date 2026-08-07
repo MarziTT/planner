@@ -178,6 +178,23 @@ class AgentNotifier extends StateNotifier<AgentState> {
         return;
       }
 
+      if (result.intent == 'chat') {
+        final answer = result.answer ?? '我在。请继续说。';
+        final answerMsg = ChatMessage(
+          id: _generateId(),
+          type: ChatMessageType.answerCard,
+          text: answer,
+          parseResult: result,
+        );
+        state = state.copyWith(
+          messages: [...state.messages, answerMsg],
+          status: AgentStatus.done,
+          errorMessage: null,
+        );
+        unawaited(_voiceOutput.speak(answer));
+        return;
+      }
+
       // Unknown / low confidence — ask user to rephrase
       if (result.intent == 'unknown' || result.confidence < 0.4) {
         final systemMsg = ChatMessage(

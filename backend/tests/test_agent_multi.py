@@ -129,8 +129,7 @@ class TestMultiIntentParse:
         parsed = data["data"]
         assert parsed["intent"] in ("create_event", "unknown")
 
-    def test_parse_multi_unknown_intent(self, app_client, auth_headers):
-        """Gibberish → unknown intent."""
+    def test_parse_multi_greeting_returns_butler_chat(self, app_client, auth_headers):
         _, client = app_client
         resp = client.post(
             "/api/v1/agent/parse-multi",
@@ -140,8 +139,9 @@ class TestMultiIntentParse:
         assert resp.status_code == 200
         data = resp.get_json()
         parsed = data["data"]
-        assert "intent" in parsed
-        assert "confidence" in parsed
+        assert parsed["intent"] == "chat"
+        assert "我在" in parsed["answer"]
+        assert parsed["confidence"] == 1.0
 
 
 class TestExecuteLogMeal:
